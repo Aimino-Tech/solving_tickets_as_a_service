@@ -7,7 +7,6 @@
   "nav.audit": "Journal d'audit",
   "nav.settings": "Paramètres",
   "nav.admin": "Admin",
-
   "dashboard.totalRuns": "Total des exécutions",
   "dashboard.passRate": "Taux de réussite",
   "dashboard.avgDuration": "Durée moyenne",
@@ -24,7 +23,6 @@
   "dashboard.total": "Total",
   "dashboard.passed": "Réussi",
   "dashboard.failedToLoad": "Échec du chargement des données du tableau de bord : {{error}}",
-
   "runs.title": "Exécutions",
   "runs.status": "Statut",
   "runs.duration": "Durée",
@@ -42,7 +40,6 @@
   "runs.previous": "Précédent",
   "runs.next": "Suivant",
   "runs.pageInfo": "Page {{page}} sur {{totalPages}} ({{total}} au total)",
-
   "runDetail.backToRuns": "Retour aux exécutions",
   "runDetail.runs": "Exécutions",
   "runDetail.timing": "Chronologie",
@@ -75,7 +72,6 @@
   "runDetail.stars": "162K+ étoiles",
   "runDetail.backToRunsLink": "← Retour aux exécutions",
   "runDetail.getSyntaro": "Obtenir SYNTARO",
-
   "repos.connected": "{{count}} dépôt{{count, plural, one {} other {s}}} connecté{{count, plural, one {} other {s}}}",
   "repos.cancel": "Annuler",
   "repos.connectRepo": "Connecter un dépôt",
@@ -90,7 +86,6 @@
   "repos.connectFirst": "Connecter votre premier dépôt",
   "repos.connectedAgo": "Connecté {{time}}",
   "repos.disconnect": "Déconnecter",
-
   "analytics.failedToLoad": "Échec du chargement de l'analyse : {{error}}",
   "analytics.overallPassRate": "Taux de réussite global",
   "analytics.totalRuns": "Total des exécutions",
@@ -101,7 +96,6 @@
   "analytics.noDataYet": "Pas encore assez de données.",
   "analytics.noRunData": "Aucune donnée d'exécution disponible.",
   "analytics.noCostData": "Aucune donnée de coût disponible.",
-
   "kpi.failedToLoad": "Échec du chargement des données KPI : {{error}}",
   "kpi.activeReposMA": "Dépôts actifs (MA)",
   "kpi.fixCompletionRate": "Taux de complétion des corrections",
@@ -122,24 +116,20 @@
   "kpi.exportCsv": "Exporter CSV",
   "kpi.noData": "Pas encore de données",
   "kpi.snapshotsAvailable": "{{count}} snapshots quotidiens disponibles ({{from}} – {{to}})",
-
   "audit.totalEntries": "{{count}} entrées au total",
   "audit.noEntries": "Aucune entrée d'audit pour l'instant.",
   "audit.noEntriesDesc": "Les actions apparaîtront ici au fur et à mesure que le bot traite les corrections.",
   "audit.retry": "Réessayer",
   "audit.pageInfo": "Page {{page}} sur {{totalPages}}",
-
   "common.loading": "Chargement...",
   "common.error": "Erreur",
   "common.retry": "Réessayer",
   "common.save": "Enregistrer",
   "common.cancel": "Annuler",
-
   "auth.login": "Se connecter",
   "auth.logout": "Se déconnecter",
   "auth.profile": "Profil",
   "auth.user": "Utilisateur",
-
   "settings.botConfig": "Configuration du bot",
   "settings.botConfigDesc": "Configurez le comportement du bot SYNTARO pour vos dépôts.",
   "settings.triggerLabel": "Étiquette déclencheuse",
@@ -167,15 +157,12 @@
   "settings.dangerZone": "Zone de danger",
   "settings.dangerZoneDesc": "Ces actions sont irréversibles. Procédez avec prudence.",
   "settings.resetAll": "Réinitialiser tous les paramètres",
-
   "offline.youAreOffline": "Vous êtes hors ligne. Affichage des données en cache.",
-
   "notFound.pageNotFound": "Page non trouvée",
   "notFound.pageNotFoundDesc": "La page que vous recherchez n'existe pas ou a été déplacée.",
   "notFound.searchRuns": "Rechercher des exécutions...",
   "notFound.backToDashboard": "Retour au tableau de bord",
   "notFound.goBack": "Retour",
-
   "admin.adminRequired": "Clé API Admin requise",
   "admin.adminRequiredDesc": "Entrez votre ADMIN_API_KEY pour accéder au tableau de bord opérateur.",
   "admin.authenticate": "S'authentifier",
@@ -246,17 +233,20 @@
   "steering.runningBusy": "Exécution…",
   "steering.noBackups": "Aucune sauvegarde enregistrée.",
   "repos.bitbucketTitle": "Espace de travail Bitbucket",
-  "repos.bitbucketDesc": "Connectez un espace de travail Bitbucket pour activer les correctifs SYNTARO sur Bitbucket",
+  "repos.bitbucketDesc": "Connectez un espace de travail Bitbucket via l'application SYNTARO Marketplace pour activer les corrections sur Bitbucket",
   "repos.bitbucketConnectedTo": "Connecté à {{workspace}}",
   "repos.bitbucketDisconnect": "Déconnecter Bitbucket",
-  "repos.bitbucketAppPasswordHint": "Utilisez un mot de passe d'application Bitbucket (paramètres du compte → Mots de passe d'application) avec des autorisations lecture/écriture pour Pull requests / Issues / Webhooks.",
-  "repos.bitbucketUsername": "Nom d'utilisateur Bitbucket",
-  "repos.bitbucketAppPassword": "Mot de passe d'application",
   "repos.bitbucketWorkspace": "Slug de l'espace de travail",
   "repos.bitbucketConnecting": "Connexion…",
   "repos.bitbucketConnect": "Connecter l'espace de travail Bitbucket",
   "repos.bitbucketNoRepos": "Aucun dépôt trouvé dans l'espace de travail {{workspace}}.",
   "repos.bitbucketActive": "SYNTARO actif",
   "repos.bitbucketEnable": "Activer SYNTARO",
-  "repos.bitbucketHint": "Un espace de travail par instance. Événements de webhook : issue:created, issue:updated, pullrequest:created, pullrequest:updated."
+  "repos.bitbucketHint": "Un espace de travail par instance. Événements de webhook : issue:created, issue:updated, pullrequest:created, pullrequest:updated.",
+  "repos.bitbucketOAuthHint": "Installez l'application SYNTARO depuis l'Atlassian Marketplace, puis saisissez l'ID client et le secret client de l'application (OAuth par identifiants client).",
+  "repos.bitbucketClientId": "ID client",
+  "repos.bitbucketClientSecret": "Secret client",
+  "repos.bitbucketInstall": "Installer depuis Marketplace",
+  "repos.bitbucketPermissionsTitle": "Autorisations demandées",
+  "repos.bitbucketConnectedApp": "Connecté via l'application Marketplace"
 }

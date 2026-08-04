@@ -161,10 +161,12 @@ const envSchema = z.object({
   GITLAB_TOKEN: z.string().optional(),
   GITLAB_WEBHOOK_SECRET: z.string().optional(),
 
-  BITBUCKET_USERNAME: z.string().optional(),
-  BITBUCKET_APP_PASSWORD: z.string().optional(),
+  BITBUCKET_CLIENT_ID: z.string().optional(),
+  BITBUCKET_CLIENT_SECRET: z.string().optional(),
+  BITBUCKET_WORKSPACE: z.string().optional(),
   BITBUCKET_WEBHOOK_SECRET: z.string().optional(),
   BITBUCKET_BASE_URL: z.string().default('https://api.bitbucket.org'),
+  BITBUCKET_TOKEN_URL: z.string().default('https://bitbucket.org/site/oauth2/access_token'),
 
   SLACK_WEBHOOK_URL: z.string().optional(),
   SLACK_CHANNEL: z.string().optional(),
@@ -504,10 +506,12 @@ function buildConfig(env: ParsedEnv) {
     },
 
     bitbucket: {
-      username: env.BITBUCKET_USERNAME ?? '',
-      appPassword: env.BITBUCKET_APP_PASSWORD ?? '',
+      clientId: env.BITBUCKET_CLIENT_ID ?? '',
+      clientSecret: env.BITBUCKET_CLIENT_SECRET ?? '',
+      workspace: env.BITBUCKET_WORKSPACE ?? '',
       webhookSecret: env.BITBUCKET_WEBHOOK_SECRET ?? '',
       baseUrl: env.BITBUCKET_BASE_URL,
+      tokenUrl: env.BITBUCKET_TOKEN_URL,
     },
 
     ci: {

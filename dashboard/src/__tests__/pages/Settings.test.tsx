@@ -82,7 +82,7 @@ describe('Settings', () => {
     renderWithProviders(<Settings />);
 
     await waitFor(() => {
-      expect(screen.getByText('Bitbucket App Password')).toBeInTheDocument();
+      expect(screen.getByText('Bitbucket Cloud (Marketplace app)')).toBeInTheDocument();
     });
 
     // Bitbucket: clickable external link
@@ -95,7 +95,6 @@ describe('Settings', () => {
     const jiraConnect = screen.getByTitle('Setup guide coming soon');
     expect(jiraConnect.tagName).toBe('SPAN');
     expect(jiraConnect).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByText('Jira API Token')).toBeInTheDocument();
   });
 
   it('renders Data & Privacy tab and its content', async () => {

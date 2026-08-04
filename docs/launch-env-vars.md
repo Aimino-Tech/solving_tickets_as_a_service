@@ -428,8 +428,8 @@ IP_ALLOWLIST=192.30.252.0/22,185.199.108.0/22,140.82.112.0/20
 
 | Variable | Description | Where to Get It |
 |----------|-------------|-----------------|
-| `BITBUCKET_USERNAME` | Account username | Your Bitbucket account |
-| `BITBUCKET_APP_PASSWORD` | App password with Repos R/W, PRs W | Bitbucket → Personal settings → App passwords |
+| `BITBUCKET_CLIENT_ID` | Marketplace app client id | Atlassian Marketplace vendor portal |
+| `BITBUCKET_CLIENT_SECRET` | Marketplace app client secret | Atlassian Marketplace vendor portal |
 | `BITBUCKET_WEBHOOK_SECRET` | Webhook secret | Your choice |
 
 ### Jira (Tracker)

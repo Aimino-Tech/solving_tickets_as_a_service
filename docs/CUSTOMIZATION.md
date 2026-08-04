@@ -318,8 +318,8 @@ GITLAB_WEBHOOK_SECRET=...        # GitLab webhook secret
 ### Bitbucket
 
 ```bash
-BITBUCKET_USERNAME=your-username
-BITBUCKET_APP_PASSWORD=...       # Bitbucket app password
+BITBUCKET_CLIENT_ID=...         # Marketplace app client id
+BITBUCKET_CLIENT_SECRET=...      # Marketplace app client secret
 BITBUCKET_WEBHOOK_SECRET=...     # Bitbucket webhook secret
 ```
 

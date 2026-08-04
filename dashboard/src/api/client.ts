@@ -558,13 +558,21 @@ export interface BitbucketRepo {
 export interface BitbucketStatus {
   connected: boolean;
   workspace: string;
-  username: string | null;
+  clientId: string | null;
+  scopes: string[];
+  marketplaceUrl: string;
+}
+
+export interface BitbucketConnectBody {
+  clientId: string;
+  clientSecret: string;
+  workspace: string;
 }
 
 export const bitbucket = {
   getStatus: (opts?: { signal?: AbortSignal }) =>
     request<BitbucketStatus>('/v1/bitbucket/status', opts),
-  connect: (body: { username: string; appPassword: string; workspace: string }) =>
+  connect: (body: BitbucketConnectBody) =>
     request<{ connected: boolean; workspace: string; repoCount: number }>('/v1/bitbucket/connect', {
       method: 'POST',
       body: JSON.stringify(body),

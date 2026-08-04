@@ -1,15 +1,11 @@
 import crypto from 'node:crypto';
 
 import { config } from '../config.js';
-import { createBitbucketConfig } from '../platforms/bitbucket/config.js';
+import { getBitbucketAuth } from '../platforms/bitbucket/auth.js';
 import { BitbucketPlatformClient } from '../platforms/bitbucket/index.js';
 import { rootLogger } from '../utils/logger.js';
 import type { IssueJobData } from '../utils/types.js';
 import type { CreatePullRequestParams, PlatformClient, PlatformWebhook, PlatformWebhookEvent } from './base.js';
-
-const bbConfig = createBitbucketConfig();
-const bbToken = `${bbConfig.username}:${bbConfig.appPassword}`;
-export const bitbucketPlatformClient = new BitbucketPlatformClient(bbToken, bbConfig.baseUrl);
 
 const log = rootLogger.child({ module: 'webhooks-bitbucket' });
 
@@ -118,21 +114,22 @@ export const bitbucketWebhook: PlatformWebhook = {
   },
 };
 
-function createBitbucketPlatformClient(): BitbucketPlatformClient {
-  const token = `${config.bitbucket.username}:${config.bitbucket.appPassword}`;
-  return new BitbucketPlatformClient(token, config.bitbucket.baseUrl);
+async function createBitbucketPlatformClient(): Promise<BitbucketPlatformClient> {
+  const auth = getBitbucketAuth();
+  const accessToken = await auth.accessToken();
+  return new BitbucketPlatformClient(accessToken, auth.baseUrl);
 }
 
 export const bitbucketClient: PlatformClient = {
   platform: 'bitbucket',
 
   async createComment(repoOwner: string, repoName: string, issueNumber: number, body: string): Promise<void> {
-    const client = createBitbucketPlatformClient();
+    const client = await createBitbucketPlatformClient();
     await client.createComment(`${repoOwner}/${repoName}`, issueNumber, body);
   },
 
   async createPullRequest(params: CreatePullRequestParams): Promise<{ url: string; number: number }> {
-    const client = createBitbucketPlatformClient();
+    const client = await createBitbucketPlatformClient();
     const pr = await client.createPullRequest({
       repoOwner: params.repoOwner,
       repoName: params.repoName,

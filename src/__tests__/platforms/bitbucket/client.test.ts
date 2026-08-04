@@ -18,7 +18,7 @@ function mockResponse(data: unknown, status = 200) {
   };
 }
 
-const token = 'testuser:test-app-password';
+const token = 'test-access-token';
 
 describe('Bitbucket PlatformClient', () => {
   let client: BitbucketPlatformClient;
@@ -26,6 +26,17 @@ describe('Bitbucket PlatformClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client = new BitbucketPlatformClient(token);
+  });
+
+  it('authenticates with the OAuth access token as a Bearer header', async () => {
+    mockFetch.mockResolvedValueOnce(mockResponse({ values: [] }));
+    await client.listRepos('ws');
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.bitbucket.org/2.0/workspaces/ws/repositories?pagelen=100',
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer test-access-token' }),
+      }),
+    );
   });
 
   describe('getIssue', () => {

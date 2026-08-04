@@ -477,21 +477,21 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* ── Bitbucket Cloud (App Password) ── */}
+          {/* ── Bitbucket Cloud (Marketplace app) ── */}
           <div className="flex flex-row flex-nowrap items-center justify-between gap-3 p-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className={iconContainerClass}>
                 <BitbucketLogo />
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Bitbucket App Password</div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Bitbucket Cloud (Marketplace app)</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  Connect Bitbucket Cloud for Cloud Agents, Bugbot and enhanced codebase context
+                  Connect Bitbucket Cloud via the SYNTARO Marketplace app — OAuth client credentials
                 </div>
               </div>
             </div>
             <a
-              href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/docs/platforms/bitbucket-setup.md"
+              href="https://marketplace.atlassian.com"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors shrink-0"

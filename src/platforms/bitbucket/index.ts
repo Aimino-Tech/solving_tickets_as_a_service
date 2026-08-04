@@ -1,7 +1,8 @@
 /**
  * Bitbucket PlatformClient implementation.
  *
- * Makes REST API calls to Bitbucket Cloud using Basic auth.
+ * Makes REST API calls to Bitbucket Cloud using a Bearer access token from
+ * the Marketplace-app OAuth2 client-credentials grant (AIM-4630/4633).
  * API docs: https://developer.atlassian.com/bitbucket/api/2/reference/
  */
 
@@ -22,42 +23,25 @@ function parseRepo(repo: string): { owner: string; repo: string } {
 }
 
 /**
- * Parse token as "username:app-password" or use raw Basic header value.
- * The PlatformConfig token for Bitbucket should be "username:appPassword".
- */
-function parseToken(token: string): { username: string; appPassword: string } {
-  const colonIdx = token.indexOf(':');
-  if (colonIdx === -1) {
-    // Treat the whole token as a Basic auth header value
-    const decoded = Buffer.from(token, 'base64').toString('utf-8');
-    const parts = decoded.split(':');
-    return { username: parts[0] ?? '', appPassword: parts.slice(1).join(':') };
-  }
-  return {
-    username: token.slice(0, colonIdx),
-    appPassword: token.slice(colonIdx + 1),
-  };
-}
-
-/**
  * Bitbucket implementation of PlatformClient.
+ *
+ * The constructor takes the OAuth access token (Bearer) obtained via the
+ * client-credentials grant — NOT a username/app-password pair.
  */
 export class BitbucketPlatformClient implements PlatformClient {
   readonly platform = 'bitbucket' as const;
 
   private readonly baseUrl: string;
-  private readonly authHeader: string;
+  private readonly accessToken: string;
 
-  constructor(token: string, baseUrl?: string) {
-    const { username, appPassword } = parseToken(token);
+  constructor(accessToken: string, baseUrl?: string) {
     this.baseUrl = baseUrl ?? 'https://api.bitbucket.org/2.0';
-    const encoded = Buffer.from(`${username}:${appPassword}`).toString('base64');
-    this.authHeader = `Basic ${encoded}`;
+    this.accessToken = accessToken;
   }
 
   private get headers(): Record<string, string> {
     return {
-      Authorization: this.authHeader,
+      Authorization: `Bearer ${this.accessToken}`,
       'Content-Type': 'application/json',
     };
   }

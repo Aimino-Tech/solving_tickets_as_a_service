@@ -6,8 +6,10 @@ export interface BitbucketPlatformConfig {
   apiVersion: BitbucketApiVersion;
   baseUrl: string;
   apiBaseUrl: string;
-  username: string;
-  appPassword: string;
+  clientId: string;
+  clientSecret: string;
+  workspace: string;
+  tokenUrl: string;
   rateLimitPerHour: number;
 }
 
@@ -33,8 +35,10 @@ export function createBitbucketConfig(): BitbucketPlatformConfig {
     apiVersion,
     baseUrl,
     apiBaseUrl: buildApiBaseUrl(baseUrl, apiVersion),
-    username: config.bitbucket.username,
-    appPassword: config.bitbucket.appPassword,
+    clientId: config.bitbucket.clientId,
+    clientSecret: config.bitbucket.clientSecret,
+    workspace: config.bitbucket.workspace,
+    tokenUrl: config.bitbucket.tokenUrl,
     rateLimitPerHour: apiVersion === 'cloud' ? 1000 : 5000,
   };
 }

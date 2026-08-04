@@ -25,19 +25,27 @@ vi.mock('../../config.js', () => ({
   config: {
     syntaro: { label: 'syntaro:fix' },
     bitbucket: {
-      username: 'testuser',
-      appPassword: 'test-password',
+      clientId: 'app-id',
+      clientSecret: 'app-secret',
+      workspace: 'ws',
       webhookSecret: 'test-secret',
+      baseUrl: 'https://api.bitbucket.org',
+      tokenUrl: 'https://bitbucket.org/site/oauth2/access_token',
     },
   },
 }));
 
 const mockCreateComment = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockAccessToken = vi.hoisted(() => vi.fn().mockResolvedValue('test-access-token'));
 
 vi.mock('../../platforms/bitbucket/index.js', () => ({
   BitbucketPlatformClient: class {
     createComment = mockCreateComment;
   },
+}));
+
+vi.mock('../../platforms/bitbucket/auth.js', () => ({
+  getBitbucketAuth: () => ({ accessToken: mockAccessToken, baseUrl: 'https://api.bitbucket.org' }),
 }));
 
 import type { PlatformWebhookEvent } from '../../webhooks/base.js';

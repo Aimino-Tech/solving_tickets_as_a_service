@@ -104,7 +104,7 @@ vi.mock('../config.js', () => ({
       privateKeyEnv: '-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----',
     },
     gitlab: { url: 'https://gitlab.com', token: '', webhookSecret: 'test-secret' },
-    bitbucket: { username: '', appPassword: '', webhookSecret: '' },
+    bitbucket: { clientId: '', clientSecret: '', workspace: '', webhookSecret: '' },
     syntaro: {
       label: 'syntaro:fix',
       botName: 'SYNTARO',

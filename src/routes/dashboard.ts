@@ -466,7 +466,7 @@ const configRouter: Router = Router();
 configRouter.get('/', (_req: Request, res: Response) => {
   try {
     const env: Record<string, string> = {};
-    const trackedKeys = ['LINEAR_API_KEY', 'BITBUCKET_APP_PASSWORD', 'JIRA_API_TOKEN', 'GITHUB_TOKEN', 'SLACK_BOT_TOKEN', 'SLACK_APP_TOKEN'];
+    const trackedKeys = ['LINEAR_API_KEY', 'BITBUCKET_CLIENT_SECRET', 'JIRA_API_TOKEN', 'GITHUB_TOKEN', 'SLACK_BOT_TOKEN', 'SLACK_APP_TOKEN'];
     for (const key of trackedKeys) {
       const val = key in envOverrides && envOverrides[key]
         ? envOverrides[key]
@@ -502,8 +502,8 @@ configRouter.get('/', (_req: Request, res: Response) => {
         id: 'bitbucket',
         name: 'Bitbucket',
         icon: 'bitbucket',
-        connected: !!(config.bitbucket.username && config.bitbucket.appPassword),
-        configUrl: 'https://bitbucket.org/account/settings/app-passwords/',
+        connected: !!(config.bitbucket.clientId && config.bitbucket.clientSecret),
+        configUrl: 'https://marketplace.atlassian.com/apps/1225120/syntaro-ai-ticket-fixing',
       },
     ];
 

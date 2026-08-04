@@ -71,3 +71,6 @@ worktrees/
 # Local runtime artifacts
 celerybeat-schedule
 .stas/
+
+# AI code-scan caches
+src/.wisdom/

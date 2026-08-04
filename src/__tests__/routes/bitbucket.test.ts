@@ -38,10 +38,12 @@ vi.mock('../../auth/middleware.js', () => ({
 vi.mock('../../config.js', () => ({
   config: {
     bitbucket: {
-      username: '',
-      appPassword: '',
+      clientId: '',
+      clientSecret: '',
+      workspace: '',
       webhookSecret: 'test-secret',
       baseUrl: 'https://api.bitbucket.org',
+      tokenUrl: 'https://bitbucket.org/site/oauth2/access_token',
     },
   },
 }));
@@ -50,6 +52,7 @@ const mockListRepos = vi.hoisted(() => vi.fn());
 const mockListWebhooks = vi.hoisted(() => vi.fn());
 const mockCreateWebhook = vi.hoisted(() => vi.fn());
 const mockRemoveWebhook = vi.hoisted(() => vi.fn());
+const mockFetchToken = vi.hoisted(() => vi.fn());
 
 vi.mock('../../platforms/bitbucket/index.js', () => ({
   BitbucketPlatformClient: class {
@@ -58,6 +61,10 @@ vi.mock('../../platforms/bitbucket/index.js', () => ({
     createWebhook = mockCreateWebhook;
     removeWebhook = mockRemoveWebhook;
   },
+}));
+
+vi.mock('../../platforms/bitbucket/oauth.js', () => ({
+  fetchBitbucketToken: mockFetchToken,
 }));
 
 function mockReqRes(method: string, path: string) {
@@ -110,36 +117,44 @@ describe('bitbucket routes', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetchToken.mockResolvedValue({ access_token: 'test-token', expires_in: 3600, token_type: 'bearer' });
   });
 
   describe('GET /status', () => {
     it('reports disconnected when no credentials are configured', async () => {
       const { req, res } = mockReqRes('GET', '/status');
       await invokeRoute(router, 'get', '/status', req, res);
-      expect(res.json).toHaveBeenCalledWith({ connected: false, workspace: '', username: null });
+      expect(res.json).toHaveBeenCalledWith({
+        connected: false,
+        workspace: '',
+        clientId: null,
+        scopes: expect.any(Array),
+        marketplaceUrl: expect.any(String),
+      });
     });
   });
 
   describe('POST /connect', () => {
     it('rejects when fields are missing', async () => {
       const { req, res } = mockReqRes('POST', '/connect');
-      req.body = { username: 'u' };
+      req.body = { clientId: 'u' };
       await invokeRoute(router, 'post', '/connect', req, res);
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
-    it('connects when credentials verify against the workspace', async () => {
+    it('connects when Marketplace app credentials verify against the workspace', async () => {
       mockListRepos.mockResolvedValue([{ name: 'repo-a', fullName: 'ws/repo-a', private: false, mainbranch: 'main' }]);
       const { req, res } = mockReqRes('POST', '/connect');
-      req.body = { username: 'u', appPassword: 'p', workspace: 'ws' };
+      req.body = { clientId: 'app-id', clientSecret: 'app-secret', workspace: 'ws' };
       await invokeRoute(router, 'post', '/connect', req, res);
+      expect(mockFetchToken).toHaveBeenCalledWith('app-id', 'app-secret', expect.any(Object));
       expect(res.json).toHaveBeenCalledWith({ connected: true, workspace: 'ws', repoCount: 1 });
     });
 
     it('returns 401 when verification fails', async () => {
-      mockListRepos.mockRejectedValue(new Error('Unauthorized'));
+      mockFetchToken.mockRejectedValue(new Error('invalid_client'));
       const { req, res } = mockReqRes('POST', '/connect');
-      req.body = { username: 'u', appPassword: 'bad', workspace: 'ws' };
+      req.body = { clientId: 'app-id', clientSecret: 'bad-secret', workspace: 'ws' };
       await invokeRoute(router, 'post', '/connect', req, res);
       expect(res.status).toHaveBeenCalledWith(401);
     });
@@ -151,7 +166,7 @@ describe('bitbucket routes', () => {
       mockListWebhooks.mockResolvedValue([{ uuid: '{h}', url: 'https://api.syntaro.io/webhook/bitbucket', active: true }]);
 
       const connect = mockReqRes('POST', '/connect');
-      connect.req.body = { username: 'u', appPassword: 'p', workspace: 'ws' };
+      connect.req.body = { clientId: 'app-id', clientSecret: 'app-secret', workspace: 'ws' };
       await invokeRoute(router, 'post', '/connect', connect.req, connect.res);
 
       const { req, res } = mockReqRes('GET', '/repos');
@@ -168,7 +183,7 @@ describe('bitbucket routes', () => {
     it('creates a webhook pointing at the SYNTARO endpoint', async () => {
       mockCreateWebhook.mockResolvedValue({ uuid: '{new-hook}' });
       const connect = mockReqRes('POST', '/connect');
-      connect.req.body = { username: 'u', appPassword: 'p', workspace: 'ws' };
+      connect.req.body = { clientId: 'app-id', clientSecret: 'app-secret', workspace: 'ws' };
       await invokeRoute(router, 'post', '/connect', connect.req, connect.res);
 
       const { req, res } = mockReqRes('POST', '/repos/ws/repo-a/webhook');
@@ -186,7 +201,7 @@ describe('bitbucket routes', () => {
       ]);
       mockRemoveWebhook.mockResolvedValue(undefined);
       const connect = mockReqRes('POST', '/connect');
-      connect.req.body = { username: 'u', appPassword: 'p', workspace: 'ws' };
+      connect.req.body = { clientId: 'app-id', clientSecret: 'app-secret', workspace: 'ws' };
       await invokeRoute(router, 'post', '/connect', connect.req, connect.res);
 
       const { req, res } = mockReqRes('DELETE', '/repos/ws/repo-a/webhook');

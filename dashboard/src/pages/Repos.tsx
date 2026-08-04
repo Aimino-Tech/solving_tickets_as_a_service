@@ -15,10 +15,16 @@ export default function Repos() {
   const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; githubLogin?: string }>({ connected: false });
   const [showInstallations, setShowInstallations] = useState(false);
   const [togglingRepo, setTogglingRepo] = useState<string | null>(null);
-  const [bbStatus, setBbStatus] = useState<{ connected: boolean; workspace: string }>({ connected: false, workspace: '' });
+  const [bbStatus, setBbStatus] = useState<{
+    connected: boolean;
+    workspace: string;
+    clientId?: string | null;
+    scopes?: string[];
+    marketplaceUrl?: string;
+  }>({ connected: false, workspace: '' });
   const [bbRepos, setBbRepos] = useState<BitbucketRepo[]>([]);
   const [bbLoading, setBbLoading] = useState(false);
-  const [bbForm, setBbForm] = useState({ username: '', appPassword: '', workspace: '' });
+  const [bbForm, setBbForm] = useState({ clientId: '', clientSecret: '', workspace: '' });
   const [bbConnecting, setBbConnecting] = useState(false);
   const [bbError, setBbError] = useState<string | null>(null);
   const [togglingBbRepo, setTogglingBbRepo] = useState<string | null>(null);
@@ -43,7 +49,7 @@ export default function Repos() {
     setBbError(null);
     try {
       await bitbucket.connect(bbForm);
-      setBbForm({ username: '', appPassword: '', workspace: '' });
+      setBbForm({ clientId: '', clientSecret: '', workspace: '' });
       await loadBitbucket();
     } catch (err) {
       setBbError(err instanceof Error ? err.message : 'Failed to connect Bitbucket');
@@ -360,14 +366,21 @@ export default function Repos() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('repos.bitbucketTitle')}</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {bbStatus.connected
-                ? t('repos.bitbucketConnectedTo', { workspace: bbStatus.workspace })
+                ? `${t('repos.bitbucketConnectedApp')} — ${t('repos.bitbucketConnectedTo', { workspace: bbStatus.workspace })}`
                 : t('repos.bitbucketDesc')}
             </p>
           </div>
           {bbStatus.connected ? (
-            <button onClick={handleDisconnectBitbucket} className="btn-danger text-sm">
-              {t('repos.bitbucketDisconnect')}
-            </button>
+            <div className="flex flex-col items-start gap-2 sm:items-end">
+              {bbStatus.scopes && bbStatus.scopes.length > 0 ? (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('repos.bitbucketPermissionsTitle')}: {bbStatus.scopes.join(', ')}
+                </p>
+              ) : null}
+              <button onClick={handleDisconnectBitbucket} className="btn-danger text-sm">
+                {t('repos.bitbucketDisconnect')}
+              </button>
+            </div>
           ) : null}
         </div>
 
@@ -379,20 +392,28 @@ export default function Repos() {
 
         {!bbStatus.connected ? (
           <div className="card mt-3">
-            <p className="text-sm text-gray-600 dark:text-gray-300">{t('repos.bitbucketAppPasswordHint')}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">{t('repos.bitbucketOAuthHint')}</p>
+            <a
+              href={bbStatus.marketplaceUrl ?? 'https://marketplace.atlassian.com'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary mt-3 inline-block"
+            >
+              {t('repos.bitbucketInstall')}
+            </a>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <input
                 type="text"
-                placeholder={t('repos.bitbucketUsername')}
-                value={bbForm.username}
-                onChange={(e) => setBbForm({ ...bbForm, username: e.target.value })}
+                placeholder={t('repos.bitbucketClientId')}
+                value={bbForm.clientId}
+                onChange={(e) => setBbForm({ ...bbForm, clientId: e.target.value })}
                 className="input"
               />
               <input
                 type="password"
-                placeholder={t('repos.bitbucketAppPassword')}
-                value={bbForm.appPassword}
-                onChange={(e) => setBbForm({ ...bbForm, appPassword: e.target.value })}
+                placeholder={t('repos.bitbucketClientSecret')}
+                value={bbForm.clientSecret}
+                onChange={(e) => setBbForm({ ...bbForm, clientSecret: e.target.value })}
                 className="input"
               />
               <input
@@ -405,11 +426,16 @@ export default function Repos() {
             </div>
             <button
               onClick={handleConnectBitbucket}
-              disabled={bbConnecting || !bbForm.username || !bbForm.appPassword || !bbForm.workspace}
+              disabled={bbConnecting || !bbForm.clientId || !bbForm.clientSecret || !bbForm.workspace}
               className="btn-primary mt-3"
             >
               {bbConnecting ? t('repos.bitbucketConnecting') : t('repos.bitbucketConnect')}
             </button>
+            {bbStatus.scopes && bbStatus.scopes.length > 0 ? (
+              <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                {t('repos.bitbucketPermissionsTitle')}: {bbStatus.scopes.join(', ')}
+              </p>
+            ) : null}
           </div>
         ) : (
           <div className="space-y-3 mt-3">

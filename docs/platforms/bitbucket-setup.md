@@ -4,43 +4,53 @@ SYNTARO supports Bitbucket Cloud end-to-end: a labeled Bitbucket issue
 (`syntaro:fix`) triggers a fix run, status comments are posted on the issue,
 and a draft pull request is opened on Bitbucket for human review.
 
+The Bitbucket integration is a **real Bitbucket Marketplace app** (AIM-4633):
+outbound API calls authenticate with the OAuth2 **client-credentials grant**
+using the app's client id/secret — **not** raw app passwords.
+
 ## Prerequisites
 
 - A Bitbucket workspace and repository (Cloud)
 - Admin access to the repository
 - SYNTARO instance running (see [DEVELOPMENT.md](../../DEVELOPMENT.md))
+- A Bitbucket Marketplace app listing (installed from the Atlassian
+  Marketplace; the listing itself is an external vendor-portal action)
 
-## Step 1: Configure SYNTARO (server side)
+## Step 1: Install the Marketplace app
+
+1. Open the dashboard **Repos → Bitbucket Workspace** section and click
+   **Install from Marketplace** (or visit the app's Atlassian Marketplace
+   listing directly).
+2. Choose the workspace you want to grant the app access to.
+3. Review the requested scopes:
+   - `repository:read`, `repository:write`
+   - `issue:read`, `issue:write`
+   - `pullrequest:read`, `pullrequest:write`
+   - `webhook:read`, `webhook:write`
+4. Install.
+
+## Step 2: Configure SYNTARO (server side)
 
 Set these variables on the SYNTARO instance (see [`.env.example`](../../.env.example)):
 
 | Variable | Purpose |
 |----------|---------|
-| `BITBUCKET_USERNAME` | Bitbucket username (or workspace account) |
-| `BITBUCKET_APP_PASSWORD` | Bitbucket app password (see Step 2) |
+| `BITBUCKET_CLIENT_ID` | Marketplace app client id (vendor portal) |
+| `BITBUCKET_CLIENT_SECRET` | Marketplace app client secret (vendor portal) |
 | `BITBUCKET_WORKSPACE` | Default workspace slug |
 | `BITBUCKET_WEBHOOK_SECRET` | Secret used to verify webhook payloads (HMAC-SHA256) |
 | `BITBUCKET_BASE_URL` | Defaults to `https://api.bitbucket.org` (Cloud) |
+| `BITBUCKET_TOKEN_URL` | Defaults to `https://bitbucket.org/site/oauth2/access_token` |
 
 The workspace can also be connected from the dashboard (**Repos → Bitbucket
-Workspace** or **Settings → Integrations**), which verifies the credentials
-and lists the workspace repositories.
-
-## Step 2: Create an App Password
-
-1. Go to **Bitbucket account settings → App passwords** (https://bitbucket.org/account/settings/app-passwords/)
-2. Click **Create app password**
-3. Grant these permissions:
-   - Pull requests: **Read, Write**
-   - Issues: **Read, Write**
-   - Webhooks: **Read, Write**
-   - Repositories: **Read**
-4. Copy the generated password into `BITBUCKET_APP_PASSWORD`
+Workspace**), which verifies the app credentials by fetching an access token
+and listing the workspace repositories.
 
 ## Step 3: Configure the Webhook
 
 1. Go to **Repository Settings → Webhooks** (or enable it from the dashboard:
-   **Repos → Bitbucket Workspace → Enable SYNTARO** per repo)
+   **Repos → Bitbucket Workspace → Enable SYNTARO** per repo — the dashboard
+   registers the webhook with the SYNTARO webhook secret automatically)
 2. Click **Add webhook**
 3. Title: `SYNTARO Webhook`
 4. URL: `https://your-syntaro-instance.com/webhook/bitbucket`
@@ -65,8 +75,6 @@ Repository variables**:
 | Variable | Value |
 |----------|-------|
 | `SYNTARO_API_KEY` | Your SYNTARO API key |
-| `BITBUCKET_USERNAME` | Your Bitbucket username |
-| `BITBUCKET_APP_PASSWORD` | Your Bitbucket app password |
 
 ## Known Limitations
 

@@ -1,12 +1,14 @@
 /**
- * Bitbucket authentication wrapper — app-password / Basic auth for the
- * Bitbucket Cloud API.
+ * Bitbucket authentication wrapper — Marketplace-app OAuth2 credentials
+ * (client-credentials grant, AIM-4630/4633).
  *
- * Wraps the username + app password configured via environment variables
- * so the rest of the platform layer does not need to know about config keys.
+ * Wraps the Bitbucket Marketplace app client id/secret configured via
+ * environment variables so the rest of the platform layer does not need to
+ * know about config keys. Tokens are fetched on demand and never persisted.
  */
 
 import { config } from '../../config.js';
+import { fetchBitbucketToken } from './oauth.js';
 import { rootLogger } from '../../utils/logger.js';
 
 const log = rootLogger.child({ module: 'platform-bitbucket-auth' });
@@ -15,16 +17,22 @@ export interface BitbucketAuth {
   /** The Bitbucket API base URL. */
   readonly baseUrl: string;
 
-  /** The username (BITBUCKET_USERNAME). */
-  readonly username: string;
+  /** The Marketplace app client id (BITBUCKET_CLIENT_ID). */
+  readonly clientId: string;
 
-  /** The app password (BITBUCKET_APP_PASSWORD). */
-  readonly appPassword: string;
+  /** The Marketplace app client secret (BITBUCKET_CLIENT_SECRET). */
+  readonly clientSecret: string;
 
-  /** Return a Basic Authorization header value. */
-  basicAuthHeader(): string;
+  /** The connected workspace slug (BITBUCKET_WORKSPACE). */
+  readonly workspace: string;
 
-  /** Check whether auth is configured and available. */
+  /** The OAuth token endpoint. */
+  readonly tokenUrl: string;
+
+  /** Return a fresh Bearer access token via the client-credentials grant. */
+  accessToken(): Promise<string>;
+
+  /** Check whether OAuth credentials are configured. */
   isConfigured(): boolean;
 }
 
@@ -32,22 +40,24 @@ let _auth: BitbucketAuth | undefined;
 
 function createAuth(): BitbucketAuth {
   const baseUrl = 'https://api.bitbucket.org/2.0';
-  const { username, appPassword } = config.bitbucket;
+  const { clientId, clientSecret, workspace, tokenUrl } = config.bitbucket;
 
-  if (!username || !appPassword) {
-    log.warn('Bitbucket credentials not configured — set BITBUCKET_USERNAME and BITBUCKET_APP_PASSWORD');
+  if (!clientId || !clientSecret) {
+    log.warn('Bitbucket OAuth credentials not configured — set BITBUCKET_CLIENT_ID and BITBUCKET_CLIENT_SECRET');
   }
 
   return {
     baseUrl,
-    username,
-    appPassword,
-    basicAuthHeader() {
-      const encoded = Buffer.from(`${this.username}:${this.appPassword}`).toString('base64');
-      return `Basic ${encoded}`;
+    clientId,
+    clientSecret,
+    workspace,
+    tokenUrl,
+    async accessToken() {
+      const token = await fetchBitbucketToken(clientId, clientSecret, { tokenUrl });
+      return token.access_token;
     },
     isConfigured() {
-      return Boolean(this.username && this.appPassword);
+      return Boolean(clientId && clientSecret);
     },
   };
 }
