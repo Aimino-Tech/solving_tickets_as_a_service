@@ -25,7 +25,7 @@ export default function Repos() {
   const [bbStatus, setBbStatus] = useState<{ connected: boolean; workspace: string }>({ connected: false, workspace: '' });
   const [bbRepos, setBbRepos] = useState<BitbucketRepo[]>([]);
   const [bbLoading, setBbLoading] = useState(false);
-  const [bbForm, setBbForm] = useState({ username: '', appPassword: '', workspace: '' });
+  const [bbForm, setBbForm] = useState({ apiToken: '' });
   const [bbConnecting, setBbConnecting] = useState(false);
   const [bbError, setBbError] = useState<string | null>(null);
   const [togglingBbRepo, setTogglingBbRepo] = useState<string | null>(null);
@@ -65,11 +65,16 @@ export default function Repos() {
   }
 
   async function handleConnectBitbucket() {
+    const apiToken = bbForm.apiToken.trim();
+    if (!apiToken || apiToken.length < 20) {
+      setBbError('Paste the full Atlassian API token (Account settings → Security → API tokens).');
+      return;
+    }
     setBbConnecting(true);
     setBbError(null);
     try {
-      await bitbucket.connect(bbForm);
-      setBbForm({ username: '', appPassword: '', workspace: '' });
+      await bitbucket.connect({ apiToken });
+      setBbForm({ apiToken: '' });
       await loadBitbucket();
     } catch (err) {
       setBbError(err instanceof Error ? err.message : 'Failed to connect Bitbucket');
@@ -417,38 +422,53 @@ export default function Repos() {
         )}
 
         {!bbStatus.connected ? (
-          <div className="card mt-3">
-            <p className="text-sm text-gray-600 dark:text-gray-300">{t('repos.bitbucketAppPasswordHint')}</p>
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <input
-                type="text"
-                placeholder={t('repos.bitbucketUsername')}
-                value={bbForm.username}
-                onChange={(e) => setBbForm({ ...bbForm, username: e.target.value })}
-                className="input-field min-h-[44px]"
-              />
-              <input
-                type="password"
-                placeholder={t('repos.bitbucketAppPassword')}
-                value={bbForm.appPassword}
-                onChange={(e) => setBbForm({ ...bbForm, appPassword: e.target.value })}
-                className="input-field min-h-[44px]"
-              />
-              <input
-                type="text"
-                placeholder={t('repos.bitbucketWorkspace')}
-                value={bbForm.workspace}
-                onChange={(e) => setBbForm({ ...bbForm, workspace: e.target.value })}
-                className="input-field min-h-[44px]"
-              />
-            </div>
+          <div className="card mt-3 space-y-3">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Connect with Bitbucket OAuth (recommended). Workspace is detected automatically.
+            </p>
+            {bbError && (
+              <p className="text-sm text-red-600 dark:text-red-400">{bbError}</p>
+            )}
             <button
-              onClick={handleConnectBitbucket}
-              disabled={bbConnecting || !bbForm.username || !bbForm.appPassword || !bbForm.workspace}
-              className="btn-primary mt-3"
+              onClick={async () => {
+                setBbConnecting(true);
+                setBbError(null);
+                try {
+                  const { url } = await bitbucket.getOAuthUrl();
+                  window.location.href = url;
+                } catch (err) {
+                  setBbError(err instanceof Error ? err.message : 'Failed to start Bitbucket OAuth');
+                  setBbConnecting(false);
+                }
+              }}
+              disabled={bbConnecting}
+              className="btn-primary"
             >
-              {bbConnecting ? t('repos.bitbucketConnecting') : t('repos.bitbucketConnect')}
+              {bbConnecting ? t('repos.bitbucketConnecting') : 'Connect with Bitbucket'}
             </button>
+            <details className="text-sm">
+              <summary className="cursor-pointer text-gray-500">Use API token instead</summary>
+              <div className="mt-3 max-w-xl space-y-2">
+                <input
+                  type="password"
+                  placeholder={t('repos.bitbucketApiToken')}
+                  value={bbForm.apiToken}
+                  onChange={(e) => {
+                    setBbError(null);
+                    setBbForm({ apiToken: e.target.value });
+                  }}
+                  className="input-field min-h-[44px] w-full"
+                  autoComplete="off"
+                />
+                <button
+                  onClick={handleConnectBitbucket}
+                  disabled={bbConnecting || !bbForm.apiToken.trim()}
+                  className="btn-secondary"
+                >
+                  {bbConnecting ? t('repos.bitbucketConnecting') : t('repos.bitbucketConnect')}
+                </button>
+              </div>
+            </details>
           </div>
         ) : (
           <div className="space-y-3 mt-3">

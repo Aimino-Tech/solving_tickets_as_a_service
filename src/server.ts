@@ -75,6 +75,7 @@ import { gitHubOAuthRouter } from './routes/githubOAuth.js';
 import healthRouter from './routes/health.js';
 import { kpiRouter } from './routes/kpi.js';
 import { bitbucketRouter } from './routes/bitbucket.js';
+import { bitbucketOAuthRouter } from './routes/bitbucketOAuth.js';
 import { linearOAuthRouter } from './routes/linearOAuth.js';
 import { litellmUsageRouter } from './routes/litellmUsage.js';
 import mcpKeysRouter from './routes/mcpKeys.js';
@@ -822,6 +823,7 @@ export async function createApp(): Promise<express.Application> {
 
   // GitHub OAuth — before /api/v1 catch-all to avoid requireAuth conflict
   app.use('/api/v1/auth/github', gitHubOAuthRouter);
+  app.use('/api/v1/auth/bitbucket', bitbucketOAuthRouter);
   app.use('/api/v1/auth/linear', linearOAuthRouter);
 
   // Social OAuth (Google + Microsoft via Supabase) — before /api/v1 catch-all

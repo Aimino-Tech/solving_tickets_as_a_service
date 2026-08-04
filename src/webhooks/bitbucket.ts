@@ -1,8 +1,10 @@
 import crypto from 'node:crypto';
 
 import { config } from '../config.js';
+import { bitbucketConnectionRepository } from '../db/repositories/BitbucketConnectionRepository.js';
 import { createBitbucketConfig } from '../platforms/bitbucket/config.js';
 import { BitbucketPlatformClient } from '../platforms/bitbucket/index.js';
+import { clientFromStoredConnection } from '../routes/bitbucketOAuth.js';
 import { rootLogger } from '../utils/logger.js';
 import type { IssueJobData } from '../utils/types.js';
 import type { CreatePullRequestParams, PlatformClient, PlatformWebhook, PlatformWebhookEvent } from './base.js';
@@ -118,7 +120,20 @@ export const bitbucketWebhook: PlatformWebhook = {
   },
 };
 
-function createBitbucketPlatformClient(): BitbucketPlatformClient {
+/**
+ * Resolve a Bitbucket API client for a workspace: prefer the per-user DB
+ * connection, fall back to instance BITBUCKET_* env (self-host).
+ */
+export async function resolveBitbucketClient(workspace: string): Promise<BitbucketPlatformClient> {
+  try {
+    const row = await bitbucketConnectionRepository.findByWorkspace(workspace);
+    if (row) {
+      return clientFromStoredConnection(row);
+    }
+  } catch (err) {
+    log.warn({ err: String(err), workspace }, 'Failed to load Bitbucket connection from DB — falling back to env');
+  }
+
   const token = `${config.bitbucket.username}:${config.bitbucket.appPassword}`;
   return new BitbucketPlatformClient(token, config.bitbucket.baseUrl);
 }
@@ -127,12 +142,12 @@ export const bitbucketClient: PlatformClient = {
   platform: 'bitbucket',
 
   async createComment(repoOwner: string, repoName: string, issueNumber: number, body: string): Promise<void> {
-    const client = createBitbucketPlatformClient();
+    const client = await resolveBitbucketClient(repoOwner);
     await client.createComment(`${repoOwner}/${repoName}`, issueNumber, body);
   },
 
   async createPullRequest(params: CreatePullRequestParams): Promise<{ url: string; number: number }> {
-    const client = createBitbucketPlatformClient();
+    const client = await resolveBitbucketClient(params.repoOwner);
     const pr = await client.createPullRequest({
       repoOwner: params.repoOwner,
       repoName: params.repoName,

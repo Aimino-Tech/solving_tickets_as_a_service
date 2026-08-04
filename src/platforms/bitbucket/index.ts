@@ -22,21 +22,31 @@ function parseRepo(repo: string): { owner: string; repo: string } {
 }
 
 /**
- * Parse token as "username:app-password" or use raw Basic header value.
- * The PlatformConfig token for Bitbucket should be "username:appPassword".
+ * Parse credentials for Bitbucket Cloud.
+ *
+ * - `bearer:<token>` or a raw token with no `:` → Bearer auth (workspace/repo access tokens)
+ * - `email:token` or `username:appPassword` → Basic auth (Atlassian API tokens / legacy app passwords)
  */
-function parseToken(token: string): { username: string; appPassword: string } {
-  const colonIdx = token.indexOf(':');
-  if (colonIdx === -1) {
-    // Treat the whole token as a Basic auth header value
-    const decoded = Buffer.from(token, 'base64').toString('utf-8');
-    const parts = decoded.split(':');
-    return { username: parts[0] ?? '', appPassword: parts.slice(1).join(':') };
+function parseAuth(token: string): { authorization: string } {
+  const trimmed = token.trim();
+  if (/^bearer\s+/i.test(trimmed)) {
+    return { authorization: `Bearer ${trimmed.replace(/^bearer\s+/i, '').trim()}` };
   }
-  return {
-    username: token.slice(0, colonIdx),
-    appPassword: token.slice(colonIdx + 1),
-  };
+  if (trimmed.toLowerCase().startsWith('bearer:')) {
+    return { authorization: `Bearer ${trimmed.slice('bearer:'.length).trim()}` };
+  }
+  const colonIdx = trimmed.indexOf(':');
+  if (colonIdx === -1) {
+    // Token-only → Bearer (no email/username required in the client)
+    return { authorization: `Bearer ${trimmed}` };
+  }
+  const username = trimmed.slice(0, colonIdx);
+  const secret = trimmed.slice(colonIdx + 1);
+  // Sentinel stored when connect succeeded via Bearer
+  if (username === 'bearer' || username === '') {
+    return { authorization: `Bearer ${secret}` };
+  }
+  return { authorization: `Basic ${Buffer.from(`${username}:${secret}`).toString('base64')}` };
 }
 
 /**
@@ -49,10 +59,9 @@ export class BitbucketPlatformClient implements PlatformClient {
   private readonly authHeader: string;
 
   constructor(token: string, baseUrl?: string) {
-    const { username, appPassword } = parseToken(token);
-    this.baseUrl = baseUrl ?? 'https://api.bitbucket.org/2.0';
-    const encoded = Buffer.from(`${username}:${appPassword}`).toString('base64');
-    this.authHeader = `Basic ${encoded}`;
+    const raw = baseUrl ?? 'https://api.bitbucket.org/2.0';
+    this.baseUrl = raw.includes('/2.0') ? raw.replace(/\/$/, '') : `${raw.replace(/\/$/, '')}/2.0`;
+    this.authHeader = parseAuth(token).authorization;
   }
 
   private get headers(): Record<string, string> {
@@ -72,7 +81,21 @@ export class BitbucketPlatformClient implements PlatformClient {
 
     if (!response.ok) {
       const text = await response.text().catch(() => 'unknown error');
-      throw new Error(`Bitbucket API ${method} ${path} failed: ${response.status} ${text}`);
+      let bitbucketMessage = text;
+      try {
+        const parsed = JSON.parse(text) as { error?: { message?: string } | string; message?: string };
+        if (typeof parsed.error === 'string') {
+          bitbucketMessage = parsed.error;
+        } else {
+          bitbucketMessage = parsed.error?.message ?? parsed.message ?? text;
+        }
+      } catch {
+        /* keep raw text */
+      }
+      const err = new Error(`Bitbucket API error: ${bitbucketMessage}`);
+      (err as Error & { status?: number; bitbucketMessage?: string }).status = response.status;
+      (err as Error & { bitbucketMessage?: string }).bitbucketMessage = bitbucketMessage;
+      throw err;
     }
 
     return response.json() as Promise<T>;
@@ -133,6 +156,14 @@ export class BitbucketPlatformClient implements PlatformClient {
   }
 
   // ── Repository / webhook operations ────────────────────────────────
+
+  async listWorkspaces(): Promise<Array<{ slug: string; name: string }>> {
+    const data = await this.request<any>('GET', '/workspaces?role=member&pagelen=100');
+    return (data.values ?? []).map((w: { slug?: string; name?: string }) => ({
+      slug: w.slug ?? '',
+      name: w.name ?? w.slug ?? '',
+    }));
+  }
 
   async listRepos(
     workspace: string,

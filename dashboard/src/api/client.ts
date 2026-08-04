@@ -82,26 +82,38 @@ export async function request<T>(
         console.warn('Token refresh failed:', refreshErr);
       }
     }
+
+    const body = await res.json().catch(() => ({ error: 'Unauthorized' as string }));
+    const errorMsg = typeof body.error === 'string' ? body.error : 'Unauthorized';
+    const hint = typeof (body as { hint?: string }).hint === 'string' ? (body as { hint: string }).hint.trim() : '';
+    const fullMsg = hint && !errorMsg.includes(hint) ? `${errorMsg}. ${hint}` : errorMsg;
+
     const _isLogin = path.includes('/auth/login') || path.includes('/auth/register');
     const _isReset = path.includes('/auth/forgot-password') || path.includes('/auth/reset-password');
     const _isAuthFlow = _isLogin || _isReset;
-    if (!_isAuthFlow) {
+    // Only wipe the session for real JWT failures. Upstream Bitbucket/GitHub 401 bodies
+    // (e.g. "no Bitbucket scopes") must surface in the form — not redirect to /login.
+    const isSessionAuthFailure =
+      errorMsg === 'Authentication required' ||
+      errorMsg === 'Invalid or expired token' ||
+      errorMsg === 'Unauthorized';
+    if (!_isAuthFlow && isSessionAuthFailure) {
       clearToken();
       if (typeof window !== 'undefined') {
         window.location.href = '/login';
       }
     }
     if (_isReset) {
-      const resetBody = await res.json().catch(() => ({ error: 'Invalid credentials' }));
-      throw new Error(typeof resetBody.error === 'string' ? resetBody.error : 'Invalid credentials');
+      throw new Error(typeof body.error === 'string' ? body.error : 'Invalid credentials');
     }
-    throw new Error(_isLogin ? 'Invalid login credentials' : 'Unauthorized');
+    throw new Error(_isLogin ? 'Invalid login credentials' : fullMsg);
   }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
     const errorMsg = typeof body.error === 'string' ? body.error : `Request failed: ${res.status}`;
-    throw new Error(errorMsg);
+    const hint = typeof body.hint === 'string' && body.hint.trim() ? body.hint.trim() : '';
+    throw new Error(hint && !errorMsg.includes(hint) ? `${errorMsg}. ${hint}` : errorMsg);
   }
 
   return res.json() as Promise<T>;
@@ -585,13 +597,42 @@ export interface BitbucketStatus {
   connected: boolean;
   workspace: string;
   username: string | null;
+  authMethod?: 'api_token' | 'oauth' | null;
 }
 
 export const bitbucket = {
   getStatus: (opts?: { signal?: AbortSignal }) =>
     request<BitbucketStatus>('/v1/bitbucket/status', opts),
-  connect: (body: { username: string; appPassword: string; workspace: string }) =>
-    request<{ connected: boolean; workspace: string; repoCount: number }>('/v1/bitbucket/connect', {
+  getOAuthUrl: () =>
+    request<{ url: string; redirectUri?: string }>('/v1/auth/bitbucket/url', { method: 'POST' }),
+  handleOAuthCallback: (code: string, workspace?: string) =>
+    request<{
+      connected: boolean;
+      workspace: string;
+      repoCount: number;
+      workspaces?: string[];
+      username?: string;
+      authMethod?: 'oauth';
+    }>('/v1/auth/bitbucket/callback', {
+      method: 'POST',
+      body: JSON.stringify({ code, workspace }),
+    }),
+  getOAuthStatus: (opts?: { signal?: AbortSignal }) =>
+    request<{
+      oauthConfigured: boolean;
+      connected: boolean;
+      workspace: string;
+      authMethod: string | null;
+      username: string | null;
+    }>('/v1/auth/bitbucket/status', opts),
+  connect: (body: { apiToken: string; email?: string; workspace?: string }) =>
+    request<{
+      connected: boolean;
+      workspace: string;
+      repoCount: number;
+      workspaces?: string[];
+      emailUsed?: string;
+    }>('/v1/bitbucket/connect', {
       method: 'POST',
       body: JSON.stringify(body),
     }),

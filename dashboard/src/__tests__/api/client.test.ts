@@ -203,6 +203,40 @@ describe('API client', () => {
       expect(localStorage.getItem('syntaro_token')).toBeNull();
     });
 
+    it('401 with upstream Bitbucket error does NOT redirect to /login', async () => {
+      localStorage.setItem('syntaro_token', 'valid-session');
+      (window.fetch as any).mockResolvedValue({
+        ok: false, status: 401,
+        json: () => Promise.resolve({
+          error: 'API Token provided has no Bitbucket scopes',
+          emailUsed: 'user@example.com',
+          hint: 'Create an API token with Bitbucket scopes',
+        }),
+      });
+
+      const err = await client.request('/v1/bitbucket/connect', {
+        method: 'POST',
+        body: JSON.stringify({ apiToken: 'ATATT3xFfGF0-fake' }),
+      }).catch((e: Error) => e);
+
+      expect(err.message).toContain('no Bitbucket scopes');
+      expect(window.location.href).toBe('');
+      expect(localStorage.getItem('syntaro_token')).toBe('valid-session');
+    });
+
+    it('401 Authentication required redirects to /login', async () => {
+      localStorage.setItem('syntaro_token', 'expired');
+      (window.fetch as any).mockResolvedValue({
+        ok: false, status: 401,
+        json: () => Promise.resolve({ error: 'Authentication required' }),
+      });
+
+      await expect(client.request('/v1/bitbucket/connect', { method: 'POST' })).rejects.toThrow(
+        'Authentication required',
+      );
+      expect(window.location.href).toBe('/login');
+    });
+
     it('401 on non-auth endpoint redirects to /login when refresh fails', async () => {
       localStorage.setItem('syntaro_token', 'expired');
       localStorage.setItem('syntaro_refresh_token', 'expired-refresh');

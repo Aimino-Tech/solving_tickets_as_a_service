@@ -436,8 +436,10 @@ IP_ALLOWLIST=192.30.252.0/22,185.199.108.0/22,140.82.112.0/20
 
 | Variable | Description | Where to Get It |
 |----------|-------------|-----------------|
-| `BITBUCKET_USERNAME` | Account username | Your Bitbucket account |
-| `BITBUCKET_APP_PASSWORD` | App password with Repos R/W, PRs W | Bitbucket → Personal settings → App passwords |
+| `BITBUCKET_USERNAME` | Account email (API token fallback) | Your Bitbucket/Atlassian account |
+| `BITBUCKET_APP_PASSWORD` / `BITBUCKET_API_TOKEN` | API token | Bitbucket / Atlassian API tokens |
+| `BITBUCKET_OAUTH_CLIENT_ID` | OAuth consumer key | Workspace → OAuth consumers |
+| `BITBUCKET_OAUTH_CLIENT_SECRET` | OAuth consumer secret | Workspace → OAuth consumers |
 | `BITBUCKET_WEBHOOK_SECRET` | Webhook secret | Your choice |
 
 ### Jira (Tracker)

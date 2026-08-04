@@ -28,20 +28,50 @@ vi.mock('../../config.js', () => ({
       username: 'testuser',
       appPassword: 'test-password',
       webhookSecret: 'test-secret',
+      baseUrl: 'https://api.bitbucket.org',
     },
   },
 }));
 
+vi.mock('../../platforms/bitbucket/config.js', () => ({
+  createBitbucketConfig: () => ({
+    username: 'testuser',
+    appPassword: 'test-password',
+    webhookSecret: 'test-secret',
+    baseUrl: 'https://api.bitbucket.org',
+  }),
+}));
+
+const mockFindByWorkspace = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock('../../db/repositories/BitbucketConnectionRepository.js', () => ({
+  bitbucketConnectionRepository: {
+    findByWorkspace: mockFindByWorkspace,
+    findByUserId: vi.fn(),
+    upsert: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
+
+vi.mock('../../utils/encryption.js', () => ({
+  encrypt: (t: string) => `enc:${t}`,
+  decrypt: (t: string) => t.replace(/^enc:/, ''),
+}));
+
 const mockCreateComment = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockCtorToken = vi.hoisted(() => vi.fn());
 
 vi.mock('../../platforms/bitbucket/index.js', () => ({
   BitbucketPlatformClient: class {
+    constructor(token: string, _baseUrl?: string) {
+      mockCtorToken(token);
+    }
     createComment = mockCreateComment;
   },
 }));
 
 import type { PlatformWebhookEvent } from '../../webhooks/base.js';
-import { bitbucketWebhook, createBitbucketWebhooks } from '../../webhooks/bitbucket.js';
+import { bitbucketWebhook, createBitbucketWebhooks, resolveBitbucketClient } from '../../webhooks/bitbucket.js';
 
 const mockEnqueue = vi.fn<(...args: unknown[]) => Promise<string | undefined>>().mockResolvedValue('job-mock-id');
 
@@ -170,6 +200,7 @@ describe('createBitbucketWebhooks', () => {
     mockEnqueue.mockClear();
     mockCreateComment.mockResolvedValue(undefined);
     mockCreateComment.mockClear();
+    mockFindByWorkspace.mockResolvedValue(undefined);
   });
 
   it('enqueues a job for issue created event with the trigger label', async () => {
@@ -265,5 +296,34 @@ describe('createBitbucketWebhooks', () => {
     await handler.handle(rawPayload, signature);
 
     expect(mockEnqueue).not.toHaveBeenCalled();
+  });
+});
+
+describe('resolveBitbucketClient', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFindByWorkspace.mockResolvedValue(undefined);
+  });
+
+  it('uses DB credentials when a workspace connection exists', async () => {
+    mockFindByWorkspace.mockResolvedValue({
+      userId: '1',
+      username: 'db-user',
+      appPasswordEncrypted: 'enc:db-pass',
+      workspace: 'owner',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await resolveBitbucketClient('owner');
+
+    expect(mockFindByWorkspace).toHaveBeenCalledWith('owner');
+    expect(mockCtorToken).toHaveBeenCalledWith('db-user:db-pass');
+  });
+
+  it('falls back to env credentials when no DB row exists', async () => {
+    await resolveBitbucketClient('unknown-ws');
+
+    expect(mockCtorToken).toHaveBeenCalledWith('testuser:test-password');
   });
 });

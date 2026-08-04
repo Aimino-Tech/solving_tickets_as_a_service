@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { request, configApi, github as githubApi, mcpKeysApi, privacy as privacyApi } from '@/api/client';
+import { useState, useEffect, useRef } from 'react';
+import { request, configApi, github as githubApi, bitbucket as bitbucketApi, mcpKeysApi, privacy as privacyApi } from '@/api/client';
 import type { McpApiKey } from '@/api/types';
+import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/i18n/I18nProvider';
 import {
   Eye,
@@ -99,8 +100,8 @@ function JiraLogo({ className = 'size-[18px]' }: { className?: string }) {
 
 function SentryLogo({ className = 'size-[18px]' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" className={className} fill="currentColor">
-      <path d="M13.2 2.6a1.5 1.5 0 0 0-2.4 0L1.7 16.3c-.6.9 0 2.1 1.2 2.1h6.6c-.3-.9-.1-1.9.5-2.6l4.2-5.4L13.2 2.6zM15 12l-2.6 3.4c-.3.4-.3.9 0 1.3l.9 1.1c.3.4.8.4 1.1 0L17 14.4c.3-.4.3-.9 0-1.3l-.9-1.1c-.3-.4-.8-.4-1.1 0zM17.5 17.5c-.3.4-.3.9 0 1.3l.9 1.1c.3.4.8.4 1.1 0l2.6-3.4c.3-.4.3-.9 0-1.3l-.9-1.1c-.3-.4-.8-.4-1.1 0l-2.6 3.4z" />
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 66" className={className} aria-hidden="true">
+      <path d="M29,2.26a4.67,4.67,0,0,0-8,0L14.42,13.53A32.21,32.21,0,0,1,32.17,40.19H27.55A27.68,27.68,0,0,0,12.09,17.47L6,28a15.92,15.92,0,0,1,9.23,12.17H4.62A.76.76,0,0,1,4,39.06l2.94-5a10.74,10.74,0,0,0-3.36-1.9l-2.91,5a4.54,4.54,0,0,0,1.69,6.24A4.66,4.66,0,0,0,4.62,44H19.15a19.4,19.4,0,0,0-8-17.31l2.31-4A23.87,23.87,0,0,1,23.76,44H36.07a35.88,35.88,0,0,0-16.41-31.8l4.67-8a.77.77,0,0,1,1.05-.27c.53.29,20.29,34.77,20.66,35.17a.76.76,0,0,1-.68,1.13H40.6q.09,1.91,0,3.81h4.78A4.59,4.59,0,0,0,50,39.43a4.49,4.49,0,0,0-.62-2.28Z" transform="translate(11, 11)" fill="currentColor" />
     </svg>
   );
 }
@@ -140,6 +141,7 @@ function JsonCode({ json }: { json: string }) {
 
 export default function Settings() {
   const { t } = useI18n();
+  const { user } = useAuth();
   const [dataPrivacyLoading, setDataPrivacyLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [deletionStatus, setDeletionStatus] = useState<{
@@ -161,7 +163,61 @@ export default function Settings() {
   useEffect(() => {
     const ac = new AbortController();
     loadSysConfig(ac.signal);
+    bitbucketApi.getStatus({ signal: ac.signal })
+      .then((status) => {
+        if (ac.signal.aborted) return;
+        setBbConnected(status.connected);
+        setBbWorkspace(status.workspace || '');
+      })
+      .catch((err: unknown) => {
+        if ((err as Error).name !== 'AbortError') {/* status load is best-effort */}
+      });
+    bitbucketApi.getOAuthStatus({ signal: ac.signal })
+      .then((s) => {
+        if (!ac.signal.aborted) setBbOauthConfigured(Boolean(s.oauthConfigured));
+      })
+      .catch(() => {/* optional */});
     return () => ac.abort();
+  }, []);
+
+  // Bitbucket OAuth return: /settings?bitbucket_code=...
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('bitbucket_code');
+    const oauthErr = params.get('bitbucket_oauth');
+    if (oauthErr === 'error') {
+      setBbFormError(params.get('error') || 'Bitbucket OAuth was denied');
+      setBitbucketExpanded(true);
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    }
+    if (!code) return;
+    let cancelled = false;
+    (async () => {
+      setBbConnecting(true);
+      setBbFormError(null);
+      try {
+        const result = await bitbucketApi.handleOAuthCallback(code);
+        if (cancelled) return;
+        setBbConnected(true);
+        setBbWorkspace(result.workspace);
+        setBitbucketExpanded(true);
+        setMessage({
+          type: 'success',
+          text: `Connected to Bitbucket workspace ${result.workspace} (${result.repoCount} repos) via OAuth.`,
+        });
+        setTimeout(() => setMessage(null), 8000);
+      } catch (err) {
+        if (!cancelled) {
+          setBbFormError(err instanceof Error ? err.message : 'Bitbucket OAuth failed');
+          setBitbucketExpanded(true);
+        }
+      } finally {
+        if (!cancelled) setBbConnecting(false);
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   async function handleExportData() {
@@ -247,6 +303,16 @@ export default function Settings() {
   const [githubExpanded, setGithubExpanded] = useState(false);
   const [slackExpanded, setSlackExpanded] = useState(false);
   const [linearExpanded, setLinearExpanded] = useState(false);
+  const [bitbucketExpanded, setBitbucketExpanded] = useState(false);
+  const [bbConnected, setBbConnected] = useState(false);
+  const [bbWorkspace, setBbWorkspace] = useState('');
+  const [bbConnecting, setBbConnecting] = useState(false);
+  const [bbForm, setBbForm] = useState({ apiToken: '' });
+  const [showBbPassword, setShowBbPassword] = useState(false);
+  const [bbFormError, setBbFormError] = useState<string | null>(null);
+  const [bbOauthConfigured, setBbOauthConfigured] = useState(false);
+  const [showBbTokenFallback, setShowBbTokenFallback] = useState(false);
+  const bbErrorRef = useRef<HTMLDivElement | null>(null);
   const [slackConnected, setSlackConnected] = useState(false);
   const [mcpKeys, setMcpKeys] = useState<McpApiKey[]>([]);
   const [mcpKeysLoading, setMcpKeysLoading] = useState(false);
@@ -260,6 +326,12 @@ export default function Settings() {
   const [revealedKeys, setRevealedKeys] = useState<Record<string, string>>({});
   const [lastRevealedKey, setLastRevealedKey] = useState<string | null>(null);
   const [guideKeyId, setGuideKeyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (bbFormError && typeof bbErrorRef.current?.scrollIntoView === 'function') {
+      bbErrorRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [bbFormError]);
 
   const guideJsonKey = (guideKeyId && revealedKeys[guideKeyId]) || Object.values(revealedKeys)[0] || '';
 
@@ -602,27 +674,237 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* ── Bitbucket Cloud (App Password) ── */}
-          <div className="flex flex-row flex-nowrap items-center justify-between gap-3 p-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={iconContainerClass}>
-                <BitbucketLogo />
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Bitbucket App Password</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  Connect Bitbucket Cloud for Cloud Agents, Bugbot and enhanced codebase context
+          {/* ── Bitbucket Cloud (Atlassian API Token) ── */}
+          <div className="p-4 space-y-3">
+            <div className="flex flex-row flex-nowrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={iconContainerClass}>
+                  <BitbucketLogo />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Bitbucket</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {bbConnected
+                      ? t('repos.bitbucketConnectedTo', { workspace: bbWorkspace })
+                      : 'Connect with Bitbucket OAuth (recommended) or an API token'}
+                  </div>
                 </div>
               </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {bbConnecting ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-yellow-500" />
+                    Connecting
+                  </span>
+                ) : bbConnected ? (
+                  <button
+                    type="button"
+                    onClick={() => setBitbucketExpanded(!bitbucketExpanded)}
+                    className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors"
+                  >
+                    Manage
+                    <ChevronDown size={14} className="text-gray-400" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBbFormError(null);
+                      setBitbucketExpanded(!bitbucketExpanded);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors"
+                  >
+                    Connect
+                    <ChevronDown size={14} className={`text-gray-400 transition-transform ${bitbucketExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+                )}
+              </div>
             </div>
-            <span
-              aria-disabled="true"
-              title="Setup guide coming soon"
-              className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 cursor-not-allowed select-none shrink-0"
-            >
-              Connect
-              <ArrowUpRight size={13} />
-            </span>
+
+            {bitbucketExpanded && (
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                {bbConnected ? (
+                  <>
+                    <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2 border border-gray-200 dark:border-gray-700">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        Connected
+                        {bbWorkspace ? (
+                          <> to workspace <span className="font-mono text-gray-700 dark:text-gray-300">{bbWorkspace}</span></>
+                        ) : null}
+                        . Credentials are stored encrypted (never shown again).
+                        Manage repo webhooks on the Repos page.
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBbConnected(false);
+                          setBbFormError(null);
+                          setBbForm({ apiToken: '' });
+                        }}
+                        className="btn-secondary text-xs min-h-[36px] px-3"
+                      >
+                        Reconnect
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setMessage(null);
+                          try {
+                            await bitbucketApi.disconnect();
+                            setBbConnected(false);
+                            setBbWorkspace('');
+                            setBbForm({ apiToken: '' });
+                            setBitbucketExpanded(false);
+                            setSysConfig((prev: any) => ({
+                              ...prev,
+                              integrations: prev.integrations?.map((i: any) =>
+                                i.id === 'bitbucket' ? { ...i, connected: false } : i,
+                              ) || prev.integrations,
+                            }));
+                            setMessage({ type: 'success', text: 'Bitbucket disconnected.' });
+                            setTimeout(() => setMessage(null), 3000);
+                          } catch (err) {
+                            setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Could not disconnect Bitbucket' });
+                          }
+                        }}
+                        className="btn-danger text-xs min-h-[36px] px-3"
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Recommended: connect with Bitbucket OAuth — one click, no API token or email paste.
+                    </p>
+
+                    {bbFormError && (
+                      <div
+                        ref={bbErrorRef}
+                        role="alert"
+                        className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs text-red-700 dark:text-red-300"
+                      >
+                        {bbFormError}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={bbConnecting}
+                      onClick={async () => {
+                        setBbConnecting(true);
+                        setBbFormError(null);
+                        try {
+                          const { url } = await bitbucketApi.getOAuthUrl();
+                          if (!url) throw new Error('Bitbucket OAuth URL missing');
+                          window.location.href = url;
+                        } catch (err) {
+                          const text = err instanceof Error ? err.message : 'Failed to start Bitbucket OAuth';
+                          setBbFormError(text);
+                          setBbConnecting(false);
+                        }
+                      }}
+                      className="btn-primary text-xs min-h-[36px] px-3"
+                    >
+                      {bbConnecting ? t('repos.bitbucketConnecting') : 'Connect with Bitbucket'}
+                    </button>
+                    {!bbOauthConfigured && (
+                      <p className="text-xs text-amber-700 dark:text-amber-400">
+                        Bitbucket OAuth is not enabled on this SYNTARO instance yet.
+                        Ask your admin to register a Bitbucket OAuth consumer, or use the API token option below.
+                      </p>
+                    )}
+
+                    <button
+                      type="button"
+                      className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 underline"
+                      onClick={() => setShowBbTokenFallback((v) => !v)}
+                    >
+                      {showBbTokenFallback ? 'Hide API token option' : 'Use API token instead'}
+                    </button>
+
+                    {showBbTokenFallback && (
+                      <div className="space-y-3 border-t border-gray-100 dark:border-gray-800 pt-3">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Paste an Atlassian API token with Bitbucket scopes. Uses your SYNTARO login email for Basic auth.
+                        </p>
+                        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 px-3 py-2 space-y-1.5 max-w-xl">
+                          <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Required scopes</p>
+                          <ul className="text-xs text-gray-500 dark:text-gray-400 list-disc pl-4 space-y-0.5">
+                            <li>User Read · Workspaces Read</li>
+                            <li>Repositories / PRs / Issues / Webhooks: Read + Write</li>
+                          </ul>
+                        </div>
+                        <label className="block space-y-1 max-w-xl">
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Atlassian API token</span>
+                          <div className="relative">
+                            <input
+                              type={showBbPassword ? 'text' : 'password'}
+                              placeholder="ATATT3xFfGF0..."
+                              value={bbForm.apiToken}
+                              onChange={(e) => {
+                                setBbFormError(null);
+                                setBbForm({ apiToken: e.target.value });
+                              }}
+                              className="input-field w-full font-mono text-sm min-h-[36px] pr-10"
+                              autoComplete="off"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowBbPassword(!showBbPassword)}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                              tabIndex={-1}
+                              aria-label={showBbPassword ? 'Hide API token' : 'Show API token'}
+                            >
+                              {showBbPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          </div>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const apiToken = bbForm.apiToken.trim();
+                            if (!apiToken || apiToken.length < 20) {
+                              setBbFormError('Paste the full Atlassian API token.');
+                              return;
+                            }
+                            if (!user?.email) {
+                              setBbFormError('You must be logged in. Refresh and sign in again.');
+                              return;
+                            }
+                            setBbConnecting(true);
+                            setBbFormError(null);
+                            try {
+                              const result = await bitbucketApi.connect({ apiToken });
+                              setBbConnected(true);
+                              setBbWorkspace(result.workspace);
+                              setBbForm({ apiToken: '' });
+                              setBitbucketExpanded(true);
+                              setMessage({
+                                type: 'success',
+                                text: `Connected to Bitbucket workspace ${result.workspace} (${result.repoCount} repos).`,
+                              });
+                              setTimeout(() => setMessage(null), 8000);
+                            } catch (err) {
+                              setBbFormError(err instanceof Error ? err.message : 'Failed to connect Bitbucket');
+                            } finally {
+                              setBbConnecting(false);
+                            }
+                          }}
+                          disabled={bbConnecting || !bbForm.apiToken.trim()}
+                          className="btn-secondary text-xs min-h-[36px] px-3"
+                        >
+                          {bbConnecting ? t('repos.bitbucketConnecting') : 'Connect with API token'}
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ── Bitbucket Data Center ── */}

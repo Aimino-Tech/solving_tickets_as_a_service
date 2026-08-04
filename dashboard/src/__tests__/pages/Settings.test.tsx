@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/__tests__/test-utils';
 import Settings from '@/pages/Settings';
 
-const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest, mockMcpKeysApiList, mockPrivacy } = vi.hoisted(() => ({
+const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest, mockMcpKeysApiList, mockPrivacy, mockBitbucket } = vi.hoisted(() => ({
   mockConfigApiGet: vi.fn(),
   mockConfigApiUpdateEnv: vi.fn(),
   mockRequest: vi.fn(),
@@ -14,6 +14,15 @@ const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest, mockMcpKeysApiLis
     requestDeletion: vi.fn(),
     cancelDeletion: vi.fn(),
     exportData: vi.fn(),
+  },
+  mockBitbucket: {
+    getStatus: vi.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    listRepos: vi.fn(),
+    getOAuthUrl: vi.fn(),
+    handleOAuthCallback: vi.fn(),
+    getOAuthStatus: vi.fn(),
   },
 }));
 
@@ -30,6 +39,7 @@ vi.mock('@/api/client', () => ({
   github: {
     getOAuthUrl: vi.fn(),
   },
+  bitbucket: mockBitbucket,
   privacy: mockPrivacy,
 }));
 
@@ -50,6 +60,15 @@ describe('Settings', () => {
     vi.clearAllMocks();
     mockMcpKeysApiList.mockResolvedValue({ keys: [] });
     mockPrivacy.getDeletionStatus.mockResolvedValue({ activeRequest: null, retentionDays: 30 });
+    mockBitbucket.getStatus.mockResolvedValue({ connected: false, workspace: '', username: null });
+    mockBitbucket.getOAuthStatus.mockResolvedValue({
+      oauthConfigured: true,
+      connected: false,
+      workspace: '',
+      authMethod: null,
+      username: null,
+    });
+    mockBitbucket.getOAuthUrl.mockResolvedValue({ url: 'https://bitbucket.org/site/oauth2/authorize?client_id=x' });
 
     mockUseAuth.mockReturnValue({
       user: { id: '1', email: 'test@test.com', name: 'Test User' },
@@ -95,32 +114,99 @@ describe('Settings', () => {
     });
   });
 
-  it('shows disabled Connect for GitLab, Azure, Bitbucket and Jira', async () => {
+  it('shows disabled Connect for GitLab, Azure and Jira; Bitbucket Connect is clickable', async () => {
     renderWithProviders(<Settings />);
 
     await waitFor(() => {
-      expect(screen.getByText('Bitbucket App Password')).toBeInTheDocument();
+      expect(screen.getByText('Bitbucket')).toBeInTheDocument();
     });
 
-    // No clickable Connect links remain
     expect(screen.queryAllByRole('link', { name: 'Connect' }).length).toBe(0);
 
-    // GitLab, Azure DevOps, Bitbucket and Jira: disabled, not clickable
     const disabledConnects = screen.getAllByTitle('Setup guide coming soon');
-    expect(disabledConnects.length).toBe(4);
-    for (const el of disabledConnects) {
-      expect(el.tagName).toBe('SPAN');
-      expect(el).toHaveAttribute('aria-disabled', 'true');
-    }
+    expect(disabledConnects.length).toBe(3);
 
-    expect(screen.getByText('Jira API Token')).toBeInTheDocument();
+    const bbDescription = screen.getByText(
+      'Connect with Bitbucket OAuth (recommended) or an API token',
+    );
+    const bbCard = bbDescription.closest('div.p-4') as HTMLElement;
+    const bbConnect = within(bbCard).getByRole('button', { name: 'Connect' });
+    expect(bbConnect).toBeEnabled();
+
+    await userEvent.click(bbConnect);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Connect with Bitbucket' })).toBeInTheDocument();
+    });
+  });
+
+  async function expandBitbucketPanel() {
+    const description = screen.getByText(
+      'Connect with Bitbucket OAuth (recommended) or an API token',
+    );
+    const card = description.closest('div.p-4') as HTMLElement;
+    await userEvent.click(within(card).getByRole('button', { name: 'Connect' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Connect with Bitbucket' })).toBeInTheDocument();
+    });
+  }
+
+  it('surfaces Bitbucket scopes error under the form and stays disconnected', async () => {
+    mockBitbucket.connect.mockRejectedValue(
+      new Error('API Token provided has no Bitbucket scopes'),
+    );
+    renderWithProviders(<Settings />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Bitbucket')).toBeInTheDocument();
+    });
+    await expandBitbucketPanel();
+    await userEvent.click(screen.getByRole('button', { name: 'Use API token instead' }));
+
+    const tokenInput = screen.getByPlaceholderText('ATATT3xFfGF0...');
+    await userEvent.clear(tokenInput);
+    await userEvent.type(tokenInput, 'ATATT3xFfGF0-this-is-a-long-enough-fake-token');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Connect with API token' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('no Bitbucket scopes');
+    });
+    expect(mockBitbucket.connect).toHaveBeenCalledWith({
+      apiToken: 'ATATT3xFfGF0-this-is-a-long-enough-fake-token',
+    });
+  });
+
+  it('shows Manage after successful Bitbucket connect', async () => {
+    mockBitbucket.connect.mockResolvedValue({
+      connected: true,
+      workspace: 'aimino',
+      repoCount: 3,
+      emailUsed: 'test@test.com',
+    });
+    renderWithProviders(<Settings />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Bitbucket')).toBeInTheDocument();
+    });
+    await expandBitbucketPanel();
+    await userEvent.click(screen.getByRole('button', { name: 'Use API token instead' }));
+
+    const tokenInput = screen.getByPlaceholderText('ATATT3xFfGF0...');
+    await userEvent.type(tokenInput, 'ATATT3xFfGF0-this-is-a-long-enough-fake-token');
+    await userEvent.click(screen.getByRole('button', { name: 'Connect with API token' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Manage/i })).toBeInTheDocument();
+    });
+    expect(screen.getByText(/workspace aimino/i)).toBeInTheDocument();
   });
 
   it('renders Data & Privacy section with export and deletion controls', async () => {
     renderWithProviders(<Settings />);
 
     await waitFor(() => {
-      expect(screen.getByText('Export My Data')).toBeInTheDocument();
+      expect(screen.getAllByText('Export My Data').length).toBeGreaterThan(0);
     });
     expect(screen.getByText('Request Data Deletion')).toBeInTheDocument();
     expect(mockPrivacy.getDeletionStatus).toHaveBeenCalled();

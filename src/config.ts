@@ -162,9 +162,13 @@ const envSchema = z.object({
   GITLAB_WEBHOOK_SECRET: z.string().optional(),
 
   BITBUCKET_USERNAME: z.string().optional(),
+  /** Prefer BITBUCKET_API_TOKEN; BITBUCKET_APP_PASSWORD kept as legacy alias. */
+  BITBUCKET_API_TOKEN: z.string().optional(),
   BITBUCKET_APP_PASSWORD: z.string().optional(),
   BITBUCKET_WEBHOOK_SECRET: z.string().optional(),
   BITBUCKET_BASE_URL: z.string().default('https://api.bitbucket.org'),
+  BITBUCKET_OAUTH_CLIENT_ID: z.string().optional(),
+  BITBUCKET_OAUTH_CLIENT_SECRET: z.string().optional(),
 
   SLACK_WEBHOOK_URL: z.string().optional(),
   SLACK_CHANNEL: z.string().optional(),
@@ -505,9 +509,12 @@ function buildConfig(env: ParsedEnv) {
 
     bitbucket: {
       username: env.BITBUCKET_USERNAME ?? '',
-      appPassword: env.BITBUCKET_APP_PASSWORD ?? '',
+      // API tokens replaced deprecated app passwords; env name appPassword is legacy.
+      appPassword: env.BITBUCKET_API_TOKEN ?? env.BITBUCKET_APP_PASSWORD ?? '',
       webhookSecret: env.BITBUCKET_WEBHOOK_SECRET ?? '',
       baseUrl: env.BITBUCKET_BASE_URL,
+      oauthClientId: env.BITBUCKET_OAUTH_CLIENT_ID ?? '',
+      oauthClientSecret: env.BITBUCKET_OAUTH_CLIENT_SECRET ?? '',
     },
 
     ci: {
