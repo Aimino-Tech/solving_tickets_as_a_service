@@ -119,7 +119,7 @@ export default function ServiceCatalogManager() {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-gray-500 dark:text-gray-400">{t('incidents.catalog.desc')}</p>
-        <button onClick={openCreate} className="btn-primary min-h-[44px]">
+        <button type="button" onClick={openCreate} className="btn-primary min-h-[44px]">
           <Plus size={16} className="mr-1 inline" />
           {t('incidents.catalog.add')}
         </button>
@@ -158,6 +158,7 @@ export default function ServiceCatalogManager() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
+                      type="button"
                       onClick={() => openEdit(entry)}
                       className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400"
                       aria-label={t('common.edit')}
@@ -165,6 +166,7 @@ export default function ServiceCatalogManager() {
                       <Pencil size={16} />
                     </button>
                     <button
+                      type="button"
                       onClick={() => void handleDelete(entry)}
                       className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
                       aria-label={t('common.delete')}
@@ -186,8 +188,9 @@ export default function ServiceCatalogManager() {
       >
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('incidents.catalog.name')}</label>
+            <label htmlFor="catalog-name" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('incidents.catalog.name')}</label>
             <input
+              id="catalog-name"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="input-field min-h-[44px] w-full"
@@ -195,8 +198,9 @@ export default function ServiceCatalogManager() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('incidents.catalog.repos')}</label>
+            <label htmlFor="catalog-repos" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('incidents.catalog.repos')}</label>
             <input
+              id="catalog-repos"
               value={form.repos}
               onChange={(e) => setForm({ ...form, repos: e.target.value })}
               className="input-field min-h-[44px] w-full"
@@ -204,8 +208,9 @@ export default function ServiceCatalogManager() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('incidents.catalog.providers')}</label>
+            <label htmlFor="catalog-providers" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('incidents.catalog.providers')}</label>
             <input
+              id="catalog-providers"
               value={form.providers}
               onChange={(e) => setForm({ ...form, providers: e.target.value })}
               className="input-field min-h-[44px] w-full"
@@ -213,8 +218,9 @@ export default function ServiceCatalogManager() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('incidents.catalog.purpose')}</label>
+            <label htmlFor="catalog-purpose" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('incidents.catalog.purpose')}</label>
             <textarea
+              id="catalog-purpose"
               value={form.purpose}
               onChange={(e) => setForm({ ...form, purpose: e.target.value })}
               className="input-field w-full"
@@ -222,8 +228,9 @@ export default function ServiceCatalogManager() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('incidents.catalog.runbook')}</label>
+            <label htmlFor="catalog-runbook" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('incidents.catalog.runbook')}</label>
             <textarea
+              id="catalog-runbook"
               value={form.runbook}
               onChange={(e) => setForm({ ...form, runbook: e.target.value })}
               className="input-field w-full"
@@ -232,10 +239,10 @@ export default function ServiceCatalogManager() {
           </div>
           {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
           <div className="flex gap-3">
-            <button onClick={closePanel} className="btn-secondary min-h-[44px]">
+            <button type="button" onClick={closePanel} className="btn-secondary min-h-[44px]">
               {t('common.cancel')}
             </button>
-            <button onClick={() => void handleSubmit()} disabled={saving} className="btn-primary min-h-[44px]">
+            <button type="button" onClick={() => void handleSubmit()} disabled={saving} className="btn-primary min-h-[44px]">
               {saving ? t('common.loading') : t('common.save')}
             </button>
           </div>

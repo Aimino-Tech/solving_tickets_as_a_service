@@ -111,6 +111,7 @@ export default function Incidents() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1">
           <button
+            type="button"
             onClick={() => switchTab('incidents')}
             className={`min-h-[44px] rounded-md px-4 text-sm font-medium transition-colors ${
               tab === 'incidents'
@@ -121,6 +122,7 @@ export default function Incidents() {
             {t('incidents.title')}
           </button>
           <button
+            type="button"
             onClick={() => switchTab('catalog')}
             className={`min-h-[44px] rounded-md px-4 text-sm font-medium transition-colors ${
               tab === 'catalog'
@@ -131,8 +133,9 @@ export default function Incidents() {
             {t('incidents.serviceCatalog')}
           </button>
         </div>
-        <label className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+        <label htmlFor="incidents-live" className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <input
+            id="incidents-live"
             type="checkbox"
             checked={live}
             onChange={(e) => setLive(e.target.checked)}
@@ -167,8 +170,9 @@ export default function Incidents() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-500 dark:text-gray-400">{t('incidents.filterStatus')}</label>
+              <label htmlFor="incidents-status" className="text-sm text-gray-500 dark:text-gray-400">{t('incidents.filterStatus')}</label>
               <select
+                id="incidents-status"
                 value={statusFilter || 'all'}
                 onChange={(e) => updateFilter('status', e.target.value === 'all' ? '' : e.target.value)}
                 className="input-field min-h-[44px] w-full sm:w-32"
@@ -181,8 +185,9 @@ export default function Incidents() {
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-500 dark:text-gray-400">{t('incidents.filterSeverity')}</label>
+              <label htmlFor="incidents-severity" className="text-sm text-gray-500 dark:text-gray-400">{t('incidents.filterSeverity')}</label>
               <select
+                id="incidents-severity"
                 value={severityFilter || 'all'}
                 onChange={(e) => updateFilter('severity', e.target.value === 'all' ? '' : e.target.value)}
                 className="input-field min-h-[44px] w-full sm:w-32"
@@ -195,8 +200,9 @@ export default function Incidents() {
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-500 dark:text-gray-400">{t('incidents.filterSource')}</label>
+              <label htmlFor="incidents-source" className="text-sm text-gray-500 dark:text-gray-400">{t('incidents.filterSource')}</label>
               <input
+                id="incidents-source"
                 type="text"
                 placeholder={t('incidents.sourcePlaceholder')}
                 value={sourceFilter}
@@ -205,8 +211,9 @@ export default function Incidents() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-500 dark:text-gray-400">{t('incidents.filterSearch')}</label>
+              <label htmlFor="incidents-search" className="text-sm text-gray-500 dark:text-gray-400">{t('incidents.filterSearch')}</label>
               <input
+                id="incidents-search"
                 type="text"
                 placeholder={t('incidents.searchPlaceholder')}
                 value={qFilter}
@@ -216,6 +223,7 @@ export default function Incidents() {
             </div>
             {(statusFilter || severityFilter || sourceFilter || qFilter) && (
               <button
+                type="button"
                 onClick={() => setSearchParams({ tab: 'incidents' })}
                 className="min-h-[44px] min-w-[44px] text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               >

@@ -23,6 +23,7 @@ function statusBadgeClass(status: string): string {
 interface TimelineStep {
   key: string;
   time?: string;
+  prUrl?: string;
 }
 
 export default function IncidentDetail() {
@@ -85,7 +86,7 @@ export default function IncidentDetail() {
     { key: 'alert', time: incident.firstSeenAt },
     { key: 'dispatched', time: incident.dispatchedAt },
     { key: 'fixRuns', time: incident.dispatchedAt },
-    ...incident.prs.map(() => ({ key: 'pr' as const, time: undefined })),
+    ...incident.prs.map((pr) => ({ key: 'pr' as const, time: undefined, prUrl: pr.prUrl })),
     { key: 'resolved', time: incident.resolvedAt },
   ].filter((s) => s.key !== 'fixRuns' || incident.dispatchedAt);
 
@@ -171,7 +172,7 @@ export default function IncidentDetail() {
         <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('incidents.detail.timeline')}</h3>
         <ol className="mt-4 space-y-0">
           {steps.map((step, idx) => (
-            <li key={`${step.key}-${idx}`} className="relative flex gap-4 pb-6 last:pb-0">
+            <li key={`${step.key}-${step.prUrl ?? step.time ?? idx}`} className="relative flex gap-4 pb-6 last:pb-0">
               {idx < steps.length - 1 && (
                 <span className="absolute left-[9px] top-6 h-full w-px bg-gray-200 dark:bg-gray-700" />
               )}
