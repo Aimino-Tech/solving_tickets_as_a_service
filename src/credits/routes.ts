@@ -30,7 +30,7 @@ import { z } from 'zod';
 import { config } from '../config.js';
 import { creditsRepository } from '../db/repositories/CreditsRepository.js';
 import { createCheckoutSession } from '../stripe/checkout.js';
-import { CREDIT_PACKS } from '../stripe/credit-packs.js';
+import { CREDIT_PACKS, getCreditPacks } from '../stripe/credit-packs.js';
 import { rootLogger } from '../utils/logger.js';
 import { queryWithRetry } from '../db/connection.js';
 import { requireAuth } from '../auth/middleware.js';
@@ -180,6 +180,33 @@ creditRouter.get('/credits/balance', async (req: Request, res: Response) => {
     log.error({ err: String(err), accountId }, 'Failed to fetch credit balance');
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/credits/packs
+// ---------------------------------------------------------------------------
+
+/**
+ * Get the available credit packs with config-resolved Stripe price IDs.
+ *
+ * Response:
+ * ```json
+ * [
+ *   { "credits": 100, "bonus": 0, "priceCents": 1000, "priceId": "price_..." },
+ *   { "credits": 500, "bonus": 50, "priceCents": 4500, "priceId": "price_..." },
+ *   { "credits": 2000, "bonus": 200, "priceCents": 15000, "priceId": "price_..." }
+ * ]
+ * ```
+ */
+creditRouter.get('/credits/packs', (_req: Request, res: Response) => {
+  res.json(
+    getCreditPacks().map((p) => ({
+      credits: p.credits,
+      bonus: p.bonus,
+      priceCents: p.amount,
+      priceId: p.priceId,
+    })),
+  );
 });
 
 // ---------------------------------------------------------------------------
