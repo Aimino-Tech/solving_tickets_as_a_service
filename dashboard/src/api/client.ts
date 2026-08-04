@@ -134,6 +134,13 @@ export interface MonthlyUsage {
   totalTransactions: number;
 }
 
+export interface CreditPack {
+  credits: number;
+  bonus: number;
+  priceCents: number;
+  priceId: string;
+}
+
 export interface BillingPlan {
   id: string;
   name: string;
@@ -162,6 +169,46 @@ export interface Invoice {
   invoicePdf: string | null;
   hostedInvoiceUrl: string | null;
 }
+
+export interface BillingSettings {
+  autoReloadEnabled: boolean;
+  autoReloadThresholdCents: number | null;
+  autoReloadTopupCents: number | null;
+  monthlyLimitCents: number | null;
+  monthSpendCents?: number;
+}
+
+export interface Coupon {
+  id: number;
+  code: string;
+  amountCredits: number;
+  active: boolean;
+  maxRedemptions: number | null;
+  timesRedeemed: number;
+  createdAt: string;
+}
+
+export interface BillingSettingsUpdate {
+  autoReloadEnabled?: boolean;
+  autoReloadThresholdCents?: number | null;
+  autoReloadTopupCents?: number | null;
+  monthlyLimitCents?: number | null;
+}
+
+export const billingSettingsApi = {
+  get: (opts?: { signal?: AbortSignal }) =>
+    request<BillingSettings>('/v1/credits/billing-settings', opts),
+  update: (body: BillingSettingsUpdate) =>
+    request<{ settings: BillingSettings }>('/v1/credits/billing-settings', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  redeemCoupon: (code: string) =>
+    request<{ coupon: Coupon; newBalance: number }>('/v1/credits/redeem-coupon', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+};
 
 export const litellm = {
   usage: () =>
@@ -250,6 +297,7 @@ me: () =>
 
 export const credits = {
   balance: (opts?: { signal?: AbortSignal }) => request<CreditBalance>('/v1/credits/balance', opts),
+  getPacks: (opts?: { signal?: AbortSignal }) => request<CreditPack[]>('/v1/credits/packs', opts),
   transactions: (limit = 50, offset = 0, opts?: { signal?: AbortSignal }) =>
     request<{ transactions: Transaction[]; pagination: { limit: number; offset: number; total: number } }>(
       `/v1/credits/transactions?limit=${limit}&offset=${offset}`, opts,
@@ -263,6 +311,86 @@ export const credits = {
     request<{ accountId: number; period: string; usage: MonthlyUsage[] }>(
       `/v1/credits/usage?period=${period}`, opts,
     ),
+  redeemCoupon: (code: string) =>
+    request<{ coupon: Coupon; newBalance: number }>('/v1/credits/redeem-coupon', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+};
+
+// -- Usage limits + provider routing (OpenCode Go "Go" parity, AIM-4645) --
+
+export interface UsageLimitWindow {
+  usedCredits: number;
+  limitCredits: number;
+  resetAt: string;
+}
+
+export interface UsageLimits {
+  continuous: UsageLimitWindow;
+  weekly: UsageLimitWindow;
+  monthly: UsageLimitWindow;
+  useBalanceAfterLimits: boolean;
+  enableChinaModels: boolean;
+  balance: number;
+}
+
+export const usageLimitsApi = {
+  get: (opts?: { signal?: AbortSignal }) =>
+    request<UsageLimits>('/v1/usage-limits', opts),
+  updatePreferences: (body: {
+    useBalanceAfterLimits?: boolean;
+    enableChinaModels?: boolean;
+  }) =>
+    request<{ success: boolean; useBalanceAfterLimits: boolean; enableChinaModels: boolean }>(
+      '/v1/usage-limits/preferences',
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+};
+
+// -- Usage & cost analytics (OpenCode Go "Kosten" parity) --
+
+export interface UsageSeriesPoint {
+  date: string;
+  [model: string]: string | number;
+}
+
+export interface UsageTotalsByModel {
+  model: string;
+  costCents: number;
+  runs: number;
+}
+
+export interface UsageRequest {
+  date: string;
+  model: string | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  costCents: number;
+  sessionId?: string;
+  runId?: number;
+  issueNumber?: number | null;
+  prUrl?: string | null;
+  durationMs?: number | null;
+}
+
+export interface UsageAnalytics {
+  month: string;
+  series: UsageSeriesPoint[];
+  totalsByModel: UsageTotalsByModel[];
+  requests: UsageRequest[];
+  filters: { models: string[]; apiKeys: string[] };
+}
+
+export const usageApi = {
+  get: (params?: { month?: string; model?: string; apiKey?: string }, opts?: { signal?: AbortSignal }) => {
+    const qs = new URLSearchParams();
+    if (params?.month) qs.set('month', params.month);
+    if (params?.model) qs.set('model', params.model);
+    if (params?.apiKey) qs.set('apiKey', params.apiKey);
+    const query = qs.toString();
+    return request<UsageAnalytics>(`/v1/credits/usage/usage${query ? `?${query}` : ''}`, opts);
+  },
 };
 
 export const runs = {
@@ -343,6 +471,57 @@ export const repos = {
     request<{ success: boolean }>(`/repos/${id}`, { method: 'DELETE' }),
 };
 
+export interface TeamMember {
+  id: number;
+  teamId: number;
+  accountId: number;
+  role: 'admin' | 'member' | 'viewer';
+  monthlyLimitCredits: number | null;
+  joinedAt: string;
+  accountName?: string;
+  accountEmail?: string;
+  email?: string;
+}
+
+export interface TeamInvite {
+  id: number;
+  email: string;
+  role: string;
+  monthlyLimitCredits: number | null;
+  createdAt: string;
+}
+
+export interface TeamSummary {
+  id: number;
+  name: string;
+  role: 'admin' | 'member' | 'viewer';
+  ownerAccountId?: number;
+  memberCount?: number;
+}
+
+export const teamApi = {
+  me: () => request<{ team: TeamSummary }>('/teams/me'),
+  members: (teamId: number) =>
+    request<{ teamId: number; members: TeamMember[]; invites: TeamInvite[] }>(`/teams/${teamId}/members`),
+  invite: (teamId: number, body: { email: string; role?: string; monthlyLimitCredits?: number | null }) =>
+    request<{ success: boolean; invite?: { id: number; email: string } }>(`/teams/${teamId}/invite`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  changeRole: (teamId: number, userId: number, role: string) =>
+    request<{ success: boolean }>(`/teams/${teamId}/members/${userId}/role`, {
+      method: 'POST',
+      body: JSON.stringify({ role }),
+    }),
+  setLimit: (teamId: number, userId: number, monthlyLimitCredits: number | null) =>
+    request<{ success: boolean; monthlyLimitCredits: number | null }>(
+      `/teams/${teamId}/members/${userId}/limit`,
+      { method: 'POST', body: JSON.stringify({ monthlyLimitCredits }) },
+    ),
+  revokeInvite: (teamId: number, inviteId: number) =>
+    request<{ success: boolean }>(`/teams/${teamId}/invites/${inviteId}`, { method: 'DELETE' }),
+};
+
 export const github = {
   getOAuthUrl: () =>
     request<{ url: string }>('/v1/auth/github/url', { method: 'POST' }),
@@ -399,6 +578,32 @@ export const billing = {
     }),
   invoices: () =>
     request<{ invoices: Invoice[] }>('/v1/billing/invoices'),
+};
+
+// -- Referral API (AIM-4643) --
+
+export interface ReferralReward {
+  id: number;
+  accountId: number;
+  referredEmail: string;
+  amountCredits: number;
+  status: 'pending' | 'claimed';
+  createdAt: string;
+  claimedAt: string | null;
+}
+
+export const referralApi = {
+  code: (opts?: { signal?: AbortSignal }) =>
+    request<{ code: string }>('/v1/referral/code', opts),
+  createCode: () =>
+    request<{ code: string }>('/v1/referral/code', { method: 'POST' }),
+  rewards: (opts?: { signal?: AbortSignal }) =>
+    request<{ rewards: ReferralReward[] }>('/v1/referral/rewards', opts),
+  claim: (id: number) =>
+    request<{ claimed: boolean; reward: ReferralReward; newBalance: number }>(
+      `/v1/referral/rewards/${id}/claim`,
+      { method: 'POST' },
+    ),
 };
 
 export interface WizardProgress {

@@ -35,8 +35,11 @@ const mockGetBalance = vi.fn();
 const mockGetTransactions = vi.fn();
 const mockCredit = vi.fn();
 const mockDeduct = vi.fn();
+const mockRedeemCoupon = vi.fn();
 const mockCreateCheckoutSession = vi.fn();
 const mockQuery = vi.fn();
+const mockGetBillingSettings = vi.fn();
+const mockGetMonthSpendCents = vi.fn();
 
 vi.mock('../../db/repositories/CreditsRepository.js', () => ({
   creditsRepository: {
@@ -44,7 +47,13 @@ vi.mock('../../db/repositories/CreditsRepository.js', () => ({
     getTransactions: mockGetTransactions,
     credit: mockCredit,
     deduct: mockDeduct,
+    redeemCoupon: mockRedeemCoupon,
   },
+}));
+
+vi.mock('../../credits/billingSettings.js', () => ({
+  getBillingSettings: mockGetBillingSettings,
+  getMonthSpendCents: mockGetMonthSpendCents,
 }));
 
 vi.mock('../../stripe/checkout.js', () => ({ createCheckoutSession: mockCreateCheckoutSession }));
@@ -53,6 +62,10 @@ vi.mock('../../stripe/credit-packs.js', () => ({
     small: { priceId: 'price_100credits', credits: 100, bonus: 0, label: '100 Credits', amount: 1000 },
     medium: { priceId: 'price_500credits', credits: 500, bonus: 50, label: '500 + 50 Bonus', amount: 4500 },
   },
+  getCreditPacks: () => [
+    { priceId: 'price_100credits', credits: 100, bonus: 0, label: '100 Credits', amount: 1000 },
+    { priceId: 'price_500credits', credits: 500, bonus: 50, label: '500 + 50 Bonus', amount: 4500 },
+  ],
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -124,13 +137,17 @@ describe('credits/routes', () => {
     mockAdminApiKey = undefined;
   });
 
-  it('registers all 5 endpoints', async () => {
+  it('registers all 8 endpoints', async () => {
     await ensureModuleLoaded();
-    expect(routeHandlers).toHaveLength(5);
+    expect(routeHandlers).toHaveLength(9);
     const paths = routeHandlers.map((h) => `${h.method.toUpperCase()} ${h.path}`);
     expect(paths).toContain('GET /credits/balance');
+    expect(paths).toContain('GET /credits/packs');
     expect(paths).toContain('GET /credits/transactions');
     expect(paths).toContain('POST /credits/top-up');
+    expect(paths).toContain('POST /credits/redeem-coupon');
+    expect(paths).toContain('GET /credits/billing-settings');
+    expect(paths).toContain('POST /credits/billing-settings');
     expect(paths).toContain('GET /credits/usage');
     expect(paths).toContain('POST /admin/credits/adjust');
   });
@@ -186,6 +203,23 @@ describe('credits/routes', () => {
   // -----------------------------------------------------------------------
   // GET /credits/transactions — S3, S4
   // -----------------------------------------------------------------------
+
+
+  describe('GET /credits/packs', () => {
+    it('returns credit packs with price IDs', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('get', '/credits/packs')!;
+
+      const req = mockReq({});
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res.json).toHaveBeenCalledWith([
+        { credits: 100, bonus: 0, priceCents: 1000, priceId: 'price_100credits' },
+        { credits: 500, bonus: 50, priceCents: 4500, priceId: 'price_500credits' },
+      ]);
+    });
+  });
 
   describe('GET /credits/transactions', () => {
     it('returns 200 with paginated transactions (S3)', async () => {
@@ -341,6 +375,268 @@ describe('credits/routes', () => {
       await handler(req, res);
 
       expect(res._state.statusCode).toBe(500);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // POST /credits/redeem-coupon
+  // -----------------------------------------------------------------------
+
+  describe('POST /credits/redeem-coupon', () => {
+    it('returns coupon and new balance on successful redemption', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('post', '/credits/redeem-coupon')!;
+      mockRedeemCoupon.mockResolvedValue({
+        coupon: { id: 1, code: 'WELCOME100', amountCredits: 100, active: true, maxRedemptions: null, timesRedeemed: 1, createdAt: new Date() },
+        balance: 1500,
+      });
+
+      const req = mockReq({ headers: { 'x-account-id': '42' }, body: { code: 'WELCOME100' } });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(mockRedeemCoupon).toHaveBeenCalledWith(42, 'WELCOME100');
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ newBalance: 1500 }),
+      );
+    });
+
+    it('returns 404 for unknown coupon code', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('post', '/credits/redeem-coupon')!;
+      mockRedeemCoupon.mockRejectedValue(new Error('Coupon not found'));
+
+      const req = mockReq({ headers: { 'x-account-id': '42' }, body: { code: 'NOPE' } });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res._state.statusCode).toBe(404);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ error: 'Coupon not found' }),
+      );
+    });
+
+    it('returns 400 for an inactive coupon', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('post', '/credits/redeem-coupon')!;
+      mockRedeemCoupon.mockRejectedValue(new Error('Coupon is inactive'));
+
+      const req = mockReq({ headers: { 'x-account-id': '42' }, body: { code: 'OLD' } });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res._state.statusCode).toBe(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ error: 'Coupon is inactive' }),
+      );
+    });
+
+    it('returns 409 when the coupon redemption cap is reached', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('post', '/credits/redeem-coupon')!;
+      mockRedeemCoupon.mockRejectedValue(new Error('Coupon has already been fully redeemed'));
+
+      const req = mockReq({ headers: { 'x-account-id': '42' }, body: { code: 'USED' } });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res._state.statusCode).toBe(409);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ error: 'Coupon exhausted' }),
+      );
+    });
+
+    it('returns 400 for an empty code', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('post', '/credits/redeem-coupon')!;
+
+      const req = mockReq({ headers: { 'x-account-id': '42' }, body: { code: '  ' } });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res._state.statusCode).toBe(400);
+    });
+
+    it('returns 401 when not authenticated', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('post', '/credits/redeem-coupon')!;
+
+      const req = mockReq({ headers: {}, body: { code: 'WELCOME100' } });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res._state.statusCode).toBe(401);
+    });
+
+    it('returns 500 on repository error', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('post', '/credits/redeem-coupon')!;
+      mockRedeemCoupon.mockRejectedValue(new Error('DB error'));
+
+      const req = mockReq({ headers: { 'x-account-id': '42' }, body: { code: 'WELCOME100' } });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res._state.statusCode).toBe(500);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // GET /credits/billing-settings
+  // -----------------------------------------------------------------------
+
+  describe('GET /credits/billing-settings', () => {
+    it('returns settings and month spend for authenticated account', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('get', '/credits/billing-settings')!;
+      mockGetBillingSettings.mockResolvedValue({
+        autoReloadEnabled: true,
+        autoReloadThresholdCents: 500,
+        autoReloadTopupCents: 1000,
+        monthlyLimitCents: 5000,
+      });
+      mockGetMonthSpendCents.mockResolvedValue(1230);
+
+      const req = mockReq({ headers: { 'x-account-id': '42' } });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res.json).toHaveBeenCalledWith({
+        autoReloadEnabled: true,
+        autoReloadThresholdCents: 500,
+        autoReloadTopupCents: 1000,
+        monthlyLimitCents: 5000,
+        monthSpendCents: 1230,
+      });
+    });
+
+    it('returns 401 when not authenticated', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('get', '/credits/billing-settings')!;
+
+      const req = mockReq({ headers: {} });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res._state.statusCode).toBe(401);
+    });
+
+    it('returns 500 on DB error', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('get', '/credits/billing-settings')!;
+      mockGetBillingSettings.mockRejectedValue(new Error('DB down'));
+
+      const req = mockReq({ headers: { 'x-account-id': '42' } });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res._state.statusCode).toBe(500);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // POST /credits/billing-settings
+  // -----------------------------------------------------------------------
+
+  describe('POST /credits/billing-settings', () => {
+    it('updates settings and returns the merged result', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('post', '/credits/billing-settings')!;
+      mockGetBillingSettings.mockResolvedValue({
+        autoReloadEnabled: false,
+        autoReloadThresholdCents: null,
+        autoReloadTopupCents: null,
+        monthlyLimitCents: null,
+      });
+      mockQuery.mockResolvedValue({ rows: [] });
+
+      const req = mockReq({
+        headers: { 'x-account-id': '42' },
+        body: { autoReloadEnabled: true, autoReloadThresholdCents: 500, autoReloadTopupCents: 1000 },
+      });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE accounts SET'),
+        expect.arrayContaining([42, true, 500, 1000, null]),
+      );
+      expect(res.json).toHaveBeenCalledWith({
+        settings: expect.objectContaining({
+          autoReloadEnabled: true,
+          autoReloadThresholdCents: 500,
+          autoReloadTopupCents: 1000,
+          monthlyLimitCents: null,
+        }),
+      });
+    });
+
+    it('rejects enabling auto-reload without threshold and top-up', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('post', '/credits/billing-settings')!;
+      mockGetBillingSettings.mockResolvedValue({
+        autoReloadEnabled: false,
+        autoReloadThresholdCents: null,
+        autoReloadTopupCents: null,
+        monthlyLimitCents: null,
+      });
+
+      const req = mockReq({
+        headers: { 'x-account-id': '42' },
+        body: { autoReloadEnabled: true },
+      });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res._state.statusCode).toBe(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ error: 'Invalid billing settings' }),
+      );
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+
+    it('allows clearing a limit with null', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('post', '/credits/billing-settings')!;
+      mockGetBillingSettings.mockResolvedValue({
+        autoReloadEnabled: false,
+        autoReloadThresholdCents: null,
+        autoReloadTopupCents: null,
+        monthlyLimitCents: 5000,
+      });
+      mockQuery.mockResolvedValue({ rows: [] });
+
+      const req = mockReq({ headers: { 'x-account-id': '42' }, body: { monthlyLimitCents: null } });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE accounts SET'),
+        expect.arrayContaining([42, false, null, null, null]),
+      );
+      expect(res._state.statusCode).toBeUndefined();
+    });
+
+    it('returns 400 for an invalid payload', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('post', '/credits/billing-settings')!;
+
+      const req = mockReq({ headers: { 'x-account-id': '42' }, body: { autoReloadThresholdCents: -5 } });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res._state.statusCode).toBe(400);
+    });
+
+    it('returns 401 when not authenticated', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('post', '/credits/billing-settings')!;
+
+      const req = mockReq({ headers: {}, body: { autoReloadEnabled: true } });
+      const res = mockRes();
+      await handler(req, res);
+
+      expect(res._state.statusCode).toBe(401);
     });
   });
 

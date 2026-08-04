@@ -19,6 +19,13 @@
 import type { NextFunction, Request, Response } from 'express';
 import { creditsRepository } from '../db/repositories/CreditsRepository.js';
 import { rootLogger } from '../utils/logger.js';
+import {
+  getBillingSettings,
+  getMonthSpendCents,
+  isMonthlyLimitExceeded,
+  triggerAutoReload,
+  type AutoReloadResult,
+} from './billingSettings.js';
 
 const log = rootLogger.child({ module: 'credits-middleware' });
 
@@ -36,6 +43,11 @@ export interface DeductOptions {
    * Defaults to reading `x-account-id` header or `body.accountId`.
    */
   getAccountId?: (req: Request) => number | null;
+  /** Redirect URLs for an auto-reload checkout session (webhook context has no browser). */
+  autoReload?: {
+    successUrl?: string;
+    cancelUrl?: string;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -102,6 +114,17 @@ export function deductMiddleware(options?: DeductOptions) {
           'Insufficient credits — rejecting request',
         );
 
+        let autoReload: AutoReloadResult | null = null;
+        try {
+          const settings = await getBillingSettings(accountId);
+          autoReload = await triggerAutoReload(accountId, settings, balance.balance, options?.autoReload);
+        } catch (settingsErr) {
+          log.error(
+            { err: String(settingsErr), accountId },
+            'Failed to check auto-reload settings for insufficient-balance response',
+          );
+        }
+
         res.status(402).json({
           error: 'Insufficient credits',
           message: `You need ${amount} credits for this fix run. ` +
@@ -111,6 +134,7 @@ export function deductMiddleware(options?: DeductOptions) {
           required: amount,
           missing: amount - balance.balance,
           upgradeUrl: '/api/v1/credits/top-up',
+          ...(autoReload ? { topUpRequired: autoReload.topUpRequired, checkoutUrl: autoReload.checkoutUrl } : {}),
         });
         return;
       }
@@ -119,18 +143,52 @@ export function deductMiddleware(options?: DeductOptions) {
       const newBalance = await creditsRepository.deduct(accountId, amount, { description });
 
       // Attach deduction info to request for downstream use and potential refund
-      (req as unknown as Record<string, unknown>).creditDeduction = {
+      const creditDeduction = {
         accountId,
         amount,
         previousBalance: balance.balance,
         newBalance: newBalance.balance,
         description,
       };
+      (req as unknown as Record<string, unknown>).creditDeduction = creditDeduction;
 
       log.info(
         { accountId, amount, previousBalance: balance.balance, newBalance: newBalance.balance },
         'Credits deducted for fix run',
       );
+
+      // Monthly limit + auto-reload checks (fail closed → let request through on DB error)
+      try {
+        const settings = await getBillingSettings(accountId);
+        const monthSpendCents = await getMonthSpendCents(accountId);
+
+        if (isMonthlyLimitExceeded(settings, monthSpendCents)) {
+          log.warn(
+            { accountId, monthSpendCents, monthlyLimitCents: settings.monthlyLimitCents },
+            'Monthly usage limit exceeded — refunding deduction and blocking',
+          );
+          await refundCredits(creditDeduction);
+          res.status(402).json({
+            error: 'Monthly usage limit exceeded',
+            message: `Your monthly usage limit of ${settings.monthlyLimitCents} cents has been reached. ` +
+              'Please raise the limit or wait for the next billing cycle.',
+            balance: newBalance.balance,
+            monthSpendCents,
+            monthlyLimitCents: settings.monthlyLimitCents,
+          });
+          return;
+        }
+
+        const autoReload = await triggerAutoReload(accountId, settings, newBalance.balance, options?.autoReload);
+        if (autoReload) {
+          (req as unknown as Record<string, unknown>).autoReload = autoReload;
+        }
+      } catch (billingErr) {
+        log.error(
+          { err: String(billingErr), accountId },
+          'Billing settings check failed — allowing request through',
+        );
+      }
 
       next();
     } catch (err) {
@@ -193,7 +251,7 @@ export async function refundCredits(deduction: {
   }
 }
 
-// Extend Express Request to include creditDeduction
+// Extend Express Request to include creditDeduction and autoReload
 declare global {
   namespace Express {
     interface Request {
@@ -203,6 +261,11 @@ declare global {
         previousBalance: number;
         newBalance: number;
         description: string;
+      };
+      autoReload?: {
+        topUpRequired: boolean;
+        checkoutUrl: string;
+        topupCents: number;
       };
     }
   }

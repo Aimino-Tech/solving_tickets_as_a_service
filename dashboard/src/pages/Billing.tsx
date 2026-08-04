@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { stats, billing, litellm } from '@/api/client';
-import type { DashboardStats, BillingPlan, Invoice } from '@/api/client';
+import { stats, billing, litellm, credits, billingSettingsApi } from '@/api/client';
+import type { DashboardStats, BillingPlan, Invoice, BillingSettings } from '@/api/client';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
@@ -49,6 +49,20 @@ export default function Billing() {
   const [litellmData, setLitellmData] = useState<any>(null);
   const [litellmLoading, setLitellmLoading] = useState(true);
   const [litellmError, setLitellmError] = useState<string | null>(null);
+
+  const [settings, setSettings] = useState<BillingSettings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [autoReloadEnabled, setAutoReloadEnabled] = useState(false);
+  const [thresholdDollars, setThresholdDollars] = useState('');
+  const [topupDollars, setTopupDollars] = useState('');
+  const [monthlyLimitDollars, setMonthlyLimitDollars] = useState('');
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsSaveMsg, setSettingsSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponMsg, setCouponMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(true);
   const [invoicesError, setInvoicesError] = useState<string | null>(null);
@@ -84,6 +98,24 @@ export default function Billing() {
         if (!cancelled) setLitellmLoading(false);
       }
     })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSettingsLoading(true);
+    setSettingsError(null);
+    billingSettingsApi.get()
+      .then((s) => {
+        if (cancelled) return;
+        setSettings(s);
+        setAutoReloadEnabled(s.autoReloadEnabled);
+        setThresholdDollars(s.autoReloadThresholdCents != null ? String(s.autoReloadThresholdCents / 100) : '');
+        setTopupDollars(s.autoReloadTopupCents != null ? String(s.autoReloadTopupCents / 100) : '');
+        setMonthlyLimitDollars(s.monthlyLimitCents != null ? String(s.monthlyLimitCents / 100) : '');
+      })
+      .catch((e: Error) => { if (!cancelled) setSettingsError(e.message); })
+      .finally(() => { if (!cancelled) setSettingsLoading(false); });
     return () => { cancelled = true; };
   }, []);
 
@@ -132,6 +164,82 @@ export default function Billing() {
     }
   }
 
+  function dollarsToCents(value: string): number | null {
+    if (value.trim() === '') return null;
+    const n = Math.round(Number.parseFloat(value) * 100);
+    return Number.isFinite(n) && n > 0 ? n : NaN;
+  }
+
+  function validateAmount(value: string): string | null {
+    if (value.trim() === '') return null;
+    const n = Number.parseFloat(value);
+    if (!Number.isFinite(n) || n <= 0) return 'Enter a positive amount';
+    return null;
+  }
+
+  async function handleSaveBillingSettings(body: Parameters<typeof billingSettingsApi.update>[0]) {
+    setSettingsSaving(true);
+    setSettingsSaveMsg(null);
+    try {
+      const res = await billingSettingsApi.update(body);
+      setSettings(res.settings);
+      setSettingsSaveMsg({ type: 'success', text: 'Billing settings saved.' });
+    } catch (err) {
+      setSettingsSaveMsg({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save billing settings' });
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
+
+  async function handleSaveAutoReload() {
+    const thresholdErr = validateAmount(thresholdDollars);
+    const topupErr = validateAmount(topupDollars);
+    if (autoReloadEnabled && (thresholdErr || topupErr)) {
+      setSettingsSaveMsg({ type: 'error', text: thresholdErr ?? topupErr ?? 'Threshold and top-up amount are required.' });
+      return;
+    }
+    await handleSaveBillingSettings({
+      autoReloadEnabled,
+      autoReloadThresholdCents: dollarsToCents(thresholdDollars),
+      autoReloadTopupCents: dollarsToCents(topupDollars),
+    });
+  }
+
+  async function handleSaveMonthlyLimit() {
+    const err = validateAmount(monthlyLimitDollars);
+    if (monthlyLimitDollars.trim() !== '' && err) {
+      setSettingsSaveMsg({ type: 'error', text: err });
+      return;
+    }
+    await handleSaveBillingSettings({ monthlyLimitCents: dollarsToCents(monthlyLimitDollars) });
+  }
+
+  async function handleClearMonthlyLimit() {
+    await handleSaveBillingSettings({ monthlyLimitCents: null });
+    setMonthlyLimitDollars('');
+  }
+
+  async function handleRedeemCoupon() {
+    if (couponCode.trim() === '') {
+      setCouponMsg({ type: 'error', text: 'Enter a coupon code.' });
+      return;
+    }
+    setCouponLoading(true);
+    setCouponMsg(null);
+    try {
+      const res = await credits.redeemCoupon(couponCode);
+      setCouponMsg({
+        type: 'success',
+        text: `Coupon redeemed — ${res.coupon.amountCredits.toLocaleString()} credits added. New balance: ${res.newBalance.toLocaleString()} credits.`,
+      });
+      setCouponCode('');
+    } catch (err) {
+      setCouponMsg({ type: 'error', text: err instanceof Error ? err.message : 'Failed to redeem coupon' });
+    } finally {
+      setCouponLoading(false);
+    }
+  }
+
   const planParam = searchParams.get('plan');
 
   useEffect(() => {
@@ -160,31 +268,11 @@ export default function Billing() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Billing</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Subscription plan, payment history, and usage costs
-          </p>
-        </div>
-        {activePlan?.hasBillingRecord && (
-          <button
-            onClick={handleOpenPortal}
-            disabled={portalLoading}
-            className="btn-secondary shrink-0"
-          >
-            {portalLoading ? 'Opening...' : 'Manage Subscription'}
-          </button>
-        )}
-        {!planLoading && !activePlan && (
-          <a
-            href="https://syntaro.io/pricing"
-            className="btn-primary shrink-0 no-underline"
-          >
-            View Plans
-          </a>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Billing</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Subscription plan, payment history, and usage costs
+        </p>
       </div>
 
       {error && (
@@ -193,146 +281,266 @@ export default function Billing() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Current Plan Card — highlighted panel */}
-        <div className="card lg:col-span-1 overflow-hidden p-0">
-          <div className="bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-4">
-            <h2 className="text-sm font-semibold text-white/90">Current Plan</h2>
-          </div>
-          <div className="p-5">
-            {planLoading ? (
-              <div className="space-y-3">
-                <div className="h-8 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-                <div className="h-4 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-              </div>
-            ) : activePlan ? (
-              <>
-                <p className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{planName || activePlan.name}</p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  {planPrice && <span className="font-medium text-slate-700 dark:text-slate-300">{planPrice}</span>}
-                  {fixLimit !== undefined && (
-                    <span className="ml-1">{fixLimit === -1 ? 'Unlimited fixes/mo' : `${fixLimit} fixes/mo`}</span>
-                  )}
-                </p>
-                {activePlan.description && (
-                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{activePlan.description}</p>
+      {/* Current Plan Card */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Current Plan</h2>
+        {planLoading ? (
+          <div className="mt-4 h-20 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        ) : activePlan ? (
+          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{planName || activePlan.name}</p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {planPrice && <span className="font-medium text-gray-700 dark:text-gray-300">{planPrice}</span>}
+                {fixLimit !== undefined && (
+                  <span className="ml-2">{fixLimit === -1 ? 'Unlimited fixes/mo' : `${fixLimit} fixes/mo`}</span>
                 )}
-                {activePlan.hasBillingRecord && (
-                  <button
-                    onClick={handleOpenPortal}
-                    disabled={portalLoading}
-                    className="btn-primary mt-4 w-full"
-                  >
-                    {portalLoading ? 'Opening...' : 'Manage Subscription'}
-                  </button>
-                )}
-                {!activePlan.hasBillingRecord && (
-                  <div className="mt-4 flex flex-col gap-2">
-                    <button
-                      onClick={() => handleSubscribe('solo')}
-                      disabled={checkoutLoading === 'solo'}
-                      className="btn-primary w-full"
-                    >
-                      {checkoutLoading === 'solo' ? 'Redirecting...' : 'Subscribe Solo — $49/mo'}
-                    </button>
-                    <button
-                      onClick={() => handleSubscribe('team')}
-                      disabled={checkoutLoading === 'team'}
-                      className="btn-primary w-full"
-                    >
-                      {checkoutLoading === 'team' ? 'Redirecting...' : 'Subscribe Team — $149/mo'}
-                    </button>
-                  </div>
-                )}
-                {checkoutError && (
-                  <p className="mt-2 text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
-                )}
-              </>
-            ) : (
-              <div>
-                <p className="text-slate-500 dark:text-slate-400">No active plan found.</p>
-                <div className="mt-3 flex flex-col gap-2">
+                {activePlan.description && <span className="ml-2">· {activePlan.description}</span>}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              {activePlan.hasBillingRecord ? (
+                <button
+                  onClick={handleOpenPortal}
+                  disabled={portalLoading}
+                  className="btn-primary min-h-[44px]"
+                >
+                  {portalLoading ? 'Opening...' : 'Manage Subscription'}
+                </button>
+              ) : (
+                <>
                   <button
                     onClick={() => handleSubscribe('solo')}
                     disabled={checkoutLoading === 'solo'}
-                    className="btn-primary w-full"
+                    className="btn-primary min-h-[44px]"
                   >
                     {checkoutLoading === 'solo' ? 'Redirecting...' : 'Subscribe Solo — $49/mo'}
                   </button>
                   <button
                     onClick={() => handleSubscribe('team')}
                     disabled={checkoutLoading === 'team'}
-                    className="btn-primary w-full"
+                    className="btn-primary min-h-[44px]"
                   >
                     {checkoutLoading === 'team' ? 'Redirecting...' : 'Subscribe Team — $149/mo'}
                   </button>
-                </div>
-                <a
-                  href="https://syntaro.io/pricing"
-                  className="mt-3 block text-center text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
-                >
-                  View Plans
-                </a>
-                {checkoutError && (
-                  <p className="mt-2 text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
-                )}
-              </div>
-            )}
-            {portalError && (
-              <p className="mt-2 text-sm text-red-600 dark:text-red-400">{portalError}</p>
+                </>
+              )}
+            </div>
+            {checkoutError && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
             )}
           </div>
-        </div>
-
-        {/* Usage Stats — compact 2-col grid inside the right column */}
-        <div className="lg:col-span-2">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-3">Overview</h2>
-          <div className="grid grid-cols-2 gap-4">
-            {data ? (
-              <>
-                <div className="card">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Total Runs</p>
-                  <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                    {formatNumber(totalRuns)}
-                  </p>
-                </div>
-                <div className="card">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Pass Rate</p>
-                  <p className="mt-1 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-                    {passRate}%
-                  </p>
-                </div>
-                <div className="card">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Avg Duration</p>
-                  <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                    {avgDurationSeconds}s
-                  </p>
-                </div>
-                <div className="card">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Active Repos</p>
-                  <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                    {data?.activeRepos ?? 0}
-                  </p>
-                </div>
-              </>
-            ) : (
-              Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+        ) : (
+          <div className="mt-4">
+            <p className="text-gray-500 dark:text-gray-400">No active plan found.</p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                onClick={() => handleSubscribe('solo')}
+                disabled={checkoutLoading === 'solo'}
+                className="btn-primary min-h-[44px]"
+              >
+                {checkoutLoading === 'solo' ? 'Redirecting...' : 'Subscribe Solo — $49/mo'}
+              </button>
+              <button
+                onClick={() => handleSubscribe('team')}
+                disabled={checkoutLoading === 'team'}
+                className="btn-primary min-h-[44px]"
+              >
+                {checkoutLoading === 'team' ? 'Redirecting...' : 'Subscribe Team — $149/mo'}
+              </button>
+            </div>
+            {checkoutError && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">{checkoutError}</p>
             )}
           </div>
-        </div>
+        )}
+        {portalError && (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">{portalError}</p>
+        )}
       </div>
 
-      {/* Payment History — full-width table */}
+      {/* Redeem Coupon */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Redeem Coupon</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Enter a promo code to add credits to your balance.
+        </p>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <input
+            type="text"
+            value={couponCode}
+            onChange={(e) => setCouponCode(e.target.value)}
+            placeholder="e.g. WELCOME100"
+            className="input-field flex-1 min-h-[44px]"
+          />
+          <button
+            onClick={handleRedeemCoupon}
+            disabled={couponLoading}
+            className="btn-primary min-h-[44px]"
+          >
+            {couponLoading ? 'Redeeming...' : 'Redeem'}
+          </button>
+        </div>
+        {couponMsg && (
+          <p className={`mt-2 text-sm ${couponMsg.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            {couponMsg.text}
+          </p>
+        )}
+      </div>
+
+      {/* Auto-Reload */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Auto-Reload</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          When your balance drops below the threshold, we'll start a top-up checkout for the specified amount.
+        </p>
+        {settingsLoading ? (
+          <div className="mt-4 h-20 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        ) : settingsError ? (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">{settingsError}</p>
+        ) : (
+          <div className="mt-4 space-y-4">
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={autoReloadEnabled}
+                onChange={(e) => setAutoReloadEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-brand-600"
+              />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Enable auto-reload</span>
+            </label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-400">Reload when balance falls below ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={thresholdDollars}
+                  onChange={(e) => setThresholdDollars(e.target.value)}
+                  placeholder="e.g. 10.00"
+                  className="input-field mt-1 w-full min-h-[44px]"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-400">Top-up amount ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={topupDollars}
+                  onChange={(e) => setTopupDollars(e.target.value)}
+                  placeholder="e.g. 25.00"
+                  className="input-field mt-1 w-full min-h-[44px]"
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleSaveAutoReload}
+              disabled={settingsSaving}
+              className="btn-secondary min-h-[44px]"
+            >
+              {settingsSaving ? 'Saving...' : 'Save Auto-Reload'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Monthly Limit */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Monthly Usage Limit</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          {settings?.monthSpendCents != null
+            ? `Spent this month: $${(settings.monthSpendCents / 100).toFixed(2)}. `
+            : ''}
+          Fix runs are blocked once this month's spend reaches the limit.
+        </p>
+        {settingsLoading ? (
+          <div className="mt-4 h-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        ) : settingsError ? (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">{settingsError}</p>
+        ) : (
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={monthlyLimitDollars}
+              onChange={(e) => setMonthlyLimitDollars(e.target.value)}
+              placeholder="e.g. 100.00"
+              className="input-field w-full sm:w-48 min-h-[44px]"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleSaveMonthlyLimit}
+                disabled={settingsSaving}
+                className="btn-primary min-h-[44px]"
+              >
+                {settingsSaving ? 'Saving...' : 'Set Limit'}
+              </button>
+              <button
+                onClick={handleClearMonthlyLimit}
+                disabled={settingsSaving}
+                className="btn-secondary min-h-[44px]"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {settingsSaveMsg && (
+        <p className={`text-sm ${settingsSaveMsg.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+          {settingsSaveMsg.text}
+        </p>
+      )}
+
+      {/* Usage Stats */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {data ? (
+          <>
+            <div className="card">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Total Runs</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {formatNumber(totalRuns)}
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Pass Rate</p>
+              <p className="mt-1 text-2xl font-bold text-green-600 dark:text-green-400">
+                {passRate}%
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Avg Duration</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {avgDurationSeconds}s
+              </p>
+            </div>
+            <div className="card">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Active Repos</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {data?.activeRepos ?? 0}
+              </p>
+            </div>
+          </>
+        ) : (
+          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+        )}
+      </div>
+
+      {/* Payment History */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Payment History</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Invoices and payment records</p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Payment History</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Invoices and payment records</p>
           </div>
           <button
             onClick={handleOpenPortal}
             disabled={portalLoading}
-            className="btn-secondary text-xs"
+            className="btn-secondary text-xs min-h-[44px]"
           >
             {portalLoading ? 'Opening...' : 'View in Stripe Portal'}
           </button>
@@ -341,7 +549,7 @@ export default function Billing() {
         {invoicesLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-12 animate-pulse rounded bg-slate-100 dark:bg-slate-800" />
+              <div key={i} className="h-12 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
             ))}
           </div>
         ) : invoicesError ? (
@@ -356,7 +564,7 @@ export default function Billing() {
           </div>
         ) : invoices.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-sm text-slate-500 dark:text-slate-400">No payments yet</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">No payments yet</p>
             <button
               onClick={handleOpenPortal}
               disabled={portalLoading}
@@ -369,25 +577,25 @@ export default function Billing() {
           <div className="overflow-x-auto -mx-5 px-5">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="pb-2 text-left font-medium text-slate-500 dark:text-slate-400">Date</th>
-                  <th className="pb-2 text-left font-medium text-slate-500 dark:text-slate-400">Invoice</th>
-                  <th className="pb-2 text-left font-medium text-slate-500 dark:text-slate-400">Status</th>
-                  <th className="pb-2 text-right font-medium text-slate-500 dark:text-slate-400">Amount</th>
-                  <th className="pb-2 text-right font-medium text-slate-500 dark:text-slate-400"></th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="pb-2 text-left font-medium text-gray-500 dark:text-gray-400">Date</th>
+                  <th className="pb-2 text-left font-medium text-gray-500 dark:text-gray-400">Invoice</th>
+                  <th className="pb-2 text-left font-medium text-gray-500 dark:text-gray-400">Status</th>
+                  <th className="pb-2 text-right font-medium text-gray-500 dark:text-gray-400">Amount</th>
+                  <th className="pb-2 text-right font-medium text-gray-500 dark:text-gray-400"></th>
                 </tr>
               </thead>
               <tbody>
                 {invoices.map((inv) => (
-                  <tr key={inv.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors last:border-0">
-                    <td className="py-3 text-slate-700 dark:text-slate-300">{formatDate(inv.created)}</td>
-                    <td className="py-3 text-slate-700 dark:text-slate-300">{inv.number || '—'}</td>
+                  <tr key={inv.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors last:border-0">
+                    <td className="py-3 text-gray-700 dark:text-gray-300">{formatDate(inv.created)}</td>
+                    <td className="py-3 text-gray-700 dark:text-gray-300">{inv.number || '—'}</td>
                     <td className="py-3">
                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${invoiceStatusBadge(inv.status)}`}>
                         {inv.status}
                       </span>
                     </td>
-                    <td className="py-3 text-right font-medium text-slate-900 dark:text-slate-100">
+                    <td className="py-3 text-right font-medium text-gray-900 dark:text-gray-100">
                       {formatCurrency(inv.amountPaidCents > 0 ? inv.amountPaidCents : inv.amountDueCents)}
                     </td>
                     <td className="py-3 text-right">
@@ -410,104 +618,99 @@ export default function Billing() {
         )}
       </div>
 
-      {/* LiteLLM Budget + Charts — 2-col grid on xl */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        {/* LiteLLM Budget */}
-        <div className="card">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">LiteLLM Budget</h2>
-          {litellmLoading ? (
-            <SkeletonChart />
-          ) : litellmError ? (
-            <p className="text-sm text-red-600 dark:text-red-400">{litellmError}</p>
-          ) : litellmData ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-500 dark:text-slate-400">Total Spend</span>
-                <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                  ${formatNumber(totalSpend)}
-                </span>
+      {/* LiteLLM Budget */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">LiteLLM Budget</h2>
+        {litellmLoading ? (
+          <SkeletonChart />
+        ) : litellmError ? (
+          <p className="text-sm text-red-600 dark:text-red-400">{litellmError}</p>
+        ) : litellmData ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500 dark:text-gray-400">Total Spend</span>
+              <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                ${formatNumber(totalSpend)}
+              </span>
+            </div>
+            {maxBudget > 0 && (
+              <div>
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span className="text-gray-500 dark:text-gray-400">Budget</span>
+                  <span className="text-gray-700 dark:text-gray-300">${formatNumber(maxBudget)}</span>
+                </div>
+                <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    className="h-2 rounded-full bg-brand-600 dark:bg-brand-500 transition-all"
+                    style={{ width: `${Math.min((totalSpend / maxBudget) * 100, 100)}%` }}
+                  />
+                </div>
               </div>
-              {maxBudget > 0 && (
-                <div>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-slate-500 dark:text-slate-400">Budget</span>
-                    <span className="text-slate-700 dark:text-slate-300">${formatNumber(maxBudget)}</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700">
-                    <div
-                      className="h-2 rounded-full bg-brand-600 dark:bg-brand-500 transition-all"
-                      style={{ width: `${Math.min((totalSpend / maxBudget) * 100, 100)}%` }}
-                    />
-                  </div>
+            )}
+            {spendPerModel.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Spend per Model</h3>
+                <div className="space-y-2">
+                  {spendPerModel.map((m: any) => (
+                    <div key={m.model} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">{m.model}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">${formatNumber(m.spend)}</span>
+                    </div>
+                  ))}
                 </div>
-              )}
-              {spendPerModel.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Spend per Model</h3>
-                  <div className="space-y-2">
-                    {spendPerModel.map((m: any) => (
-                      <div key={m.model} className="flex items-center justify-between text-sm">
-                        <span className="text-slate-600 dark:text-slate-400">{m.model}</span>
-                        <span className="font-medium text-slate-900 dark:text-slate-100">${formatNumber(m.spend)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {rpmLimit && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500 dark:text-slate-400">RPM Limit</span>
-                  <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{formatNumber(rpmLimit)}</span>
-                </div>
-              )}
-              {tpmLimit && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500 dark:text-slate-400">TPM Limit</span>
-                  <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{formatNumber(tpmLimit)}</span>
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400 dark:text-slate-500">No usage data available</p>
-          )}
-        </div>
-
-        {/* Cost Over Time */}
-        <div className="card">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Cost Over Time</h2>
-          {runsByDay.length > 0 ? (
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={runsByDay}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="date" tickFormatter={(d) => formatDate(d)} stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
-                  <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px' }} labelFormatter={(d) => formatDate(d as string)} />
-                  <Line type="monotone" dataKey="count" stroke="#10b981" strokeWidth={2} dot={false} name="Runs" />
-                  <Legend />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : data ? (
-            <p className="text-sm text-slate-400 dark:text-slate-500">No run data available yet.</p>
-          ) : (
-            <SkeletonChart />
-          )}
-        </div>
+              </div>
+            )}
+            {rpmLimit && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500 dark:text-gray-400">RPM Limit</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatNumber(rpmLimit)}</span>
+              </div>
+            )}
+            {tpmLimit && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500 dark:text-gray-400">TPM Limit</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatNumber(tpmLimit)}</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 dark:text-gray-500">No usage data available</p>
+        )}
       </div>
 
-      {/* Spend by Model — full width */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Cost Over Time</h2>
+        {runsByDay.length > 0 ? (
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={runsByDay}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="date" tickFormatter={(d) => formatDate(d)} stroke="#9CA3AF" />
+                <YAxis stroke="#9CA3AF" />
+                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} labelFormatter={(d) => formatDate(d as string)} />
+                <Line type="monotone" dataKey="count" stroke="#10B981" strokeWidth={2} dot={false} name="Runs" />
+                <Legend />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : data ? (
+          <p className="text-sm text-gray-400 dark:text-gray-500">No run data available yet.</p>
+        ) : (
+          <SkeletonChart />
+        )}
+      </div>
+
       {spendPerModel.length > 0 && (
         <div className="card">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-4">Spend by Model</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Spend by Model</h2>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={spendPerModel}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="model" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px' }} />
-                <Bar dataKey="spend" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Spend" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="model" stroke="#9CA3AF" />
+                <YAxis stroke="#9CA3AF" />
+                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }} />
+                <Bar dataKey="spend" fill="#8B5CF6" radius={[4, 4, 0, 0]} name="Spend" />
                 <Legend />
               </BarChart>
             </ResponsiveContainer>
@@ -516,14 +719,14 @@ export default function Billing() {
       )}
 
       {/* Contact & Support */}
-      <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-6 text-center">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Need help with billing?</h3>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-6 text-center">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Need help with billing?</h3>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Our support team is ready to assist you with any billing questions.
         </p>
         <a
           href="mailto:support@aimino.io"
-          className="btn-primary mt-4 inline-flex items-center gap-2"
+          className="btn-primary mt-4 inline-flex items-center gap-2 min-h-[44px]"
         >
           Contact Support
         </a>
