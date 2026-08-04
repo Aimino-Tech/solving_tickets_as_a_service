@@ -156,11 +156,40 @@ router.get('/portability', requireAuth, async (req: Request, res: Response) => {
       log.warn({ err: String(err), userId }, 'Audit fetch failed for portability');
     }
 
+    let runs: Record<string, unknown>[] = [];
+    try {
+      const runRows = await queryWithRetry<Record<string, unknown>>(
+        `SELECT id, issue_number, status, confidence, summary, pr_url, branch_name,
+                duration_ms, model_used, created_at
+         FROM runs WHERE account_id = (SELECT id FROM accounts WHERE email = $1)
+         ORDER BY created_at DESC`,
+        [email],
+      );
+      runs = runRows.rows;
+    } catch (err) {
+      log.warn({ err: String(err), email }, 'Runs fetch failed for portability');
+    }
+
+    let repos: Record<string, unknown>[] = [];
+    try {
+      const repoRows = await queryWithRetry<Record<string, unknown>>(
+        `SELECT id, owner, name, active, created_at
+         FROM repos WHERE account_id = (SELECT id FROM accounts WHERE email = $1)
+         ORDER BY name`,
+        [email],
+      );
+      repos = repoRows.rows;
+    } catch (err) {
+      log.warn({ err: String(err), email }, 'Repos fetch failed for portability');
+    }
+
     const archive = {
       exportedAt: new Date().toISOString(),
       profile,
       account,
       usage,
+      runs,
+      repos,
       auditEntries,
       compliance: { gdprCompliant: true, article: 'Art. 20 — data portability' },
     };
@@ -172,6 +201,160 @@ router.get('/portability', requireAuth, async (req: Request, res: Response) => {
   } catch (err) {
     log.error({ err, userId }, 'Portability export failed');
     res.status(500).json({ error: 'Portability export failed' });
+  }
+});
+
+/**
+ * Resolve the numeric account id for the authenticated user (the JWT subject
+ * is a Supabase UUID; `data_deletion_requests.account_id` references the
+ * numeric `accounts` table).
+ */
+async function resolveAccountId(userId: string, email: string): Promise<number | null> {
+  const direct = Number(userId);
+  if (Number.isFinite(direct) && direct > 0 && Number.isInteger(direct)) return direct;
+  try {
+    const result = await queryWithRetry<{ id: number }>('SELECT id FROM accounts WHERE email = $1 LIMIT 1', [email]);
+    if (result.rows.length > 0) return result.rows[0].id;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Account lookup failed for deletion request');
+  }
+  return null;
+}
+
+interface DeletionRequestRow {
+  id: number;
+  accountId: number;
+  requestedAt: string;
+  scheduledDeletionAt: string;
+  status: 'pending' | 'completed' | 'cancelled';
+}
+
+/**
+ * Right-to-erasure scheduling (GDPR Art. 17). Records a deletion request with
+ * a scheduled deletion date derived from the configured retention window.
+ * Returns the created request; duplicates are cancelled first so a user can
+ * re-request after cancelling.
+ */
+router.post('/deletion-request', requireAuth, async (req: Request, res: Response) => {
+  const userId = req.user!.id;
+  const email = req.user!.email;
+
+  try {
+    const accountId = await resolveAccountId(userId, email);
+    if (!accountId) {
+      res.status(400).json({ error: 'Account not found' });
+      return;
+    }
+
+    const { config } = await import('../config.js');
+    const retentionDays = config.dataPrivacy?.retentionDays ?? 30;
+
+    // Cancel any previous pending request, then create a fresh one.
+    await queryWithRetry(
+      `UPDATE data_deletion_requests SET status = 'cancelled'
+       WHERE account_id = $1 AND status = 'pending'`,
+      [accountId],
+    );
+
+    const scheduledDate = new Date();
+    scheduledDate.setDate(scheduledDate.getDate() + retentionDays);
+
+    const result = await queryWithRetry<DeletionRequestRow>(
+      `INSERT INTO data_deletion_requests (account_id, requested_at, scheduled_deletion_at, status)
+       VALUES ($1, NOW(), $2, 'pending')
+       RETURNING id, account_id AS "accountId", requested_at AS "requestedAt",
+                 scheduled_deletion_at AS "scheduledDeletionAt", status`,
+      [accountId, scheduledDate.toISOString()],
+    );
+
+    auditLog({
+      actorType: 'user',
+      actorId: userId,
+      action: 'privacy.deletion.request',
+      resourceType: 'account',
+      resourceId: userId,
+      details: { scheduledDeletionAt: scheduledDate.toISOString(), retentionDays },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    });
+
+    res.status(201).json({ deletionRequest: result.rows[0] });
+  } catch (err) {
+    log.error({ err: String(err), userId }, 'Failed to request data deletion');
+    res.status(500).json({ error: 'Failed to request data deletion' });
+  }
+});
+
+/**
+ * Cancels a pending deletion request (the user changed their mind).
+ */
+router.post('/deletion-request/cancel', requireAuth, async (req: Request, res: Response) => {
+  const userId = req.user!.id;
+  const email = req.user!.email;
+
+  try {
+    const accountId = await resolveAccountId(userId, email);
+    if (!accountId) {
+      res.status(400).json({ error: 'Account not found' });
+      return;
+    }
+
+    const result = await queryWithRetry<DeletionRequestRow>(
+      `UPDATE data_deletion_requests SET status = 'cancelled'
+       WHERE account_id = $1 AND status = 'pending'
+       RETURNING id, account_id AS "accountId", requested_at AS "requestedAt",
+                 scheduled_deletion_at AS "scheduledDeletionAt", status`,
+      [accountId],
+    );
+
+    auditLog({
+      actorType: 'user',
+      actorId: userId,
+      action: 'privacy.deletion.cancel',
+      resourceType: 'account',
+      resourceId: userId,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.requestId,
+    });
+
+    res.status(200).json({ cancelled: result.rows[0] ?? null });
+  } catch (err) {
+    log.error({ err: String(err), userId }, 'Failed to cancel deletion request');
+    res.status(500).json({ error: 'Failed to cancel deletion request' });
+  }
+});
+
+/**
+ * Returns the user's current deletion request status (GDPR transparency).
+ */
+router.get('/deletion-status', requireAuth, async (req: Request, res: Response) => {
+  const userId = req.user!.id;
+  const email = req.user!.email;
+
+  try {
+    const accountId = await resolveAccountId(userId, email);
+    if (!accountId) {
+      res.status(200).json({ activeRequest: null, retentionDays: 30 });
+      return;
+    }
+
+    const result = await queryWithRetry<DeletionRequestRow>(
+      `SELECT id, account_id AS "accountId", requested_at AS "requestedAt",
+              scheduled_deletion_at AS "scheduledDeletionAt", status
+       FROM data_deletion_requests
+       WHERE account_id = $1
+       ORDER BY requested_at DESC LIMIT 1`,
+      [accountId],
+    );
+
+    const { config } = await import('../config.js');
+    const retentionDays = config.dataPrivacy?.retentionDays ?? 30;
+    res.status(200).json({ activeRequest: result.rows[0] ?? null, retentionDays });
+  } catch (err) {
+    log.error({ err: String(err), userId }, 'Failed to get deletion status');
+    res.status(500).json({ error: 'Failed to get deletion status' });
   }
 });
 

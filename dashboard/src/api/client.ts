@@ -659,6 +659,29 @@ export const settings = {
     }),
 };
 
+export const privacy = {
+  getDeletionStatus: (opts?: { signal?: AbortSignal }) =>
+    request<{
+      activeRequest: {
+        id: number;
+        accountId: number;
+        requestedAt: string;
+        scheduledDeletionAt: string;
+        status: 'pending' | 'completed' | 'cancelled';
+      } | null;
+      retentionDays: number;
+    }>('/v1/privacy/deletion-status', opts),
+  requestDeletion: () =>
+    request<{ deletionRequest: { id: number; scheduledDeletionAt: string; status: string } }>(
+      '/v1/privacy/deletion-request',
+      { method: 'POST' },
+    ),
+  cancelDeletion: () =>
+    request<{ cancelled: unknown }>('/v1/privacy/deletion-request/cancel', { method: 'POST' }),
+  exportData: (opts?: { signal?: AbortSignal }) =>
+    request<Record<string, unknown>>('/v1/privacy/portability', opts),
+};
+
 export const configApi = {
   get: (opts?: { signal?: AbortSignal }) =>
     request<{

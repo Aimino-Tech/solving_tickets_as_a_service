@@ -245,7 +245,24 @@
   "steering.backupRun": "Run backup now",
   "steering.backupStarted": "Backup completed",
   "steering.runningBusy": "Running…",
-  "steering.noBackups": "No backups recorded yet."
+  "steering.noBackups": "No backups recorded yet.",
+  "settings.apiKeys": "API Keys",
+  "settings.exportData": "Export My Data",
+  "settings.exportDataDesc": "Download a JSON copy of your runs, repositories, usage, and personal data (GDPR Art. 20).",
+  "settings.exporting": "Preparing your export...",
+  "settings.exported": "Export downloaded.",
+  "settings.exportFailed": "Failed to create export.",
+  "settings.residency": "Data Residency",
+  "settings.residencyDesc": "Your data is stored on servers in the European Union (EU/EEA). We do not transfer personal data to non-EU jurisdictions without a valid legal basis.",
+  "settings.noTraining": "Your Code Is Not Used for Training",
+  "settings.noTrainingDesc": "Your code, tickets, and fixes are never used to train AI models. SYNTARO runs your fixes in isolated sandboxes and retains them only to provide the service.",
+  "settings.deletionStatusTitle": "Deletion Request Status",
+  "settings.pendingDeletion": "Deletion scheduled for {{date}}. You can cancel before then.",
+  "settings.privacyPolicy": "Privacy Policy",
+  "settings.viewPrivacy": "View Privacy Policy",
+  "settings.viewDpa": "View DPA",
+  "settings.deletionConfirm": "Request deletion of all your personal data? This schedules account erasure for the end of the retention period.",
+  "settings.deletionRequestFailed": "Failed to submit deletion request",
+  "settings.cancelDeletionConfirm": "Cancel this deletion request?",
+  "settings.deletionCancelled": "Deletion request cancelled."
 }
-
-

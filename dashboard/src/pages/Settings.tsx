@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { request, configApi, github as githubApi, mcpKeysApi } from '@/api/client';
+import { request, configApi, github as githubApi, mcpKeysApi, privacy as privacyApi } from '@/api/client';
 import type { McpApiKey } from '@/api/types';
+import { useI18n } from '@/i18n/I18nProvider';
 import {
   Eye,
   EyeOff,
@@ -138,7 +139,19 @@ function JsonCode({ json }: { json: string }) {
 }
 
 export default function Settings() {
+  const { t } = useI18n();
   const [dataPrivacyLoading, setDataPrivacyLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [deletionStatus, setDeletionStatus] = useState<{
+    activeRequest: {
+      id: number;
+      accountId: number;
+      requestedAt: string;
+      scheduledDeletionAt: string;
+      status: 'pending' | 'completed' | 'cancelled';
+    } | null;
+    retentionDays: number;
+  } | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [sysConfig, setSysConfig] = useState<any>({ env: {}, rateLimits: [], tokens: [], integrations: [], infrastructure: {}, symphonies: [], subscriptions: [], warnings: [] });
@@ -151,13 +164,67 @@ export default function Settings() {
     return () => ac.abort();
   }, []);
 
-  async function handleRequestDataDeletion() {
-    if (!window.confirm('Are you sure you want to request data deletion? This action will be reviewed by support.')) return;
-    setDataPrivacyLoading(true);
-    try { await request('/v1/data/deletion-request', { method: 'POST' }); setMessage({ type: 'success', text: 'Deletion request submitted.' }); }
-    catch (err) { setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to submit deletion request' }); }
-    finally { setDataPrivacyLoading(false); }
+  async function handleExportData() {
+    setExportLoading(true);
+    try {
+      const archive = await privacyApi.exportData();
+      const blob = new Blob([JSON.stringify(archive, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `syntaro-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setMessage({ type: 'success', text: t('settings.exported') });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : t('settings.exportFailed') });
+    } finally {
+      setExportLoading(false);
+    }
   }
+
+  async function handleRequestDataDeletion() {
+    if (!window.confirm(t('settings.deletionConfirm'))) return;
+    setDataPrivacyLoading(true);
+    try {
+      await privacyApi.requestDeletion();
+      setDeletionStatus(await privacyApi.getDeletionStatus());
+      setMessage({ type: 'success', text: t('settings.deletionRequested') });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : t('settings.deletionRequestFailed') });
+    } finally {
+      setDataPrivacyLoading(false);
+    }
+  }
+
+  async function handleCancelDataDeletion() {
+    if (!window.confirm(t('settings.cancelDeletionConfirm'))) return;
+    setDataPrivacyLoading(true);
+    try {
+      await privacyApi.cancelDeletion();
+      setDeletionStatus(await privacyApi.getDeletionStatus());
+      setMessage({ type: 'success', text: t('settings.deletionCancelled') });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to cancel deletion request' });
+    } finally {
+      setDataPrivacyLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const ac = new AbortController();
+    privacyApi.getDeletionStatus({ signal: ac.signal })
+      .then((status) => { if (!ac.signal.aborted) setDeletionStatus(status); })
+      .catch((err: unknown) => {
+        if ((err as Error).name !== 'AbortError') setDeletionStatus(null);
+      });
+    return () => ac.abort();
+  }, []);
 
   async function loadSysConfig(signal?: AbortSignal) {
     try {
@@ -1219,22 +1286,61 @@ export default function Settings() {
 
       {/* ── Data & Privacy ────────────────────────────────────────── */}
       <section>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Data &amp; Privacy</h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage your data and privacy settings</p>
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Data &amp; Privacy</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage your data retention, export, and deletion preferences.</p>
+        </div>
 
         <div className="mt-4 card">
           <div className="space-y-4">
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Request Data Deletion</h3>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Submit a request to delete all your personal data.</p>
-              <button onClick={handleRequestDataDeletion} disabled={dataPrivacyLoading} className="btn-secondary mt-3 text-sm min-h-[44px]">
-                {dataPrivacyLoading ? 'Submitting...' : 'Request Deletion'}
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('settings.exportData')}</h3>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('settings.exportDataDesc')}</p>
+              <button onClick={handleExportData} disabled={exportLoading} className="btn-secondary mt-3 text-sm min-h-[44px]">
+                {exportLoading ? t('settings.exporting') : t('settings.exportData')}
               </button>
             </div>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('settings.deletionStatusTitle')}</h3>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('settings.dataRetention', { days: deletionStatus?.retentionDays ?? 30 })}</p>
+              {deletionStatus?.activeRequest && deletionStatus.activeRequest.status === 'pending' && (
+                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                  {t('settings.pendingDeletion', { date: new Date(deletionStatus.activeRequest.scheduledDeletionAt).toLocaleDateString() })}
+                </p>
+              )}
+              {deletionStatus?.activeRequest && deletionStatus.activeRequest.status === 'completed' && (
+                <p className="mt-2 text-xs text-green-600 dark:text-green-400">{t('settings.deletionCompleted')}</p>
+              )}
+              {!deletionStatus?.activeRequest && (
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('settings.noDeletion')}</p>
+              )}
+              <div className="mt-3 flex gap-2">
+                <button onClick={handleRequestDataDeletion} disabled={dataPrivacyLoading} className="btn-secondary text-sm min-h-[44px]">
+                  {dataPrivacyLoading ? t('settings.saving') : t('settings.requestDeletion')}
+                </button>
+                {deletionStatus?.activeRequest && deletionStatus.activeRequest.status === 'pending' && (
+                  <button onClick={handleCancelDataDeletion} disabled={dataPrivacyLoading} className="btn-secondary text-sm min-h-[44px]">
+                    {dataPrivacyLoading ? t('settings.saving') : t('settings.cancelDeletion')}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="rounded-lg border border-green-200 dark:border-green-800 p-4">
+              <h3 className="text-sm font-medium text-green-700 dark:text-green-400">{t('settings.residency')}</h3>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('settings.residencyDesc')}</p>
+              <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                <a href="/privacy" className="text-brand-600 hover:underline">{t('settings.viewPrivacy')}</a>
+                <a href="/dpa" className="text-brand-600 hover:underline">{t('settings.viewDpa')}</a>
+              </div>
+            </div>
+            <div className="rounded-lg border border-green-200 dark:border-green-800 p-4">
+              <h3 className="text-sm font-medium text-green-700 dark:text-green-400">{t('settings.noTraining')}</h3>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('settings.noTrainingDesc')}</p>
+            </div>
             <div className="rounded-lg border border-red-200 dark:border-red-800 p-4">
-              <h3 className="text-sm font-medium text-red-700 dark:text-red-400">Reset Configuration to Defaults</h3>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Reset all bot configuration, notification preferences, and settings.</p>
-              <button className="btn-danger mt-3 text-sm min-h-[44px]">Reset All Settings</button>
+              <h3 className="text-sm font-medium text-red-700 dark:text-red-400">{t('settings.dangerZone')}</h3>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('settings.dangerZoneDesc')}</p>
+              <button className="btn-danger mt-3 text-sm min-h-[44px]">{t('settings.resetAll')}</button>
             </div>
           </div>
         </div>

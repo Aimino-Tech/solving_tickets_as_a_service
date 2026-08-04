@@ -78,6 +78,12 @@ vi.mock('../../audit/middleware.js', () => ({
   auditLog: mockAuditLog,
 }));
 
+const mockConfig = vi.hoisted(() => ({
+  config: { dataPrivacy: { retentionDays: 30 } },
+}));
+
+vi.mock('../../config.js', () => mockConfig);
+
 // ── Suite ───────────────────────────────────────────────────────────────────
 
 describe('privacy routes', () => {
@@ -198,6 +204,88 @@ describe('privacy routes', () => {
       expect(hashedEmail).toMatch(/^[a-f0-9]{64}$/);
       expect(hashedEmail).not.toBe('test@example.com');
       expect(mockAuditLog).toHaveBeenCalledWith(expect.objectContaining({ action: 'privacy.anonymize' }));
+    });
+  });
+
+  // ── GDPR deletion request lifecycle ──────────────────────────────────────
+
+  describe('GDPR deletion lifecycle', () => {
+    beforeEach(() => {
+      mockQueryWithRetry.mockResolvedValue({ rows: [] });
+    });
+
+    it('POST /deletion-request records a pending deletion and returns 201', async () => {
+      mockQueryWithRetry
+        .mockResolvedValueOnce({ rows: [{ id: 1 }] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 7,
+              accountId: 1,
+              requestedAt: '2026-08-04T00:00:00Z',
+              scheduledDeletionAt: '2026-09-03T00:00:00Z',
+              status: 'pending',
+            },
+          ],
+        });
+      const { req, res } = mockReqRes('POST', '/deletion-request');
+      req.user = { id: 'user-123', email: 'test@example.com' };
+
+      await invokeRoute(router, 'post', '/deletion-request', req, res);
+
+      expect(res.status).toHaveBeenCalledWith(201);
+      const body = (res.json as any).mock.calls[0][0];
+      expect(body.deletionRequest.status).toBe('pending');
+      expect(mockAuditLog).toHaveBeenCalledWith(expect.objectContaining({ action: 'privacy.deletion.request' }));
+    });
+
+    it('POST /deletion-request returns 400 when the account is not found', async () => {
+      mockQueryWithRetry.mockResolvedValue({ rows: [] });
+      const { req, res } = mockReqRes('POST', '/deletion-request');
+      req.user = { id: 'user-123', email: 'unknown@example.com' };
+
+      await invokeRoute(router, 'post', '/deletion-request', req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockQueryWithRetry).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT id FROM accounts'),
+        expect.any(Array),
+      );
+    });
+
+    it('POST /deletion-request/cancel cancels a pending request', async () => {
+      mockQueryWithRetry.mockResolvedValueOnce({ rows: [{ id: 1 }] }).mockResolvedValueOnce({
+        rows: [
+          {
+            id: 7,
+            accountId: 1,
+            requestedAt: '2026-08-04T00:00:00Z',
+            scheduledDeletionAt: '2026-09-03T00:00:00Z',
+            status: 'cancelled',
+          },
+        ],
+      });
+      const { req, res } = mockReqRes('POST', '/deletion-request/cancel');
+      req.user = { id: 'user-123', email: 'test@example.com' };
+
+      await invokeRoute(router, 'post', '/deletion-request/cancel', req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      const body = (res.json as any).mock.calls[0][0];
+      expect(body.cancelled.status).toBe('cancelled');
+      expect(mockAuditLog).toHaveBeenCalledWith(expect.objectContaining({ action: 'privacy.deletion.cancel' }));
+    });
+
+    it('GET /deletion-status returns the latest request or empty state', async () => {
+      const { req, res } = mockReqRes('GET', '/deletion-status');
+      req.user = { id: 'user-123', email: 'test@example.com' };
+
+      await invokeRoute(router, 'get', '/deletion-status', req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      const body = (res.json as any).mock.calls[0][0];
+      expect(body).toEqual(expect.objectContaining({ activeRequest: null, retentionDays: 30 }));
     });
   });
 });
