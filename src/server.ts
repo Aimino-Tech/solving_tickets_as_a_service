@@ -60,6 +60,7 @@ import { rateLimitMiddleware } from './ratelimit/middleware.js';
 import { adminRouter } from './routes/admin.js';
 import { adminAuditRouter } from './routes/admin_audit.js';
 import { adminRunsRouter } from './routes/adminRuns.js';
+import { adminSteeringRouter } from './routes/adminSteering.js';
 import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { badgeRouter } from './routes/badge.js';
@@ -775,6 +776,9 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Admin Runs API (AI-Disabled Mode) ────────────
   app.use('/api/v1/admin', adminRunsRouter);
+
+  // ── Admin Steering API (JWT + ADMIN_EMAILS gate → OpenSymphony admin API) ──
+  app.use('/api/v1/admin/steering', adminSteeringRouter);
 
   app.use('/api/admin/audit', adminAuditRouter);
 

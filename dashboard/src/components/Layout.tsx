@@ -1,19 +1,21 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
+import {
+  CreditCard,
+  GitFork,
+  LayoutDashboard,
+  RotateCw,
+  ScrollText,
+  Settings as SettingsIcon,
+  ShieldCheck,
+  Zap,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { adminSteering } from '@/api/adminSteering';
+import NotificationBell from '@/components/NotificationBell';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/i18n/I18nProvider';
-import { useState } from 'react';
-import NotificationBell from '@/components/NotificationBell';
-import {
-  LayoutDashboard,
-  RotateCw,
-  GitFork,
-  CreditCard,
-  ScrollText,
-  Settings as SettingsIcon,
-  Zap,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 
 const LOCALES = [
   { code: 'en' as const, label: 'EN' },
@@ -28,6 +30,22 @@ export default function Layout() {
   const { t, locale, setLocale } = useI18n();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    adminSteering
+      .health()
+      .then(() => {
+        if (!cancelled) setIsAdmin(true);
+      })
+      .catch(() => {
+        if (!cancelled) setIsAdmin(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const NAV_ITEMS: { to: string; label: string; icon: LucideIcon }[] = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
@@ -38,19 +56,19 @@ export default function Layout() {
     { to: '/settings', label: t('nav.settings'), icon: SettingsIcon },
   ];
 
+  if (isAdmin) {
+    NAV_ITEMS.splice(5, 0, { to: '/admin', label: t('nav.admin'), icon: ShieldCheck });
+  }
+
   const pageTitle =
-    NAV_ITEMS.find((item) =>
-      item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to),
-    )?.label ?? t('nav.dashboard');
+    NAV_ITEMS.find((item) => (item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)))
+      ?.label ?? t('nav.dashboard');
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
       {/* Mobile overlay */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
@@ -71,9 +89,7 @@ export default function Layout() {
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4">
           {NAV_ITEMS.map((item) => {
-            const isActive = item.to === '/'
-              ? location.pathname === '/'
-              : location.pathname.startsWith(item.to);
+            const isActive = item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to);
             return (
               <NavLink
                 key={item.to}
@@ -97,11 +113,7 @@ export default function Layout() {
         <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-4">
           <div className="flex items-center gap-3">
             {user?.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={user.name || user.email || ''}
-                className="h-8 w-8 rounded-full"
-              />
+              <img src={user.avatarUrl} alt={user.name || user.email || ''} className="h-8 w-8 rounded-full" />
             ) : (
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900 text-sm font-semibold text-brand-700 dark:text-brand-300">
                 {(user?.name || user?.email || '?').charAt(0).toUpperCase()}
@@ -118,7 +130,11 @@ export default function Layout() {
               title={t('auth.logout')}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"
+                />
               </svg>
             </button>
           </div>
