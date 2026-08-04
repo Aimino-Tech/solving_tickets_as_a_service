@@ -5,8 +5,8 @@
  * API docs: https://developer.atlassian.com/bitbucket/api/2/reference/
  */
 
-import type { PlatformClient, Issue, PR, CreatePRParams, StatusParams } from '../interface.js';
 import { rootLogger } from '../../utils/logger.js';
+import type { CreatePRParams, Issue, PlatformClient, PR, StatusParams } from '../interface.js';
 
 const log = rootLogger.child({ module: 'platform-bitbucket' });
 
@@ -115,23 +115,61 @@ export class BitbucketPlatformClient implements PlatformClient {
   // ── PR operations ─────────────────────────────────────────────────
 
   async createPullRequest(params: CreatePRParams): Promise<PR> {
-    const data = await this.request<any>(
-      'POST',
-      `/repositories/${params.repoOwner}/${params.repoName}/pullrequests`,
-      {
-        title: params.title,
-        description: params.body,
-        source: { branch: { name: params.head } },
-        destination: { branch: { name: params.base } },
-      },
-    );
+    const data = await this.request<any>('POST', `/repositories/${params.repoOwner}/${params.repoName}/pullrequests`, {
+      title: params.title,
+      description: params.body,
+      source: { branch: { name: params.head } },
+      destination: { branch: { name: params.base } },
+      draft: params.draft ?? false,
+    });
 
     return {
       url: data.links?.html?.href ?? '',
       number: data.id,
       title: data.title,
-      state: data.state === 'MERGED' ? 'merged' : data.state === 'DECLINED' || data.state === 'CLOSED' ? 'closed' : 'open',
+      state:
+        data.state === 'MERGED' ? 'merged' : data.state === 'DECLINED' || data.state === 'CLOSED' ? 'closed' : 'open',
     };
+  }
+
+  // ── Repository / webhook operations ────────────────────────────────
+
+  async listRepos(
+    workspace: string,
+  ): Promise<Array<{ name: string; fullName: string; private: boolean; mainbranch: string }>> {
+    const data = await this.request<any>('GET', `/workspaces/${workspace}/repositories?pagelen=100`);
+    return (data.values ?? []).map(
+      (r: { name?: string; full_name?: string; is_private?: boolean; mainbranch?: { name?: string } }) => ({
+        name: r.name ?? '',
+        fullName: r.full_name ?? `${workspace}/${r.name ?? ''}`,
+        private: r.is_private ?? false,
+        mainbranch: r.mainbranch?.name ?? 'main',
+      }),
+    );
+  }
+
+  async listWebhooks(workspace: string, repo: string): Promise<Array<{ uuid: string; url: string; active: boolean }>> {
+    const data = await this.request<any>('GET', `/repositories/${workspace}/${repo}/hooks?pagelen=100`);
+    return (data.values ?? []).map((h: { uuid?: string; url?: string; active?: boolean }) => ({
+      uuid: h.uuid ?? '',
+      url: h.url ?? '',
+      active: h.active ?? false,
+    }));
+  }
+
+  async createWebhook(workspace: string, repo: string, url: string, secret?: string): Promise<{ uuid: string }> {
+    const body: Record<string, unknown> = {
+      url,
+      events: ['issue:created', 'issue:updated', 'pullrequest:created', 'pullrequest:updated'],
+      active: true,
+    };
+    if (secret) body.secret = secret;
+    const data = await this.request<any>('POST', `/repositories/${workspace}/${repo}/hooks`, body);
+    return { uuid: data.uuid ?? '' };
+  }
+
+  async removeWebhook(workspace: string, repo: string, uuid: string): Promise<void> {
+    await this.request('DELETE', `/repositories/${workspace}/${repo}/hooks/${uuid}`);
   }
 
   async getPullRequest(repo: string, prNumber: number): Promise<PR> {
@@ -142,7 +180,8 @@ export class BitbucketPlatformClient implements PlatformClient {
       url: data.links?.html?.href ?? '',
       number: data.id,
       title: data.title,
-      state: data.state === 'MERGED' ? 'merged' : data.state === 'DECLINED' || data.state === 'CLOSED' ? 'closed' : 'open',
+      state:
+        data.state === 'MERGED' ? 'merged' : data.state === 'DECLINED' || data.state === 'CLOSED' ? 'closed' : 'open',
     };
   }
 

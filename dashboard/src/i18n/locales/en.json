@@ -7,7 +7,6 @@
   "nav.audit": "Audit Log",
   "nav.settings": "Settings",
   "nav.admin": "Admin",
-
   "dashboard.totalRuns": "Total Runs",
   "dashboard.passRate": "Pass Rate",
   "dashboard.avgDuration": "Avg Duration",
@@ -24,7 +23,6 @@
   "dashboard.total": "Total",
   "dashboard.passed": "Passed",
   "dashboard.failedToLoad": "Failed to load dashboard data: {{error}}",
-
   "runs.title": "Runs",
   "runs.status": "Status",
   "runs.duration": "Duration",
@@ -42,7 +40,6 @@
   "runs.previous": "Previous",
   "runs.next": "Next",
   "runs.pageInfo": "Page {{page}} of {{totalPages}} ({{total}} total)",
-
   "runDetail.backToRuns": "Back to runs",
   "runDetail.runs": "Runs",
   "runDetail.timing": "Timing",
@@ -75,7 +72,6 @@
   "runDetail.stars": "162K+ stars",
   "runDetail.backToRunsLink": "← Back to runs",
   "runDetail.getSyntaro": "Get SYNTARO",
-
   "repos.connected": "{{count}} connected {{count, plural, one {repository} other {repositories}}}",
   "repos.cancel": "Cancel",
   "repos.connectRepo": "Connect Repo",
@@ -90,7 +86,6 @@
   "repos.connectFirst": "Connect your first repo",
   "repos.connectedAgo": "Connected {{time}}",
   "repos.disconnect": "Disconnect",
-
   "analytics.failedToLoad": "Failed to load analytics: {{error}}",
   "analytics.overallPassRate": "Overall Pass Rate",
   "analytics.totalRuns": "Total Runs",
@@ -101,7 +96,6 @@
   "analytics.noDataYet": "Not enough data yet.",
   "analytics.noRunData": "No run data available yet.",
   "analytics.noCostData": "No cost data available yet.",
-
   "kpi.failedToLoad": "Failed to load KPI data: {{error}}",
   "kpi.activeReposMA": "Active Repos (MA)",
   "kpi.fixCompletionRate": "Fix Completion Rate",
@@ -122,24 +116,20 @@
   "kpi.exportCsv": "Export CSV",
   "kpi.noData": "No data yet",
   "kpi.snapshotsAvailable": "{{count}} daily snapshots available ({{from}} – {{to}})",
-
   "audit.totalEntries": "{{count}} total entries",
   "audit.noEntries": "No audit entries yet.",
   "audit.noEntriesDesc": "Actions will appear here as the bot processes fixes.",
   "audit.retry": "Retry",
   "audit.pageInfo": "Page {{page}} of {{totalPages}}",
-
   "common.loading": "Loading...",
   "common.error": "Error",
   "common.retry": "Retry",
   "common.save": "Save",
   "common.cancel": "Cancel",
-
   "auth.login": "Log in",
   "auth.logout": "Log out",
   "auth.profile": "Profile",
   "auth.user": "User",
-
   "settings.botConfig": "Bot Configuration",
   "settings.botConfigDesc": "Configure how the SYNTARO bot behaves for your repositories.",
   "settings.triggerLabel": "Trigger Label",
@@ -167,15 +157,12 @@
   "settings.dangerZone": "Danger Zone",
   "settings.dangerZoneDesc": "These actions are irreversible. Proceed with caution.",
   "settings.resetAll": "Reset All Settings",
-
   "offline.youAreOffline": "You are offline. Showing cached data.",
-
   "notFound.pageNotFound": "Page not found",
   "notFound.pageNotFoundDesc": "The page you're looking for doesn't exist or has been moved.",
   "notFound.searchRuns": "Search runs...",
   "notFound.backToDashboard": "Back to Dashboard",
   "notFound.goBack": "Go Back",
-
   "admin.adminRequired": "Admin API Key Required",
   "admin.adminRequiredDesc": "Enter your ADMIN_API_KEY to access the operator dashboard.",
   "admin.authenticate": "Authenticate",
@@ -193,7 +180,6 @@
   "admin.complete": "Complete",
   "admin.cancelRun": "Cancel",
   "admin.noRuns": "No runs found.",
-
   "steering.title": "Admin Steering",
   "steering.subtitle": "Emergency controls and OpenSymphony health",
   "steering.statusUnavailable": "status unavailable",
@@ -245,7 +231,19 @@
   "steering.backupRun": "Run backup now",
   "steering.backupStarted": "Backup completed",
   "steering.runningBusy": "Running…",
-  "steering.noBackups": "No backups recorded yet."
+  "steering.noBackups": "No backups recorded yet.",
+  "repos.bitbucketTitle": "Bitbucket Workspace",
+  "repos.bitbucketDesc": "Connect a Bitbucket workspace to enable SYNTARO fixes on Bitbucket",
+  "repos.bitbucketConnectedTo": "Connected to {{workspace}}",
+  "repos.bitbucketDisconnect": "Disconnect Bitbucket",
+  "repos.bitbucketAppPasswordHint": "Use a Bitbucket app password (account settings → App passwords) with Pull requests / Issues / Webhooks read+write permissions.",
+  "repos.bitbucketUsername": "Bitbucket username",
+  "repos.bitbucketAppPassword": "App password",
+  "repos.bitbucketWorkspace": "Workspace slug",
+  "repos.bitbucketConnecting": "Connecting…",
+  "repos.bitbucketConnect": "Connect Bitbucket Workspace",
+  "repos.bitbucketNoRepos": "No repositories found in workspace {{workspace}}.",
+  "repos.bitbucketActive": "SYNTARO Active",
+  "repos.bitbucketEnable": "Enable SYNTARO",
+  "repos.bitbucketHint": "One workspace per instance. Webhook events: issue:created, issue:updated, pullrequest:created, pullrequest:updated."
 }
-
-
