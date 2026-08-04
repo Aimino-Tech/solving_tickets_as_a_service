@@ -34,17 +34,55 @@ NC='\033[0m'
 
 CHANGED_ONLY=false
 SELECTED_GATES=""
+FIX_DIFF=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --changed-only) CHANGED_ONLY=true; shift ;;
     --gate=*) SELECTED_GATES="${1#*=}"; shift ;;
+    --fix-diff) FIX_DIFF="${2:-}"; shift 2 ;;
+    --fix-diff=*) FIX_DIFF="${1#*=}"; shift ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
 done
 
+# ── Fix-diff mode (AIM-4622): gate a single fix patch in an isolated clone ──
+# Applies the unified diff to a throwaway clone of the repo and runs the
+# deterministic gates against exactly the files the patch touches. This is the
+# mode used to verify cheap-tier (Tier 1-2) fixes with the same gates as
+# frontier-tier fixes.
+if [ -n "$FIX_DIFF" ]; then
+  if [ ! -f "$FIX_DIFF" ]; then
+    echo -e "${RED}Fix diff not found: $FIX_DIFF${NC}"
+    exit 2
+  fi
+  if ! git rev-parse --git-dir >/dev/null 2>&1; then
+    echo -e "${YELLOW}--fix-diff requires a git repo${NC}"
+    exit 2
+  fi
+  FIX_TMP="$(mktemp -d)"
+  trap 'rm -rf "$FIX_TMP"' EXIT
+  git clone -q --no-hardlinks . "$FIX_TMP"
+  if [ -d "$ROOT/node_modules" ]; then
+    ln -s "$ROOT/node_modules" "$FIX_TMP/node_modules"
+  fi
+  if ! git -C "$FIX_TMP" apply --check "$FIX_DIFF" 2>/dev/null; then
+    echo -e "${RED}Fix diff does not apply cleanly against HEAD${NC}"
+    exit 2
+  fi
+  git -C "$FIX_TMP" apply "$FIX_DIFF"
+  ROOT="$FIX_TMP"
+  cd "$ROOT"
+  CHANGED_FILES=$(grep -E '^\+\+\+ ' "$FIX_DIFF" | sed 's#^+++ b/##' | grep -v '/dev/null' || true)
+  if [ -z "$CHANGED_FILES" ]; then
+    echo -e "${YELLOW}No changed files parsed from fix diff${NC}"
+    exit 2
+  fi
+  CHANGED_ONLY=true
+fi
+
 # ── Determine changed files ──────────────────────────────────────────────────
-if $CHANGED_ONLY; then
+if $CHANGED_ONLY && [ -z "$FIX_DIFF" ]; then
   if ! git rev-parse --git-dir >/dev/null 2>&1; then
     echo -e "${YELLOW}Not a git repo — falling back to full scan${NC}"
     CHANGED_ONLY=false
@@ -58,7 +96,12 @@ if $CHANGED_ONLY; then
   fi
 fi
 
-if $CHANGED_ONLY; then
+if [ -n "$FIX_DIFF" ]; then
+  echo -e "${CYAN}══════════════════════════════════════════════════════════════${NC}"
+  echo -e "${CYAN}  QUALITY GATES — Fix diff: $(basename "$FIX_DIFF")${NC}"
+  echo -e "${CYAN}══════════════════════════════════════════════════════════════${NC}"
+  TS_CHANGED=$(echo "$CHANGED_FILES" | grep -E '\.(ts|tsx)$' | grep -v node_modules | grep -v '\.d\.ts$' || true)
+elif $CHANGED_ONLY; then
   echo -e "${CYAN}══════════════════════════════════════════════════════════════${NC}"
   echo -e "${CYAN}  QUALITY GATES — Changed files vs $BASE${NC}"
   echo -e "${CYAN}══════════════════════════════════════════════════════════════${NC}"

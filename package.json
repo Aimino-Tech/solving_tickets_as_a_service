@@ -107,6 +107,7 @@
     "eval:tiers": "node eval/scripts/tier-report.mjs --baseline eval/baselines/tiers.json --threshold 0.05",
     "eval:tiers:report": "node eval/scripts/tier-report.mjs",
     "eval:tiers:regression": "node eval/scripts/tier-report.mjs --baseline eval/baselines/tiers.json --threshold 0.05",
+    "eval:gates": "node eval/scripts/regression-gates.mjs",
     "syntaro:quickstart": "tsx src/template/cli.ts quickstart"
   },
   "dependencies": {
