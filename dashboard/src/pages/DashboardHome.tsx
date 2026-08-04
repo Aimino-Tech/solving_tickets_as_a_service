@@ -236,15 +236,15 @@ export default function DashboardHome() {
             Manage Repos &rarr;
           </span>
         </Link>
-        <Link to="/settings" className="card group hover:border-brand-200 dark:hover:border-brand-700 hover:shadow-md transition-all">
+        <Link to="/billing" className="card group hover:border-brand-200 dark:hover:border-brand-700 hover:shadow-md transition-all">
           <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-brand-600 dark:group-hover:text-brand-400">
             Subscription & Billing
           </h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Manage your subscription plan, billing history, and usage.
+            Manage your subscription plan, credit balance, and usage.
           </p>
           <span className="mt-3 inline-block text-sm font-medium text-brand-600 dark:text-brand-400">
-            Manage Subscription &rarr;
+            Manage Billing &rarr;
           </span>
         </Link>
       </div>

@@ -18,7 +18,6 @@ const RunDetail = lazy(() => import('@/pages/RunDetail'));
 const UsageLimits = lazy(() => import('@/pages/UsageLimits')); // AIM-4645 + AIM-4641
 const Repos = lazy(() => import('@/pages/Repos'));
 const Members = lazy(() => import('@/pages/Members'));
-const Credits = lazy(() => import('@/pages/Credits'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const Billing = lazy(() => import('@/pages/Billing'));
 const AuditLog = lazy(() => import('@/pages/AuditLog'));
@@ -107,7 +106,7 @@ export default function App() {
             <Route path="usage" element={<Navigate to="/usage-limits" replace />} />
             {/* AIM-4642 */}
             <Route path="members" element={<Members />} />
-            <Route path="credits" element={<Credits />} />
+            <Route path="credits" element={<Navigate to="/billing" replace />} />
             <Route path="billing" element={<Billing />} />
             <Route path="audit" element={<AuditLog />} />
             {/* AIM-4643 */}

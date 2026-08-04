@@ -1,11 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { stats, billing, litellm, credits, billingSettingsApi } from '@/api/client';
-import type { DashboardStats, BillingPlan, Invoice, BillingSettings } from '@/api/client';
+import type {
+  DashboardStats,
+  BillingPlan,
+  Invoice,
+  BillingSettings,
+  CreditBalance,
+  CreditPack,
+  Transaction,
+  MonthlyUsage,
+} from '@/api/client';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
+import { Wallet, Clock, CreditCard } from 'lucide-react';
 import { formatNumber, formatDate } from '@/utils/format';
 import { SkeletonCard, SkeletonChart } from '@/components/LoadingSkeleton';
 import StatCard from '@/components/StatCard';
@@ -71,12 +81,47 @@ export default function Billing() {
   const [invoicesLoading, setInvoicesLoading] = useState(true);
   const [invoicesError, setInvoicesError] = useState<string | null>(null);
 
+  const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
+  const [creditPacks, setCreditPacks] = useState<CreditPack[]>([]);
+  const [creditTransactions, setCreditTransactions] = useState<Transaction[]>([]);
+  const [creditUsage, setCreditUsage] = useState<MonthlyUsage[]>([]);
+  const [creditsLoading, setCreditsLoading] = useState(true);
+  const [topUpLoading, setTopUpLoading] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     stats.get()
       .then((d) => { if (!cancelled) setData(d); })
       .catch((e: Error) => { if (!cancelled) setError(e.message); });
     return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    setCreditsLoading(true);
+    Promise.all([
+      credits.balance({ signal: ac.signal }).catch(() => null),
+      credits.getPacks({ signal: ac.signal }).catch(() => []),
+      credits.transactions(20, 0, { signal: ac.signal }).catch(() => ({
+        transactions: [] as Transaction[],
+        pagination: { limit: 20, offset: 0, total: 0 },
+      })),
+      credits.usage('monthly', { signal: ac.signal }).catch(() => ({
+        accountId: 0,
+        period: 'monthly' as const,
+        usage: [] as MonthlyUsage[],
+      })),
+    ])
+      .then(([bal, packs, txData, usageData]) => {
+        setCreditBalance(bal);
+        setCreditPacks(packs);
+        setCreditTransactions(txData.transactions);
+        setCreditUsage(usageData.usage);
+      })
+      .finally(() => {
+        if (!ac.signal.aborted) setCreditsLoading(false);
+      });
+    return () => ac.abort();
   }, []);
 
   useEffect(() => {
@@ -231,6 +276,17 @@ export default function Billing() {
     setMonthlyLimitDollars('');
   }
 
+  async function handleTopUp(priceId: string) {
+    setTopUpLoading(priceId);
+    try {
+      const res = await credits.topUp(priceId, window.location.href, window.location.href);
+      window.location.href = res.url;
+    } catch (err) {
+      setPortalError(err instanceof Error ? err.message : 'Failed to initiate credit purchase');
+      setTopUpLoading(null);
+    }
+  }
+
   async function handleRedeemCoupon() {
     if (couponCode.trim() === '') {
       setCouponMsg({ type: 'error', text: 'Enter a coupon code.' });
@@ -245,6 +301,11 @@ export default function Billing() {
         text: `Coupon redeemed — ${res.coupon.amountCredits.toLocaleString()} credits added. New balance: ${res.newBalance.toLocaleString()} credits.`,
       });
       setCouponCode('');
+      setCreditBalance((prev) =>
+        prev
+          ? { ...prev, balance: res.newBalance }
+          : { accountId: 0, balance: res.newBalance, lifetimeCredits: res.newBalance },
+      );
     } catch (err) {
       setCouponMsg({ type: 'error', text: err instanceof Error ? err.message : 'Failed to redeem coupon' });
     } finally {
@@ -283,7 +344,7 @@ export default function Billing() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Billing</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Subscription plan, payment history, and usage costs
+          Subscription, credit balance, payment history, and usage
         </p>
       </div>
 
@@ -368,6 +429,126 @@ export default function Billing() {
         )}
         {portalError && (
           <p className="mt-2 text-sm text-red-600 dark:text-red-400">{portalError}</p>
+        )}
+      </div>
+
+      {/* Credit Balance & Top-up (merged from /credits) */}
+      <div className="card bg-gradient-to-br from-brand-600 to-brand-800 text-white">
+        {creditsLoading ? (
+          <div className="h-24 animate-pulse rounded bg-white/20" />
+        ) : (
+          <>
+            <div className="flex items-center gap-3">
+              <Wallet size={28} />
+              <div>
+                <p className="text-sm text-brand-100">Available Balance</p>
+                <p className="text-4xl font-bold">
+                  {(creditBalance?.balance ?? 0).toLocaleString()} credits
+                </p>
+              </div>
+            </div>
+            <div className="mt-4">
+              {creditPacks.length === 0 ? (
+                <p className="text-sm text-brand-200">Credit packs unavailable.</p>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {creditPacks.map((pack) => (
+                    <button
+                      key={pack.priceId}
+                      type="button"
+                      disabled={topUpLoading === pack.priceId}
+                      onClick={() => void handleTopUp(pack.priceId)}
+                      className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50 disabled:opacity-60"
+                    >
+                      <CreditCard size={16} />
+                      {pack.bonus > 0
+                        ? `${pack.credits} + ${pack.bonus} Bonus`
+                        : `${pack.credits} Credits`}
+                      <span className="text-brand-500">${(pack.priceCents / 100).toFixed(2)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {creditBalance && (
+              <p className="mt-3 text-xs text-brand-200">
+                Lifetime total: {creditBalance.lifetimeCredits.toLocaleString()} credits purchased
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
+      {creditUsage.length > 0 && (
+        <div className="card">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Monthly Credit Usage</h2>
+          <div className="mt-4 space-y-2">
+            {creditUsage.map((m) => (
+              <div
+                key={m.periodStart}
+                className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800"
+              >
+                <div className="flex items-center gap-2">
+                  <Clock size={14} className="text-gray-400" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {new Date(m.periodStart).toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                    })}
+                  </span>
+                </div>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {m.totalCredits.toLocaleString()} credits ({m.totalTransactions} runs)
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Credit Transactions</h2>
+        {creditsLoading ? (
+          <div className="mt-4 h-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        ) : creditTransactions.length > 0 ? (
+          <div className="mt-4 space-y-2">
+            {creditTransactions.map((tx) => (
+              <div
+                key={tx.id}
+                className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700"
+              >
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {tx.type === 'purchase'
+                      ? 'Credit Purchase'
+                      : tx.type === 'refund'
+                        ? 'Refund'
+                        : 'Adjustment'}
+                  </p>
+                  {tx.description && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{tx.description}</p>
+                  )}
+                  <p className="text-xs text-gray-400">
+                    {new Date(tx.createdAt).toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+                <span
+                  className={`text-sm font-semibold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}
+                >
+                  {tx.amount > 0 ? '+' : ''}
+                  {tx.amount.toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-gray-400">No credit transactions yet.</p>
         )}
       </div>
 

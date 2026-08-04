@@ -44,7 +44,7 @@ test.describe('Dashboard with Real Data', () => {
       localStorage.setItem('syntaro_token', token);
     }, auth.token);
 
-    const pages = ['/', '/runs', '/analytics', '/repos', '/credits'];
+    const pages = ['/', '/runs', '/analytics', '/repos', '/billing'];
 
     for (const pagePath of pages) {
       await loggedPage.actionLogger.navigate(pagePath);

@@ -5,7 +5,9 @@ import { renderWithProviders } from '@/__tests__/test-utils';
 const {
   mockBillingPlan, mockBillingPortal, mockRunsList, mockStatsGet,
   mockAuditList, mockSettingsGet, mockSettingsUpdate, mockConfigApiGet,
-  mockRequest, mockLitellmUsage,
+  mockRequest, mockLitellmUsage, mockBillingInvoices,
+  mockCreditsBalance, mockCreditsPacks, mockCreditsTransactions, mockCreditsUsage,
+  mockBillingSettingsGet,
 } = vi.hoisted(() => ({
   mockBillingPlan: vi.fn(),
   mockBillingPortal: vi.fn(),
@@ -17,10 +19,16 @@ const {
   mockConfigApiGet: vi.fn(),
   mockRequest: vi.fn(),
   mockLitellmUsage: vi.fn(),
+  mockBillingInvoices: vi.fn(),
+  mockCreditsBalance: vi.fn(),
+  mockCreditsPacks: vi.fn(),
+  mockCreditsTransactions: vi.fn(),
+  mockCreditsUsage: vi.fn(),
+  mockBillingSettingsGet: vi.fn(),
 }));
 
 vi.mock('@/api/client', () => ({
-  billing: { plan: mockBillingPlan, portal: mockBillingPortal },
+  billing: { plan: mockBillingPlan, portal: mockBillingPortal, invoices: mockBillingInvoices },
   runs: { list: mockRunsList },
   stats: { get: mockStatsGet },
   audit: { list: mockAuditList },
@@ -28,6 +36,21 @@ vi.mock('@/api/client', () => ({
   configApi: { get: mockConfigApiGet, updateEnv: vi.fn() },
   request: mockRequest,
   litellm: { usage: mockLitellmUsage },
+  credits: {
+    balance: mockCreditsBalance,
+    getPacks: mockCreditsPacks,
+    transactions: mockCreditsTransactions,
+    usage: mockCreditsUsage,
+    redeemCoupon: vi.fn(),
+    topUp: vi.fn(),
+  },
+  billingSettingsApi: { get: mockBillingSettingsGet, update: vi.fn() },
+  privacy: {
+    getDeletionStatus: vi.fn().mockResolvedValue({ status: 'none' }),
+    requestDeletion: vi.fn(),
+    cancelDeletion: vi.fn(),
+    exportData: vi.fn(),
+  },
 }));
 
 const mockFetchPreferences = vi.hoisted(() => vi.fn());
@@ -73,6 +96,18 @@ function setupEmptyMocks() {
   mockSettingsGet.mockResolvedValue({ label: 'syntaro:fix', model: 'claude-sonnet-4-20250514', maxConcurrent: 3, sandboxPoolSize: 2, auditLogEnabled: true });
   mockConfigApiGet.mockResolvedValue({ env: {}, rateLimits: [], tokens: [], integrations: [], infrastructure: {}, symphonies: [], subscriptions: [], warnings: [] });
   mockLitellmUsage.mockResolvedValue({ totalSpend: 0, maxBudget: 0, spendPerModel: [], rpmLimit: null, tpmLimit: null });
+  mockBillingInvoices.mockResolvedValue({ invoices: [] });
+  mockCreditsBalance.mockResolvedValue(null);
+  mockCreditsPacks.mockResolvedValue([]);
+  mockCreditsTransactions.mockResolvedValue({ transactions: [], pagination: { limit: 20, offset: 0, total: 0 } });
+  mockCreditsUsage.mockResolvedValue({ accountId: 0, period: 'monthly', usage: [] });
+  mockBillingSettingsGet.mockResolvedValue({
+    autoReloadEnabled: false,
+    autoReloadThresholdCents: null,
+    autoReloadTopupCents: null,
+    monthlyLimitCents: null,
+    monthSpendCents: 0,
+  });
 }
 
 function setupRateLimitMocks() {
@@ -83,6 +118,12 @@ function setupRateLimitMocks() {
   mockAuditList.mockRejectedValue(rateLimitError);
   mockSettingsGet.mockRejectedValue(rateLimitError);
   mockLitellmUsage.mockRejectedValue(rateLimitError);
+  mockBillingInvoices.mockRejectedValue(rateLimitError);
+  mockCreditsBalance.mockRejectedValue(rateLimitError);
+  mockCreditsPacks.mockRejectedValue(rateLimitError);
+  mockCreditsTransactions.mockRejectedValue(rateLimitError);
+  mockCreditsUsage.mockRejectedValue(rateLimitError);
+  mockBillingSettingsGet.mockRejectedValue(rateLimitError);
 }
 
 describe('Rate limiting (429 error handling)', () => {

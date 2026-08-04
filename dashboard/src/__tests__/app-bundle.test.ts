@@ -16,7 +16,6 @@ describe('app bundle code-splitting (AIM-4450)', () => {
       'RunsHistory',
       'RunDetail',
       'Repos',
-      'Credits',
       'AuditLog',
       'LiveView',
       'EnterprisePage',

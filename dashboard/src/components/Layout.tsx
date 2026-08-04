@@ -10,7 +10,6 @@ import {
   Gauge,
   UserRound,
   Users,
-  Wallet,
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -48,8 +47,6 @@ export default function Layout() {
     { to: '/runs', label: t('nav.runs'), icon: RotateCw },
     { to: '/usage-limits', label: 'Usage Limits', icon: Gauge }, // AIM-4645 + AIM-4641
     { to: '/repos', label: t('nav.repos'), icon: GitFork },
-    // AIM-4646
-    { to: '/credits', label: 'Credits', icon: Wallet },
     // AIM-4642
     { to: '/members', label: 'Members', icon: Users },
     { to: '/billing', label: 'Billing', icon: CreditCard },
@@ -61,7 +58,12 @@ export default function Layout() {
 
   if (isAdmin) {
     // Platform admin: user management + enter-account. OS steering is optional at /admin/steering.
-    NAV_ITEMS.splice(5, 0, { to: '/admin/users', label: 'Users', icon: UserRound });
+    const membersIdx = NAV_ITEMS.findIndex((item) => item.to === '/members');
+    NAV_ITEMS.splice(membersIdx >= 0 ? membersIdx : NAV_ITEMS.length, 0, {
+      to: '/admin/users',
+      label: 'Users',
+      icon: UserRound,
+    });
   }
 
   const isNavActive = (to: string) => {

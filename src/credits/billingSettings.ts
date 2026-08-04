@@ -68,7 +68,7 @@ type BillingSettingsRow = {
 export const AUTO_RELOAD_COOLDOWN_MS = 10 * 60 * 1000;
 
 /** Default redirect for auto-reload checkout sessions (no browser session in webhook context). */
-const DEFAULT_CHECKOUT_REDIRECT = 'https://syntaro.io/dashboard/credits';
+const DEFAULT_CHECKOUT_REDIRECT = 'https://syntaro.io/dashboard/billing';
 
 /** In-process guard so repeated deductions don't spawn duplicate top-ups. */
 const autoReloadPending = new Map<number, number>();

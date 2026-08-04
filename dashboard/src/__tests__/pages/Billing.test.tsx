@@ -17,18 +17,53 @@ vi.mock('recharts', () => ({
   Legend: () => null,
 }));
 
-const { mockStatsGet, mockBillingPlan, mockBillingPortal, mockLitellmUsage, mockBillingInvoices } = vi.hoisted(() => ({
+const {
+  mockStatsGet,
+  mockBillingPlan,
+  mockBillingPortal,
+  mockLitellmUsage,
+  mockBillingInvoices,
+  mockCreditsBalance,
+  mockCreditsPacks,
+  mockCreditsTransactions,
+  mockCreditsUsage,
+  mockCreditsRedeem,
+  mockBillingSettingsGet,
+} = vi.hoisted(() => ({
   mockStatsGet: vi.fn(),
   mockBillingPlan: vi.fn(),
   mockBillingPortal: vi.fn(),
   mockLitellmUsage: vi.fn(),
   mockBillingInvoices: vi.fn(),
+  mockCreditsBalance: vi.fn(),
+  mockCreditsPacks: vi.fn(),
+  mockCreditsTransactions: vi.fn(),
+  mockCreditsUsage: vi.fn(),
+  mockCreditsRedeem: vi.fn(),
+  mockBillingSettingsGet: vi.fn(),
 }));
 
 vi.mock('@/api/client', () => ({
   stats: { get: mockStatsGet },
-  billing: { plan: mockBillingPlan, portal: mockBillingPortal, invoices: mockBillingInvoices },
+  billing: {
+    plan: mockBillingPlan,
+    portal: mockBillingPortal,
+    invoices: mockBillingInvoices,
+    createCheckout: vi.fn(),
+  },
   litellm: { usage: mockLitellmUsage },
+  credits: {
+    balance: mockCreditsBalance,
+    getPacks: mockCreditsPacks,
+    transactions: mockCreditsTransactions,
+    usage: mockCreditsUsage,
+    redeemCoupon: mockCreditsRedeem,
+    topUp: vi.fn(),
+  },
+  billingSettingsApi: {
+    get: mockBillingSettingsGet,
+    update: vi.fn(),
+  },
 }));
 
 describe('Billing', () => {
@@ -79,6 +114,36 @@ describe('Billing', () => {
         },
       ],
     });
+
+    mockCreditsBalance.mockResolvedValue({ accountId: 1, balance: 2500, lifetimeCredits: 10000 });
+    mockCreditsPacks.mockResolvedValue([
+      { credits: 1000, bonus: 0, priceCents: 1000, priceId: 'price_pack_1' },
+    ]);
+    mockCreditsTransactions.mockResolvedValue({
+      transactions: [
+        {
+          id: 1,
+          accountId: 1,
+          amount: 1000,
+          type: 'purchase',
+          description: 'Starter pack',
+          createdAt: '2024-01-10T00:00:00Z',
+        },
+      ],
+      pagination: { limit: 20, offset: 0, total: 1 },
+    });
+    mockCreditsUsage.mockResolvedValue({
+      accountId: 1,
+      period: 'monthly',
+      usage: [{ periodStart: '2024-01-01', totalCredits: 400, totalTransactions: 8 }],
+    });
+    mockBillingSettingsGet.mockResolvedValue({
+      autoReloadEnabled: false,
+      autoReloadThresholdCents: null,
+      autoReloadTopupCents: null,
+      monthlyLimitCents: null,
+      monthSpendCents: 0,
+    });
   });
 
   it('shows Current Plan section with plan name', async () => {
@@ -118,10 +183,20 @@ describe('Billing', () => {
       expect(screen.getAllByText('Manage Subscription').length).toBeGreaterThanOrEqual(1);
     });
 
-    const buttons = screen.getAllByText('Manage Subscription');
-    const cardButton = buttons.find((b) => b.classList.contains('w-full'));
-    await userEvent.click(cardButton!);
+    await userEvent.click(screen.getAllByText('Manage Subscription')[0]);
     expect(mockBillingPortal).toHaveBeenCalled();
+  });
+
+  it('shows credit balance and top-up packs merged from Credits', async () => {
+    renderWithProviders(<Billing />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/2,500 credits/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/1000 Credits/i)).toBeInTheDocument();
+    expect(screen.getByText('Credit Transactions')).toBeInTheDocument();
+    expect(screen.getByText('Credit Purchase')).toBeInTheDocument();
   });
 
   it('shows View in Stripe Portal button in payment history section', async () => {
@@ -200,20 +275,17 @@ describe('Billing', () => {
     expect(supportLink.closest('a')).toHaveAttribute('href', 'mailto:support@aimino.io');
   });
 
-  it('shows View Plans link in empty plan state', async () => {
+  it('shows subscribe buttons when no active plan', async () => {
     mockBillingPlan.mockRejectedValue(new Error('No plan'));
 
     renderWithProviders(<Billing />);
 
     await waitFor(() => {
-      expect(screen.getAllByText('View Plans').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText(/no active plan found/i)).toBeInTheDocument();
     });
 
-      const viewPlanLinks = screen.getAllByText('View Plans');
-    const pricingLink = viewPlanLinks.find(
-      (el) => el.closest('a')?.getAttribute('href') === 'https://syntaro.io/pricing',
-    );
-    expect(pricingLink).toBeDefined();
+    expect(screen.getByText(/Subscribe Solo/i)).toBeInTheDocument();
+    expect(screen.getByText(/Subscribe Team/i)).toBeInTheDocument();
   });
 
   it('shows portal error message when portal call fails', async () => {
@@ -225,9 +297,7 @@ describe('Billing', () => {
       expect(screen.getAllByText('Manage Subscription').length).toBeGreaterThanOrEqual(1);
     });
 
-    const buttons = screen.getAllByText('Manage Subscription');
-    const cardButton = buttons.find((b) => b.classList.contains('w-full'));
-    await userEvent.click(cardButton!);
+    await userEvent.click(screen.getAllByText('Manage Subscription')[0]);
 
     await waitFor(() => {
       expect(screen.getByText(/failed to open portal/i)).toBeInTheDocument();
