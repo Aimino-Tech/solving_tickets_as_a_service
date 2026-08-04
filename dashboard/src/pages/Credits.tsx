@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { credits, type CreditBalance, type Transaction, type MonthlyUsage } from '@/api/client';
-import { Wallet, ArrowUpRight, Clock, CreditCard } from 'lucide-react';
+import { credits, type CreditBalance, type CreditPack, type Transaction, type MonthlyUsage } from '@/api/client';
+import { Wallet, Clock, CreditCard } from 'lucide-react';
 import { SkeletonCardGrid } from '@/components/LoadingSkeleton';
 
 export default function Credits() {
   const [balance, setBalance] = useState<CreditBalance | null>(null);
+  const [packs, setPacks] = useState<CreditPack[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [usage, setUsage] = useState<MonthlyUsage[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -14,11 +15,13 @@ export default function Credits() {
     const ac = new AbortController();
     Promise.all([
       credits.balance({ signal: ac.signal }).catch(() => null),
+      credits.getPacks({ signal: ac.signal }).catch(() => []),
       credits.transactions(20, 0, { signal: ac.signal }).catch(() => ({ transactions: [], pagination: { limit: 20, offset: 0, total: 0 } })),
       credits.usage('monthly', { signal: ac.signal }).catch(() => ({ accountId: 0, period: 'monthly', usage: [] })),
     ])
-      .then(([bal, txData, usageData]) => {
+      .then(([bal, packData, txData, usageData]) => {
         setBalance(bal);
+        setPacks(packData);
         setTransactions(txData.transactions);
         setUsage(usageData.usage);
       })
@@ -58,29 +61,28 @@ export default function Credits() {
               <p className="text-4xl font-bold">{balance.balance.toLocaleString()} credits</p>
             </div>
           </div>
-          <div className="mt-4 flex gap-3">
-            <button
-              onClick={() => {
-                credits.topUp('price_100credits', window.location.href, window.location.href)
-                  .then((res) => { window.location.href = res.url; })
-                  .catch((err: Error) => alert('Failed to initiate purchase: ' + err.message));
-              }}
-              className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50"
-            >
-              <CreditCard size={16} />
-              Buy Credits
-            </button>
-            <button
-              onClick={() => {
-                credits.topUp('price_500credits', window.location.href, window.location.href)
-                  .then((res) => { window.location.href = res.url; })
-                  .catch((err: Error) => alert('Failed to initiate purchase: ' + err.message));
-              }}
-              className="flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-400"
-            >
-              <ArrowUpRight size={16} />
-              Buy 500 Credits
-            </button>
+          <div className="mt-4">
+            {packs.length === 0 ? (
+              <p className="text-sm text-brand-200">Credit packs unavailable.</p>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                {packs.map((pack) => (
+                  <button
+                    key={pack.priceId}
+                    onClick={() => {
+                      credits.topUp(pack.priceId, window.location.href, window.location.href)
+                        .then((res) => { window.location.href = res.url; })
+                        .catch((err: Error) => alert('Failed to initiate purchase: ' + err.message));
+                    }}
+                    className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-50"
+                  >
+                    <CreditCard size={16} />
+                    {pack.bonus > 0 ? `${pack.credits} + ${pack.bonus} Bonus` : `${pack.credits} Credits`}
+                    <span className="text-brand-500">(${(pack.priceCents / 100).toFixed(2)})</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <p className="mt-3 text-xs text-brand-200">
             Lifetime total: {balance.lifetimeCredits.toLocaleString()} credits purchased
