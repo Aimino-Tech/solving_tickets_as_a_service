@@ -4,6 +4,10 @@
  * Uses raw pg.Pool to apply SQL migration files.
  * Migration tracking is done via a `_migrations` table.
  *
+ * Order:
+ *   1. supabase/migrations/*  (user / commercial domain) — tracked as `supabase/<file>`
+ *   2. src/db/migrations/*    (ops / pipeline) — tracked as `<file>`
+ *
  * Usage:
  *   npx tsx src/db/migrate.ts              # Run pending migrations
  *   npx tsx src/db/migrate.ts --rollback    # Roll back the last batch
@@ -21,8 +25,16 @@ const __dirname = dirname(__filename);
 
 const log = rootLogger.child({ module: 'db:migrate' });
 
-const MIGRATIONS_DIR = join(__dirname, 'migrations');
+export const MIGRATIONS_DIR = join(__dirname, 'migrations');
+export const SUPABASE_MIGRATIONS_DIR = join(__dirname, '..', '..', 'supabase', 'migrations');
 const MIGRATION_TABLE = '_migrations';
+const SUPABASE_TRACK_PREFIX = 'supabase/';
+
+export interface MigrationEntry {
+  /** Name stored in `_migrations` (prefixed for supabase files). */
+  name: string;
+  filePath: string;
+}
 
 // ---------------------------------------------------------------------------
 // Ensure the tracking table exists
@@ -94,17 +106,43 @@ export function computeChecksum(content: string): string {
   return Math.abs(hash).toString(16).padStart(8, '0');
 }
 
-// ---------------------------------------------------------------------------
-// Get list of all migration files from disk
-// ---------------------------------------------------------------------------
+function isForwardMigrationFile(f: string): boolean {
+  return f.endsWith('.sql') && !f.includes('.rollback.');
+}
 
-function getMigrationFiles(): string[] {
-  if (!existsSync(MIGRATIONS_DIR)) {
-    return [];
+/**
+ * List all forward migrations: supabase user-domain first, then ops.
+ */
+export function listMigrationEntries(): MigrationEntry[] {
+  const entries: MigrationEntry[] = [];
+
+  if (existsSync(SUPABASE_MIGRATIONS_DIR)) {
+    for (const f of readdirSync(SUPABASE_MIGRATIONS_DIR).filter(isForwardMigrationFile).sort()) {
+      entries.push({
+        name: `${SUPABASE_TRACK_PREFIX}${f}`,
+        filePath: join(SUPABASE_MIGRATIONS_DIR, f),
+      });
+    }
   }
-  return readdirSync(MIGRATIONS_DIR)
-    .filter((f) => f.endsWith('.sql') && !f.includes('.rollback.'))
-    .sort();
+
+  if (existsSync(MIGRATIONS_DIR)) {
+    for (const f of readdirSync(MIGRATIONS_DIR).filter(isForwardMigrationFile).sort()) {
+      entries.push({
+        name: f,
+        filePath: join(MIGRATIONS_DIR, f),
+      });
+    }
+  }
+
+  return entries;
+}
+
+function resolveRollbackPath(trackName: string): string {
+  if (trackName.startsWith(SUPABASE_TRACK_PREFIX)) {
+    const file = trackName.slice(SUPABASE_TRACK_PREFIX.length).replace(/\.sql$/, '.rollback.sql');
+    return join(SUPABASE_MIGRATIONS_DIR, file);
+  }
+  return join(MIGRATIONS_DIR, trackName.replace(/\.sql$/, '.rollback.sql'));
 }
 
 // ---------------------------------------------------------------------------
@@ -114,24 +152,22 @@ function getMigrationFiles(): string[] {
 export async function runMigrations(): Promise<void> {
   log.info('Checking for pending migrations...');
 
-  if (!existsSync(MIGRATIONS_DIR)) {
-    log.warn('Migrations directory does not exist, creating it');
-    const { mkdirSync } = await import('node:fs');
-    mkdirSync(MIGRATIONS_DIR, { recursive: true });
+  const entries = listMigrationEntries();
+
+  if (entries.length === 0) {
+    if (!existsSync(MIGRATIONS_DIR)) {
+      log.warn('Migrations directory does not exist, creating it');
+      const { mkdirSync } = await import('node:fs');
+      mkdirSync(MIGRATIONS_DIR, { recursive: true });
+    }
+    log.info('No migration files found');
     return;
   }
 
   await ensureMigrationTable();
   const applied = await getAppliedMigrations();
 
-  const files = getMigrationFiles();
-
-  if (files.length === 0) {
-    log.info('No migration files found');
-    return;
-  }
-
-  const pending = files.filter((f) => !applied.has(f));
+  const pending = entries.filter((e) => !applied.has(e.name));
 
   if (pending.length === 0) {
     log.info('All migrations are already applied');
@@ -140,11 +176,10 @@ export async function runMigrations(): Promise<void> {
 
   log.info({ pending: pending.length }, `Found ${pending.length} pending migration(s)`);
 
-  for (const file of pending) {
-    const filePath = join(MIGRATIONS_DIR, file);
-    const sql = readFileSync(filePath, 'utf-8');
+  for (const entry of pending) {
+    const sql = readFileSync(entry.filePath, 'utf-8');
     const checksum = computeChecksum(sql);
-    await applyMigration(file, sql, checksum);
+    await applyMigration(entry.name, sql, checksum);
   }
 }
 
@@ -162,33 +197,32 @@ export interface DryRunResult {
 export async function runMigrationsDryRun(): Promise<DryRunResult[]> {
   log.info('Dry-run: checking pending migrations...');
 
-  if (!existsSync(MIGRATIONS_DIR)) {
-    log.warn('Migrations directory does not exist');
+  const entries = listMigrationEntries();
+  if (entries.length === 0) {
+    log.warn('No migration files found');
     return [];
   }
 
   await ensureMigrationTable();
   const applied = await getAppliedMigrations();
-  const files = getMigrationFiles();
 
   const results: DryRunResult[] = [];
 
-  for (const file of files) {
-    const filePath = join(MIGRATIONS_DIR, file);
-    const sql = readFileSync(filePath, 'utf-8');
+  for (const entry of entries) {
+    const sql = readFileSync(entry.filePath, 'utf-8');
     const checksum = computeChecksum(sql);
-    const isApplied = applied.has(file);
+    const isApplied = applied.has(entry.name);
 
     results.push({
-      file,
+      file: entry.name,
       checksum,
       size: sql.length,
       status: isApplied ? 'applied' : 'pending',
     });
 
     log.info(
-      { file, checksum, status: isApplied ? 'already applied' : 'pending' },
-      `Migration: ${file} [${isApplied ? 'APPLIED' : 'PENDING'}]`,
+      { file: entry.name, checksum, status: isApplied ? 'already applied' : 'pending' },
+      `Migration: ${entry.name} [${isApplied ? 'APPLIED' : 'PENDING'}]`,
     );
   }
 
@@ -224,7 +258,7 @@ export async function rollbackLastBatchDryRun(): Promise<DryRunResult[]> {
 
   const results: DryRunResult[] = [];
   for (const row of result.rows) {
-    const rollbackFile = join(MIGRATIONS_DIR, row.name.replace('.sql', '.rollback.sql'));
+    const rollbackFile = resolveRollbackPath(row.name);
     const size = existsSync(rollbackFile) ? readFileSync(rollbackFile, 'utf-8').length : 0;
 
     results.push({
@@ -270,7 +304,7 @@ export async function rollbackLastBatch(): Promise<void> {
   }
 
   for (const row of result.rows) {
-    const rollbackFile = join(MIGRATIONS_DIR, row.name.replace('.sql', '.rollback.sql'));
+    const rollbackFile = resolveRollbackPath(row.name);
     const client = await getPool().connect();
     try {
       await client.query('BEGIN');
@@ -350,15 +384,15 @@ export async function benchmarkMigration(
 export async function runMigrationsWithBenchmark(): Promise<BenchmarkResult[]> {
   log.info('Running migrations with benchmark...');
 
-  if (!existsSync(MIGRATIONS_DIR)) {
-    log.warn('Migrations directory does not exist');
+  const entries = listMigrationEntries();
+  if (entries.length === 0) {
+    log.warn('No migration files found');
     return [];
   }
 
   await ensureMigrationTable();
   const applied = await getAppliedMigrations();
-  const files = getMigrationFiles();
-  const pending = files.filter((f) => !applied.has(f));
+  const pending = entries.filter((e) => !applied.has(e.name));
 
   if (pending.length === 0) {
     log.info('All migrations are already applied');
@@ -368,13 +402,12 @@ export async function runMigrationsWithBenchmark(): Promise<BenchmarkResult[]> {
   log.info({ pending: pending.length }, `Running ${pending.length} migration(s) with benchmark`);
 
   const results: BenchmarkResult[] = [];
-  for (const file of pending) {
-    const filePath = join(MIGRATIONS_DIR, file);
-    const sql = readFileSync(filePath, 'utf-8');
+  for (const entry of pending) {
+    const sql = readFileSync(entry.filePath, 'utf-8');
     const checksum = computeChecksum(sql);
 
-    const result = await benchmarkMigration(file, async () => {
-      await applyMigration(file, sql, checksum);
+    const result = await benchmarkMigration(entry.name, async () => {
+      await applyMigration(entry.name, sql, checksum);
     });
 
     results.push(result);

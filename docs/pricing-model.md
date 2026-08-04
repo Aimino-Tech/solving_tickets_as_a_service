@@ -104,6 +104,9 @@ Usage is tracked per account per billing period:
 - `src/billing/usage.ts` — Checks limits and increments counters
 - Tier gates enforce limits and return clear upgrade prompts
 
+### Credits & balances (Supabase Postgres)
+Overage credit balances live in `credit_balances` / `credit_transactions` on the same Supabase-hosted Postgres as Auth-linked `users` (see `supabase/migrations/`). The Express API mutates them via `CreditsRepository` (`pg` pool) — not via supabase-js table APIs. Schema DDL for this domain belongs in `supabase/migrations/` only.
+
 ### Self-Hosted License
 Self-hosted users operate without any billing integration. The system:
 - Detects self-hosted mode (no `STRIPE_SECRET_KEY` configured)

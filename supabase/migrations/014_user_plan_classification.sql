@@ -1,4 +1,4 @@
--- Plan classification columns for the users table.
+-- Plan classification columns for users (idempotent; also covered by 013_users).
 -- Self-hosted safety: ALL operations use IF NOT EXISTS / IF EXISTS patterns.
 
 BEGIN;

@@ -77,6 +77,11 @@ describe('computeChecksum', () => {
   });
 });
 
+/** Ops-only FS: treat supabase/migrations as missing so unit tests stay isolated. */
+function mockOpsMigrationsOnly() {
+  fsMockFns.existsSync.mockImplementation((p: unknown) => !String(p).includes(`${join('supabase', 'migrations')}`));
+}
+
 describe('runMigrations', () => {
   beforeEach(() => {
     fsMockFns.existsSync.mockReset();
@@ -97,7 +102,7 @@ describe('runMigrations', () => {
   });
 
   it('does nothing when no migration files exist', async () => {
-    fsMockFns.existsSync.mockReturnValue(true);
+    mockOpsMigrationsOnly();
     fsMockFns.readdirSync.mockReturnValue([]);
     mockQueryWithRetry.mockResolvedValue({ rows: [] });
     mockGetPool.mockReturnValue({ connect: vi.fn() });
@@ -106,7 +111,7 @@ describe('runMigrations', () => {
   });
 
   it('applies pending migrations not in the tracking table', async () => {
-    fsMockFns.existsSync.mockReturnValue(true);
+    mockOpsMigrationsOnly();
     fsMockFns.readdirSync.mockReturnValue(['001_test.sql', '002_test.sql']);
     fsMockFns.readFileSync
       .mockReturnValueOnce('CREATE TABLE test1 (id INTEGER);')
@@ -126,7 +131,7 @@ describe('runMigrations', () => {
   });
 
   it('skips already-applied migrations', async () => {
-    fsMockFns.existsSync.mockReturnValue(true);
+    mockOpsMigrationsOnly();
     fsMockFns.readdirSync.mockReturnValue(['001_applied.sql', '002_pending.sql']);
     fsMockFns.readFileSync.mockReturnValue('SELECT 1;');
     mockQueryWithRetry
@@ -141,6 +146,37 @@ describe('runMigrations', () => {
     mockGetPool.mockReturnValue({ connect: mockConnect });
     const { runMigrations: run } = await import('../../db/migrate.js');
     await run();
+  });
+});
+
+describe('listMigrationEntries', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    fsMockFns.existsSync.mockReset();
+    fsMockFns.readdirSync.mockReset();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('lists supabase migrations before ops with supabase/ prefix', async () => {
+    fsMockFns.existsSync.mockReturnValue(true);
+    fsMockFns.readdirSync.mockImplementation((dir: unknown) => {
+      const s = String(dir);
+      if (s.includes(`${join('supabase', 'migrations')}`)) {
+        return ['013_users.sql', '013_users.rollback.sql', '016_accounts_credits.sql'];
+      }
+      return ['001_initial.sql', '002_webhook.sql'];
+    });
+
+    const { listMigrationEntries } = await import('../../db/migrate.js');
+    const entries = listMigrationEntries();
+    expect(entries.map((e) => e.name)).toEqual([
+      'supabase/013_users.sql',
+      'supabase/016_accounts_credits.sql',
+      '001_initial.sql',
+      '002_webhook.sql',
+    ]);
   });
 });
 
@@ -195,7 +231,7 @@ describe('rollbackLastBatch', () => {
 describe('migration lifecycle (mocked)', () => {
   it('full lifecycle: ensure table -> get applied -> apply pending -> rollback', async () => {
     vi.resetModules();
-    fsMockFns.existsSync.mockReturnValue(true);
+    fsMockFns.existsSync.mockImplementation((p: unknown) => !String(p).includes(`${join('supabase', 'migrations')}`));
     fsMockFns.readdirSync
       .mockReturnValueOnce(['001_initial.sql'])
       .mockReturnValueOnce([]);
@@ -207,14 +243,11 @@ describe('migration lifecycle (mocked)', () => {
       release: vi.fn(),
     });
     mockGetPool.mockReturnValue({ connect: mockConnect });
-    mockQueryWithRetry
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [{ name: '001_initial.sql' }] });
-    const mod = await import('../../db/migrate.js');
-    await mod.runMigrations();
-    await mod.rollbackLastBatch();
+    mockQueryWithRetry.mockResolvedValue({ rows: [] });
+    const { runMigrations, rollbackLastBatch } = await import('../../db/migrate.js');
+    await runMigrations();
+    mockQueryWithRetry.mockResolvedValue({ rows: [{ name: '001_initial.sql' }] });
+    await rollbackLastBatch();
   });
 });
 
@@ -231,7 +264,7 @@ describe('dry-run mode', () => {
   });
 
   it('does not apply migrations in dry-run mode', async () => {
-    fsMockFns.existsSync.mockReturnValue(true);
+    fsMockFns.existsSync.mockImplementation((p: unknown) => !String(p).includes(`${join('supabase', 'migrations')}`));
     fsMockFns.readdirSync.mockReturnValue(['001_test.sql', '002_test.sql']);
     fsMockFns.readFileSync
       .mockReturnValueOnce('CREATE TABLE test1 (id INTEGER);')
@@ -261,7 +294,7 @@ describe('dry-run mode', () => {
   });
 
   it('returns empty array when no migrations are pending (dry-run)', async () => {
-    fsMockFns.existsSync.mockReturnValue(true);
+    fsMockFns.existsSync.mockImplementation((p: unknown) => !String(p).includes(`${join('supabase', 'migrations')}`));
     fsMockFns.readdirSync.mockReturnValue(['001_test.sql']);
     fsMockFns.readFileSync.mockReturnValue('SELECT 1;');
     mockQueryWithRetry
@@ -274,6 +307,25 @@ describe('dry-run mode', () => {
     expect(result.filter(r => r.status === 'pending')).toHaveLength(0);
     expect(result).toHaveLength(1);
     expect(result[0].status).toBe('applied');
+  });
+
+  it('dry-run lists supabase migrations before ops', async () => {
+    vi.resetModules();
+    fsMockFns.existsSync.mockReturnValue(true);
+    fsMockFns.readdirSync.mockImplementation((dir: unknown) => {
+      const s = String(dir);
+      if (s.includes(`${join('supabase', 'migrations')}`)) return ['013_users.sql'];
+      return ['001_initial.sql'];
+    });
+    fsMockFns.readFileSync.mockReturnValue('SELECT 1;');
+    mockQueryWithRetry
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    mockGetPool.mockReturnValue({ connect: vi.fn() });
+    const { runMigrationsDryRun } = await import('../../db/migrate.js');
+    const result = await runMigrationsDryRun();
+    expect(result.map((r) => r.file)).toEqual(['supabase/013_users.sql', '001_initial.sql']);
+    expect(result.every((r) => r.status === 'pending')).toBe(true);
   });
 });
 

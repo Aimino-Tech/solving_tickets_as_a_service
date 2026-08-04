@@ -61,9 +61,23 @@ export function getPool(): pg.Pool {
       min: config.database.poolMin,
       max: config.database.poolMax,
       ssl: config.database.ssl,
+      supabaseHosted: isSupabase,
     },
     'Database connection pool created',
   );
+
+  // Cloud SaaS expects user data on Supabase Postgres; self-hosted OSS may use local PG.
+  const stripeConfigured = Boolean(config.stripe?.secretKey);
+  if (
+    process.env.NODE_ENV === 'production' &&
+    stripeConfigured &&
+    !isSupabase &&
+    !process.env.SUPABASE_DATABASE_URL
+  ) {
+    log.warn(
+      'Cloud production with Stripe but DATABASE_URL is not Supabase — user/credits schema should live on Supabase Postgres',
+    );
+  }
 
   return pool;
 }

@@ -71,9 +71,17 @@ After setting `DATABASE_URL`, run:
 
 ```bash
 npx tsx src/db/migrate.ts
+# or: npm run db:migrate
 ```
 
-This creates all required tables (accounts, billing, run_history, audit_logs, webhook_events, etc.).
+This applies:
+
+1. **`supabase/migrations/`** — user/commercial schema (users, accounts, credits, billing, teams, OAuth, GDPR), tracked as `supabase/<file>.sql`
+2. **`src/db/migrations/`** — ops/pipeline schema (runs, webhooks, analytics, …)
+
+Cloud SaaS: point `DATABASE_URL` (or `SUPABASE_DATABASE_URL`) at your Supabase Postgres URI. Auth uses `SUPABASE_URL` + keys separately; credits/balances live in the same Postgres database.
+
+See [`supabase/migrations/README.md`](../supabase/migrations/README.md) and [`src/db/migrations/README.md`](../src/db/migrations/README.md).
 
 ### Connection Pool Settings (Optional Tuning)
 

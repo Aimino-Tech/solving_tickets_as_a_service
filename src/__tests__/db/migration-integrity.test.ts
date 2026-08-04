@@ -90,3 +90,58 @@ describe('migration file integrity', () => {
     }
   });
 });
+
+const SUPABASE_MIGRATIONS_DIR = join(__dirname, '..', '..', '..', 'supabase', 'migrations');
+
+const supabaseFiles = readdirSync(SUPABASE_MIGRATIONS_DIR)
+  .filter((f) => f.endsWith('.sql'))
+  .sort();
+const supabaseForward = supabaseFiles.filter((f) => !f.includes('.rollback.'));
+const supabaseRollback = supabaseFiles.filter((f) => f.includes('.rollback.'));
+
+describe('supabase user-domain migration integrity', () => {
+  it('has user-domain forward migrations', () => {
+    expect(supabaseForward.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('every supabase forward migration has a matching rollback', () => {
+    for (const fwd of supabaseForward) {
+      expect(supabaseRollback).toContain(fwd.replace('.sql', '.rollback.sql'));
+    }
+  });
+
+  it('listMigrationEntries puts supabase entries first with prefix', async () => {
+    const { listMigrationEntries } = await import('../../db/migrate.js');
+    const entries = listMigrationEntries();
+    const supabaseEntries = entries.filter((e) => e.name.startsWith('supabase/'));
+    const opsEntries = entries.filter((e) => !e.name.startsWith('supabase/'));
+
+    expect(supabaseEntries.length).toBe(supabaseForward.length);
+    expect(supabaseEntries[0].name).toMatch(/^supabase\/013_/);
+    expect(entries[0].name.startsWith('supabase/')).toBe(true);
+    if (opsEntries.length > 0) {
+      const firstOpsIdx = entries.findIndex((e) => !e.name.startsWith('supabase/'));
+      const lastSupabaseIdx = entries.map((e) => e.name.startsWith('supabase/')).lastIndexOf(true);
+      expect(lastSupabaseIdx).toBeLessThan(firstOpsIdx);
+    }
+  });
+
+  it('canonical tables appear in supabase DDL', () => {
+    const joined = supabaseForward
+      .map((f) => readFileSync(join(SUPABASE_MIGRATIONS_DIR, f), 'utf-8'))
+      .join('\n');
+    for (const table of [
+      'users',
+      'accounts',
+      'credit_balances',
+      'credit_transactions',
+      'billing',
+      'teams',
+      'team_members',
+      'referral_codes',
+      'refresh_tokens',
+    ]) {
+      expect(joined).toMatch(new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\b`));
+    }
+  });
+});

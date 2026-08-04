@@ -1,21 +1,26 @@
 import { useState, useEffect } from 'react';
-import { repos, github, bitbucket, type GitHubInstallation, type BitbucketRepo } from '@/api/client';
-import type { Repo } from '@/api/types';
+import { github, bitbucket, type GitHubInstallation, type BitbucketRepo } from '@/api/client';
 import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
 import { useI18n } from '@/i18n/I18nProvider';
-import { formatRelativeTime } from '@/utils/format';
-// import { supabase } from '@/lib/supabase';
+
+type ConnectedRepo = {
+  key: string;
+  installationId: number;
+  owner: string;
+  name: string;
+  fullName: string;
+  private: boolean;
+};
 
 export default function Repos() {
   const { t } = useI18n();
-  const [repoList, setRepoList] = useState<Repo[]>([]);
   const [installations, setInstallations] = useState<GitHubInstallation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; githubLogin?: string }>({ connected: false });
-  const [showInstallations, setShowInstallations] = useState(false);
+  const [showInstallations, setShowInstallations] = useState(true);
   const [togglingRepo, setTogglingRepo] = useState<string | null>(null);
   const [bbStatus, setBbStatus] = useState<{ connected: boolean; workspace: string }>({ connected: false, workspace: '' });
   const [bbRepos, setBbRepos] = useState<BitbucketRepo[]>([]);
@@ -25,18 +30,37 @@ export default function Repos() {
   const [bbError, setBbError] = useState<string | null>(null);
   const [togglingBbRepo, setTogglingBbRepo] = useState<string | null>(null);
 
+  const connectedRepos: ConnectedRepo[] = installations.flatMap((inst) =>
+    (inst.repos ?? [])
+      .filter((repo) => repo.syntaroInstalled)
+      .map((repo) => ({
+        key: `${inst.installationId}:${repo.fullName}`,
+        installationId: inst.installationId,
+        owner: repo.owner,
+        name: repo.name,
+        fullName: repo.fullName,
+        private: repo.private,
+      })),
+  );
+
   async function loadBitbucket(signal?: AbortSignal) {
+    setBbLoading(true);
     try {
       const status = await bitbucket.getStatus({ signal }).catch(() => ({ connected: false, workspace: '' }));
+      if (signal?.aborted) return;
       setBbStatus(status);
       if (status.connected) {
         const data = await bitbucket.listRepos({ signal });
+        if (signal?.aborted) return;
         setBbRepos(data.repos);
       } else {
         setBbRepos([]);
       }
-    } catch {
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return;
       setBbRepos([]);
+    } finally {
+      setBbLoading(false);
     }
   }
 
@@ -87,24 +111,25 @@ export default function Repos() {
     setError(null);
     setWarning(null);
     try {
-      const [status, repoData] = await Promise.all([
-        github.getStatus({ signal }).catch(() => ({ connected: false })),
-        repos.list({ signal }).catch(() => [] as (Repo & { createdAt: string })[]),
-      ]);
+      const status = await github.getStatus({ signal }).catch(() => ({ connected: false }));
+      if (signal?.aborted) return;
       setConnectionStatus(status);
-      setRepoList(repoData);
 
       if (status.connected) {
         try {
           const instData = await github.listInstallations({ signal });
-          setInstallations(instData.installations);
+          if (signal?.aborted) return;
+          setInstallations(instData.installations ?? []);
           if (instData.error) {
             setWarning(instData.error);
           }
         } catch (listErr) {
+          if ((listErr as Error).name === 'AbortError') return;
           setInstallations([]);
           setError(listErr instanceof Error ? listErr.message : 'Failed to load GitHub installations');
         }
+      } else {
+        setInstallations([]);
       }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
@@ -151,7 +176,6 @@ export default function Repos() {
       await github.disconnect();
       setConnectionStatus({ connected: false });
       setInstallations([]);
-      setRepoList([]);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to disconnect');
     }
@@ -167,9 +191,23 @@ export default function Repos() {
         await github.configureWebhook(installationId, owner, repo);
       }
       const instData = await github.listInstallations();
-      setInstallations(instData.installations);
+      setInstallations(instData.installations ?? []);
     } catch (err) {
       alert(err instanceof Error ? err.message : `Failed to ${current ? 'remove' : 'configure'} webhook`);
+    } finally {
+      setTogglingRepo(null);
+    }
+  }
+
+  async function handleDisconnectConnectedRepo(repo: ConnectedRepo) {
+    if (!confirm(`Disconnect ${repo.fullName}? SYNTARO will stop receiving events from this repository.`)) return;
+    setTogglingRepo(repo.fullName);
+    try {
+      await github.removeWebhook(repo.installationId, repo.owner, repo.name);
+      const instData = await github.listInstallations();
+      setInstallations(instData.installations ?? []);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to disconnect repository');
     } finally {
       setTogglingRepo(null);
     }
@@ -271,35 +309,39 @@ export default function Repos() {
 
                 {showInstallations && (
                   <div className="space-y-2">
-                    {inst.repos.map((repo) => (
-                      <div
-                        key={repo.fullName}
-                        className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-block h-2 w-2 rounded-full ${repo.syntaroInstalled ? 'bg-green-500' : 'bg-gray-300'}`} />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{repo.fullName}</span>
-                          {repo.private && (
-                            <span className="text-xs text-gray-400">Private</span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => handleToggleRepo(inst.installationId, repo.owner, repo.name, repo.syntaroInstalled)}
-                          disabled={togglingRepo === repo.fullName}
-                          className={`text-xs px-3 py-1 rounded-full min-h-[44px] ${
-                            repo.syntaroInstalled
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                              : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                          }`}
+                    {(inst.repos ?? []).length === 0 ? (
+                      <p className="text-xs text-gray-400 px-3 py-2">No repositories in this installation.</p>
+                    ) : (
+                      (inst.repos ?? []).map((repo) => (
+                        <div
+                          key={repo.fullName}
+                          className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800"
                         >
-                          {togglingRepo === repo.fullName
-                            ? '...'
-                            : repo.syntaroInstalled
-                              ? 'SYNTARO Active'
-                              : 'Enable SYNTARO'}
-                        </button>
-                      </div>
-                    ))}
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-block h-2 w-2 rounded-full ${repo.syntaroInstalled ? 'bg-green-500' : 'bg-gray-300'}`} />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{repo.fullName}</span>
+                            {repo.private && (
+                              <span className="text-xs text-gray-400">Private</span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleToggleRepo(inst.installationId, repo.owner, repo.name, repo.syntaroInstalled)}
+                            disabled={togglingRepo === repo.fullName}
+                            className={`text-xs px-3 py-1 rounded-full min-h-[44px] ${
+                              repo.syntaroInstalled
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                            }`}
+                          >
+                            {togglingRepo === repo.fullName
+                              ? '...'
+                              : repo.syntaroInstalled
+                                ? 'SYNTARO Active'
+                                : 'Enable SYNTARO'}
+                          </button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 )}
               </div>
@@ -307,30 +349,31 @@ export default function Repos() {
           )}
 
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 pt-4">
-            Connected Repositories ({repoList.length})
+            Connected Repositories ({connectedRepos.length})
           </h3>
-          {repoList.length === 0 ? (
+          {connectedRepos.length === 0 ? (
             <EmptyState title="No repositories connected." hint="Enable SYNTARO on repos above." />
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {repoList.map((repo) => (
-                <div key={repo.id} className="card flex flex-col justify-between">
+              {connectedRepos.map((repo) => (
+                <div key={repo.key} className="card flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className={`inline-block h-2.5 w-2.5 rounded-full ${repo.active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                      <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
                       <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        {repo.owner}/{repo.repo}
+                        {repo.fullName}
                       </h3>
                     </div>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Connected {formatRelativeTime(repo.createdAt)}
-                    </p>
+                    {repo.private && (
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Private</p>
+                    )}
                   </div>
                   <button
-                    onClick={() => repos.disconnect(repo.id)}
+                    onClick={() => handleDisconnectConnectedRepo(repo)}
+                    disabled={togglingRepo === repo.fullName}
                     className="btn-danger text-xs mt-3 self-start"
                   >
-                    Disconnect
+                    {togglingRepo === repo.fullName ? '...' : t('repos.disconnect')}
                   </button>
                 </div>
               ))}
@@ -382,21 +425,21 @@ export default function Repos() {
                 placeholder={t('repos.bitbucketUsername')}
                 value={bbForm.username}
                 onChange={(e) => setBbForm({ ...bbForm, username: e.target.value })}
-                className="input"
+                className="input-field min-h-[44px]"
               />
               <input
                 type="password"
                 placeholder={t('repos.bitbucketAppPassword')}
                 value={bbForm.appPassword}
                 onChange={(e) => setBbForm({ ...bbForm, appPassword: e.target.value })}
-                className="input"
+                className="input-field min-h-[44px]"
               />
               <input
                 type="text"
                 placeholder={t('repos.bitbucketWorkspace')}
                 value={bbForm.workspace}
                 onChange={(e) => setBbForm({ ...bbForm, workspace: e.target.value })}
-                className="input"
+                className="input-field min-h-[44px]"
               />
             </div>
             <button

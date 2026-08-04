@@ -1,6 +1,5 @@
--- Role-based access control for the users table.
--- Mirrors the plan-sync pattern (DB column + Supabase Auth app_metadata.role).
--- Self-hosted safety: ALL operations use IF NOT EXISTS patterns.
+-- Role-based access control for users (idempotent; also covered by 013_users).
+-- Mirrors Supabase Auth app_metadata.role.
 
 BEGIN;
 
