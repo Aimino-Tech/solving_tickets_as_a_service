@@ -16,6 +16,26 @@ type CreditBalanceRow = {
   updated_at: Date;
 };
 
+export interface Coupon {
+  id: number;
+  code: string;
+  amountCredits: number;
+  active: boolean;
+  maxRedemptions: number | null;
+  timesRedeemed: number;
+  createdAt: Date;
+}
+
+type CouponRow = {
+  id: number;
+  code: string;
+  amount_credits: number;
+  active: boolean;
+  max_redemptions: number | null;
+  times_redeemed: number;
+  created_at: Date;
+};
+
 function mapBalanceRow(row: CreditBalanceRow): CreditBalance {
   return {
     id: row.id,
@@ -24,6 +44,18 @@ function mapBalanceRow(row: CreditBalanceRow): CreditBalance {
     lifetimeCredits: row.lifetime_credits,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function mapCoupon(row: CouponRow): Coupon {
+  return {
+    id: row.id,
+    code: row.code,
+    amountCredits: row.amount_credits,
+    active: row.active,
+    maxRedemptions: row.max_redemptions,
+    timesRedeemed: row.times_redeemed,
+    createdAt: row.created_at,
   };
 }
 
@@ -171,6 +203,72 @@ export class CreditsRepository {
   // -----------------------------------------------------------------------
   // Queries
   // -----------------------------------------------------------------------
+
+  /**
+   * Redeem a promo coupon atomically.
+   *
+   * Validates the coupon (exists, active, under redemption cap), increments
+   * `times_redeemed`, and credits the account balance — all in one
+   * transaction so a redemption can never be recorded without crediting.
+   *
+   * Coupon credits are added to the balance only (not lifetime_credits), so
+   * promotional credits don't skew the low-balance ratio in
+   * src/credits/lowCreditWarning.ts.
+   *
+   * @throws Error with a descriptive message for invalid/inactive/exhausted coupons.
+   * @returns The coupon (post-redemption) and the account's new balance.
+   */
+  async redeemCoupon(
+    accountId: number,
+    code: string,
+  ): Promise<{ coupon: Coupon; balance: number }> {
+    const client = await getPool().connect();
+    try {
+      await client.query('BEGIN');
+
+      // Lock the coupon row so concurrent redemptions are serialized
+      const couponResult = await client.query<CouponRow>(
+        'SELECT * FROM coupons WHERE code = $1 FOR UPDATE',
+        [code],
+      );
+      const coupon = couponResult.rows[0];
+      if (!coupon) throw new Error('Coupon not found');
+      if (!coupon.active) throw new Error('Coupon is inactive');
+      if (coupon.max_redemptions !== null && coupon.times_redeemed >= coupon.max_redemptions) {
+        throw new Error('Coupon has already been fully redeemed');
+      }
+
+      await client.query('UPDATE coupons SET times_redeemed = times_redeemed + 1 WHERE id = $1', [
+        coupon.id,
+      ]);
+
+      // Credit balance (not lifetime_credits — promotional credits)
+      const balanceResult = await client.query<CreditBalance>(
+        `INSERT INTO credit_balances (account_id, balance, lifetime_credits)
+         VALUES ($1, $2, 0)
+         ON CONFLICT (account_id)
+         DO UPDATE SET
+           balance = credit_balances.balance + $2,
+           updated_at = NOW()
+         RETURNING *`,
+        [accountId, coupon.amount_credits],
+      );
+
+      await client.query(
+        `INSERT INTO credit_transactions (account_id, amount, type, description)
+         VALUES ($1, $2, 'coupon', $3)`,
+        [accountId, coupon.amount_credits, `Coupon redemption: ${coupon.code}`],
+      );
+
+      await client.query('COMMIT');
+      return { coupon: mapCoupon({ ...coupon, times_redeemed: coupon.times_redeemed + 1 }), balance: balanceResult.rows[0].balance };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
 
   /**
    * Get the transaction history for an account.
