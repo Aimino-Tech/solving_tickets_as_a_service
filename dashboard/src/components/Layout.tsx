@@ -2,12 +2,15 @@ import type { LucideIcon } from 'lucide-react';
 import {
   BarChart3,
   CreditCard,
+  Gift,
   GitFork,
   LayoutDashboard,
   RotateCw,
   ScrollText,
   Settings as SettingsIcon,
   ShieldCheck,
+  Gauge,
+  Users,
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -51,10 +54,15 @@ export default function Layout() {
   const NAV_ITEMS: { to: string; label: string; icon: LucideIcon }[] = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
     { to: '/runs', label: t('nav.runs'), icon: RotateCw },
+    { to: '/usage-limits', label: 'Usage Limits', icon: Gauge }, // AIM-4645
     { to: '/repos', label: t('nav.repos'), icon: GitFork },
     { to: '/usage', label: 'Usage', icon: BarChart3 }, // AIM-4641
+    // AIM-4642
+    { to: '/members', label: 'Members', icon: Users },
     { to: '/billing', label: 'Billing', icon: CreditCard },
     { to: '/audit', label: t('nav.audit'), icon: ScrollText },
+    // AIM-4643
+    { to: '/referral', label: 'Referral', icon: Gift },
     { to: '/settings', label: t('nav.settings'), icon: SettingsIcon },
   ];
 

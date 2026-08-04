@@ -47,6 +47,24 @@ export interface RoleChangeResult {
   newRole: TeamRole;
 }
 
+export interface TeamMemberWithLimit extends TeamMemberWithDetails {
+  monthlyLimitCredits: number | null;
+}
+
+export interface TeamInviteRow {
+  id: number;
+  email: string;
+  role: string;
+  monthlyLimitCredits: number | null;
+  createdAt: Date;
+}
+
+export interface MemberLimitResult {
+  teamId: number;
+  accountId: number;
+  monthlyLimitCredits: number | null;
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -138,6 +156,191 @@ export async function listTeams(accountId: number): Promise<TeamWithMemberCount[
   );
 
   return withCounts;
+}
+
+/**
+ * Resolve the caller's team (their first membership) with their role.
+ */
+export async function getMyTeam(accountId: number): Promise<{ team: Team; role: TeamRole } | undefined> {
+  const teams = await teamsRepository.getTeamsForAccount(accountId);
+  if (teams.length === 0) return undefined;
+
+  const team = teams[0];
+  const role = await getMemberRole(team.id, accountId);
+  return { team, role: role ?? 'viewer' };
+}
+
+/**
+ * List a team's members (with email + monthly limit) and pending invites.
+ */
+export async function listTeamMembers(teamId: number): Promise<{
+  members: TeamMemberWithLimit[];
+  invites: TeamInviteRow[];
+}> {
+  const raw = await teamsRepository.getMembersWithDetails(teamId);
+  const members: TeamMemberWithLimit[] = raw.map((m) => ({
+    id: m.id,
+    teamId: m.teamId,
+    accountId: m.accountId,
+    role: m.role,
+    monthlyLimitCredits: m.monthlyLimitCredits ?? null,
+    joinedAt: m.joinedAt,
+    accountName: m.accountName,
+    accountEmail: m.accountEmail,
+  }));
+  const invites = await teamsRepository.getPendingInvites(teamId);
+  return { members, invites };
+}
+
+/**
+ * Set or clear a member's monthly credit limit (admin only).
+ */
+export async function setMemberMonthlyLimit(params: {
+  teamId: number;
+  targetAccountId: number;
+  monthlyLimitCredits: number | null;
+  changedByAccountId: number;
+  correlationId?: string;
+}): Promise<MemberLimitResult> {
+  const team = await teamsRepository.findById(params.teamId);
+  if (!team) {
+    throw new Error(`Team not found: ${params.teamId}`);
+  }
+
+  const actorRole = await getMemberRole(params.teamId, params.changedByAccountId);
+  if (actorRole !== 'admin') {
+    throw new Error('Only admins can change member limits');
+  }
+
+  const targetRole = await getMemberRole(params.teamId, params.targetAccountId);
+  if (!targetRole) {
+    throw new Error('Target user is not a member of this team');
+  }
+
+  const updated = await teamsRepository.setMemberMonthlyLimit(
+    params.teamId,
+    params.targetAccountId,
+    params.monthlyLimitCredits,
+  );
+  if (!updated) {
+    throw new Error('Failed to update member limit');
+  }
+
+  await safeAuditLog({
+    actorType: 'user',
+    actorId: String(params.changedByAccountId),
+    action: 'team.member.limit_changed',
+    resourceType: 'team',
+    resourceId: String(params.teamId),
+    details: {
+      targetAccountId: params.targetAccountId,
+      monthlyLimitCredits: params.monthlyLimitCredits,
+    },
+    correlationId: params.correlationId,
+  });
+
+  log.info(
+    {
+      teamId: params.teamId,
+      targetAccountId: params.targetAccountId,
+      monthlyLimitCredits: params.monthlyLimitCredits,
+    },
+    'Team member monthly limit changed',
+  );
+
+  return {
+    teamId: params.teamId,
+    accountId: params.targetAccountId,
+    monthlyLimitCredits: params.monthlyLimitCredits,
+  };
+}
+
+/**
+ * Invite a member by email (creates a pending invite row, admin only).
+ */
+export async function inviteByEmail(params: {
+  teamId: number;
+  email: string;
+  role?: TeamRole;
+  monthlyLimitCredits?: number | null;
+  invitedByAccountId: number;
+  correlationId?: string;
+}): Promise<{ id: number; email: string }> {
+  const role = params.role ?? 'member';
+  if (!isValidRole(role)) {
+    throw new Error(`Invalid role "${role}". Valid roles: ${VALID_ROLES.join(', ')}`);
+  }
+
+  const team = await teamsRepository.findById(params.teamId);
+  if (!team) {
+    throw new Error(`Team not found: ${params.teamId}`);
+  }
+
+  const actorRole = await getMemberRole(params.teamId, params.invitedByAccountId);
+  if (actorRole !== 'admin') {
+    throw new Error('Only admins can invite members');
+  }
+
+  const invite = await teamsRepository.createInvite({
+    teamId: params.teamId,
+    email: params.email.toLowerCase(),
+    invitedBy: String(params.invitedByAccountId),
+    role,
+    monthlyLimitCredits: params.monthlyLimitCredits ?? null,
+  });
+  if (!invite) {
+    throw new Error(`An invite for ${params.email} already exists`);
+  }
+
+  await safeAuditLog({
+    actorType: 'user',
+    actorId: String(params.invitedByAccountId),
+    action: 'team.member.invited_by_email',
+    resourceType: 'team',
+    resourceId: String(params.teamId),
+    details: { email: params.email, role, monthlyLimitCredits: params.monthlyLimitCredits ?? null },
+    correlationId: params.correlationId,
+  });
+
+  log.info({ teamId: params.teamId, email: params.email, role }, 'Team member invited by email');
+
+  return { id: invite.id, email: invite.email };
+}
+
+/**
+ * Revoke a pending invite (admin only).
+ */
+export async function revokeInvite(params: {
+  teamId: number;
+  inviteId: number;
+  revokedByAccountId: number;
+  correlationId?: string;
+}): Promise<boolean> {
+  const team = await teamsRepository.findById(params.teamId);
+  if (!team) {
+    throw new Error(`Team not found: ${params.teamId}`);
+  }
+
+  const actorRole = await getMemberRole(params.teamId, params.revokedByAccountId);
+  if (actorRole !== 'admin') {
+    throw new Error('Only admins can revoke invites');
+  }
+
+  const revoked = await teamsRepository.revokeInvite(params.teamId, params.inviteId);
+
+  if (revoked) {
+    await safeAuditLog({
+      actorType: 'user',
+      actorId: String(params.revokedByAccountId),
+      action: 'team.invite.revoked',
+      resourceType: 'team',
+      resourceId: String(params.teamId),
+      details: { inviteId: params.inviteId },
+      correlationId: params.correlationId,
+    });
+  }
+
+  return revoked;
 }
 
 /**

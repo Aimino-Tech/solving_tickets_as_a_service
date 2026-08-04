@@ -46,6 +46,7 @@ import { streamAuditExportCsv, streamAuditExportJson } from './audit/export.js';
 import { authRouter } from './auth/index.js';
 import { oauthRouter } from './auth/oauth.js';
 import { billingRouter } from './billing/index.js';
+import { usageLimitsRouter } from './usage-limits/routes.js'; // AIM-4645
 import { registerSlackMentionHandler } from './channels/slack/handler.js';
 import { config } from './config.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
@@ -837,10 +838,31 @@ export async function createApp(): Promise<express.Application> {
   }
   app.use('/api/v1', creditRouter);
 
+  // ── Referral API (AIM-4643) ──────────────────────────────
+  // GET  /api/v1/referral/code
+  // POST /api/v1/referral/code
+  // POST /api/v1/referral/redeem
+  // GET  /api/v1/referral/rewards
+  // POST /api/v1/referral/rewards/:id/claim
+  let referralRouter: Router;
+  try {
+    const mod = await import('./referral/index.js');
+    referralRouter = mod.referralRouter;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load referral API — using empty router');
+    referralRouter = Router();
+  }
+  app.use('/api/v1', referralRouter);
+
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
 
   app.use('/api/v1', litellmUsageRouter);
+
+  // ── Usage limits + provider routing API (AIM-4645) ─────────────
+  // GET  /api/v1/usage-limits             — continuous/weekly/monthly usage + toggles
+  // POST /api/v1/usage-limits/preferences — update use_balance_after_limits / enable_china_models
+  app.use('/api/v1/usage-limits', usageLimitsRouter);
 
   // ── Admin webhooks API ──────────────────────────────────────────
   // GET /admin/webhooks (paginated, filterable)
@@ -864,10 +886,14 @@ export async function createApp(): Promise<express.Application> {
   // ── Team Management API ───────────────────────────────────────────
   // POST   /api/teams                          — Create a new team
   // GET    /api/teams                          — List teams for current account
+  // GET    /api/teams/me                       — Resolve the caller's team
   // GET    /api/teams/:id                       — Get team details with members
-  // POST   /api/teams/:id/invite               — Invite a member
-  // POST   /api/teams/:id/members/:userId/role  — Change member role
-  // DELETE /api/teams/:id/members/:userId       — Remove member
+  // GET    /api/teams/:id/members               — List members + pending invites
+  // POST   /api/teams/:id/invite               — Invite a member (accountId or email)
+  // POST   /api/teams/:id/members/:userId/role  — Change a member's role
+  // POST   /api/teams/:id/members/:userId/limit — Set a member's monthly credit limit
+  // DELETE /api/teams/:id/members/:userId       — Remove a member
+  // DELETE /api/teams/:id/invites/:inviteId     — Revoke a pending invite
   app.use('/api/teams', teamRouter);
 
   // Repos API (repo picker with webhook status)

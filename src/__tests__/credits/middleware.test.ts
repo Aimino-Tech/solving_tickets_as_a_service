@@ -15,6 +15,18 @@ vi.mock('../../db/repositories/CreditsRepository.js', () => ({
   },
 }));
 
+const mockGetBillingSettings = vi.fn();
+const mockGetMonthSpendCents = vi.fn();
+const mockIsMonthlyLimitExceeded = vi.fn();
+const mockTriggerAutoReload = vi.fn();
+
+vi.mock('../../credits/billingSettings.js', () => ({
+  getBillingSettings: mockGetBillingSettings,
+  getMonthSpendCents: mockGetMonthSpendCents,
+  isMonthlyLimitExceeded: mockIsMonthlyLimitExceeded,
+  triggerAutoReload: mockTriggerAutoReload,
+}));
+
 vi.mock('../../utils/logger.js', () => ({
   rootLogger: { child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })) },
 }));
@@ -24,6 +36,15 @@ describe('credits/middleware', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockGetBillingSettings.mockResolvedValue({
+      autoReloadEnabled: false,
+      autoReloadThresholdCents: null,
+      autoReloadTopupCents: null,
+      monthlyLimitCents: null,
+    });
+    mockGetMonthSpendCents.mockResolvedValue(0);
+    mockIsMonthlyLimitExceeded.mockReturnValue(false);
+    mockTriggerAutoReload.mockResolvedValue(null);
     middleware = await import('../../credits/middleware.js');
   });
 
@@ -174,6 +195,105 @@ describe('credits/middleware', () => {
       await mw(req, res, next);
       expect(res.status).toHaveBeenCalledWith(402);
       expect(next).not.toHaveBeenCalled();
+    });
+
+    it('refunds the deduction and blocks with 402 when monthly limit is exceeded', async () => {
+      mockGetBalance.mockResolvedValue({ balance: 100 });
+      mockDeduct.mockResolvedValue({ balance: 50 });
+      mockGetBillingSettings.mockResolvedValue({
+        autoReloadEnabled: false,
+        autoReloadThresholdCents: null,
+        autoReloadTopupCents: null,
+        monthlyLimitCents: 5000,
+      });
+      mockGetMonthSpendCents.mockResolvedValue(6000);
+      mockIsMonthlyLimitExceeded.mockReturnValue(true);
+      const mw = middleware.deductMiddleware({ amount: 50 });
+      const req = { headers: { 'x-account-id': '42' }, body: {}, path: '/test' } as any;
+      const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
+      const next = vi.fn();
+      await mw(req, res, next);
+      expect(mockCredit).toHaveBeenCalledWith(42, 50, expect.objectContaining({ type: 'refund' }));
+      expect(res.status).toHaveBeenCalledWith(402);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ error: 'Monthly usage limit exceeded' }),
+      );
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('allows through when monthly limit is not exceeded', async () => {
+      mockGetBalance.mockResolvedValue({ balance: 100 });
+      mockDeduct.mockResolvedValue({ balance: 50 });
+      mockGetMonthSpendCents.mockResolvedValue(4000);
+      mockIsMonthlyLimitExceeded.mockReturnValue(false);
+      const mw = middleware.deductMiddleware({ amount: 50 });
+      const req = { headers: { 'x-account-id': '42' }, body: {}, path: '/test' } as any;
+      const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
+      const next = vi.fn();
+      await mw(req, res, next);
+      expect(next).toHaveBeenCalled();
+      expect(mockCredit).not.toHaveBeenCalled();
+    });
+
+    it('attaches autoReload to the request when triggered after deduction', async () => {
+      mockGetBalance.mockResolvedValue({ balance: 100 });
+      mockDeduct.mockResolvedValue({ balance: 50 });
+      mockTriggerAutoReload.mockResolvedValue({
+        topUpRequired: true,
+        checkoutUrl: 'https://checkout.stripe.com/cs_test_123',
+        topupCents: 1000,
+      });
+      const mw = middleware.deductMiddleware({ amount: 50 });
+      const req = { headers: { 'x-account-id': '42' }, body: {}, path: '/test' } as any;
+      const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
+      const next = vi.fn();
+      await mw(req, res, next);
+      expect(mockTriggerAutoReload).toHaveBeenCalledWith(
+        42,
+        expect.objectContaining({ autoReloadEnabled: false }),
+        50,
+        undefined,
+      );
+      expect((req as any).autoReload).toEqual({
+        topUpRequired: true,
+        checkoutUrl: 'https://checkout.stripe.com/cs_test_123',
+        topupCents: 1000,
+      });
+      expect(next).toHaveBeenCalled();
+    });
+
+    it('includes topUpRequired and checkoutUrl in the 402 insufficient response when auto-reload triggers', async () => {
+      mockGetBalance.mockResolvedValue({ balance: 10 });
+      mockTriggerAutoReload.mockResolvedValue({
+        topUpRequired: true,
+        checkoutUrl: 'https://checkout.stripe.com/cs_test_456',
+        topupCents: 2500,
+      });
+      const mw = middleware.deductMiddleware({ amount: 50 });
+      const req = { headers: { 'x-account-id': '42' }, body: {}, path: '/test' } as any;
+      const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
+      const next = vi.fn();
+      await mw(req, res, next);
+      expect(res.status).toHaveBeenCalledWith(402);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          topUpRequired: true,
+          checkoutUrl: 'https://checkout.stripe.com/cs_test_456',
+        }),
+      );
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('lets the request through when billing settings check fails (degraded)', async () => {
+      mockGetBalance.mockResolvedValue({ balance: 100 });
+      mockDeduct.mockResolvedValue({ balance: 50 });
+      mockGetBillingSettings.mockRejectedValue(new Error('DB down'));
+      const mw = middleware.deductMiddleware({ amount: 50 });
+      const req = { headers: { 'x-account-id': '42' }, body: {}, path: '/test' } as any;
+      const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
+      const next = vi.fn();
+      await mw(req, res, next);
+      expect(next).toHaveBeenCalled();
     });
   });
 

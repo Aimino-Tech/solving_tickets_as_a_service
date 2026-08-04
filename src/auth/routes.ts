@@ -8,6 +8,7 @@ import { requireAuth } from './middleware.js';
 import { loginLimiter, refreshLimiter, registerLimiter } from './rateLimit.js';
 import { AuthError, authService } from './service.js';
 import { getSupabaseAdmin } from './supabase.js';
+import { referralService } from '../referral/service.js'; // AIM-4643
 
 const log = rootLogger.child({ module: 'auth-routes' });
 
@@ -17,6 +18,7 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   name: z.string().optional(),
+  referralCode: z.string().max(32).optional(), // AIM-4643
 });
 
 const loginSchema = z.object({
@@ -58,12 +60,12 @@ router.post('/register', registerLimiter, async (req: Request, res: Response) =>
     // Create user record in local DB and sync plan to auth metadata
     try {
       await queryWithRetry(
-        `INSERT INTO users (id, email, name, password_hash, plan, subscription_status, created_at, updated_at)
-         VALUES ($1, $2, $3, 'supabase_auth', 'solo', 'active', NOW(), NOW())
+        `INSERT INTO users (id, email, name, password_hash, plan, subscription_status, referral_code, created_at, updated_at)
+         VALUES ($1, $2, $3, 'supabase_auth', 'solo', 'active', $4, NOW(), NOW())
          ON CONFLICT (email) DO UPDATE SET
            name = EXCLUDED.name,
            updated_at = NOW()`,
-        [result.user.id, result.user.email, result.user.name || result.user.email],
+        [result.user.id, result.user.email, result.user.name || result.user.email, parsed.data.referralCode ?? null],
       );
 
       // Sync plan to Supabase Auth metadata so JWT carries it
@@ -72,6 +74,15 @@ router.post('/register', registerLimiter, async (req: Request, res: Response) =>
       });
     } catch (dbErr) {
       log.error({ err: String(dbErr) }, 'Failed to create user record — non-fatal');
+    }
+
+    // Referral (AIM-4643): create pending $5 rewards for referrer + referee
+    if (parsed.data.referralCode) {
+      try {
+        await referralService.redeem(parsed.data.referralCode, parsed.data.email);
+      } catch (refErr) {
+        log.warn({ err: String(refErr) }, 'Referral redemption failed — non-fatal');
+      }
     }
 
     // Track user signup in PostHog
