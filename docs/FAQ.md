@@ -6,7 +6,7 @@
 
 ### What is SYNTARO?
 
-SYNTARO (Solving Tickets As A Service) is an open-source GitHub bot that automatically fixes labeled issues. When you label an issue with `syntaro:fix`, SYNTARO investigates your codebase, writes a fix, runs your tests, and opens a pull request — all without human intervention.
+SYNTARO is an open-source GitHub bot that automatically fixes labeled issues. When you label an issue with `syntaro:fix`, SYNTARO investigates your codebase, writes a fix, runs your tests, and opens a pull request — all without human intervention.
 
 It's backed by [OpenCode](https://opencode.ai) — the 162K-star open-source coding agent.
 

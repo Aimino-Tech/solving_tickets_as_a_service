@@ -1,4 +1,4 @@
-# SYNTARO — Solving Tickets As A Service — Full Verification Report
+# SYNTARO — Full Verification Report
 
 **Date:** 2026-06-08  
 **Author:** Sisyphus (OpenCode Agent)  
@@ -22,7 +22,7 @@
 
 ## 1. Project Overview
 
-**SYNTARO (Solving Tickets As A Service)** is an open-source GitHub bot that:
+**SYNTARO** is an open-source GitHub bot that:
 1. Listens for GitHub issues labeled with `syntaro:fix`
 2. Dispatches an OpenCode AI agent to investigate and fix the issue
 3. Runs regression tests to verify the fix

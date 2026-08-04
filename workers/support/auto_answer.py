@@ -53,7 +53,7 @@ AUTO_ANSWER_PROMPT_TEMPLATE: str = os.getenv(
     "SYNTARO_AUTO_ANSWER_PROMPT",
     (
         "You are a knowledgeable customer support engineer for a DevOps automation"
-        " platform called SYNTARO (Solving Tickets As A Service). A user has asked a"
+        " platform called SYNTARO. A user has asked a"
         " support question. Answer clearly, concisely, and helpfully.\n\n"
         "## User Question\n{question}\n\n"
         "## Context\n{context}\n\n"

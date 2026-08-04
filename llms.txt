@@ -1,4 +1,4 @@
-# SYNTARO — Solving Tickets As A Service
+# SYNTARO
 
 > Label a GitHub issue. Get a fix PR. Open-source GitHub bot that takes a labeled issue, investigates your codebase, writes a fix, runs your tests, and opens a PR.
 

@@ -57,6 +57,7 @@ vi.mock('../../../src/notifications/slack-bolt.js', () => ({
     mountOn: vi.fn(),
     receiver: { register: vi.fn() },
     app: null,
+    start: vi.fn().mockResolvedValue(undefined),
     sendInteractiveMessage: vi.fn().mockResolvedValue(undefined),
   })),
   resetSlackBoltApp: vi.fn(),
@@ -178,6 +179,7 @@ vi.mock('../../../src/billing/index.js', () => ({
 }));
 vi.mock('../../../src/monitoring/sentry.js', () => ({
   addBreadcrumb: vi.fn(),
+  captureError: vi.fn(),
   setupSentryExpressErrorHandler: vi.fn(),
 }));
 

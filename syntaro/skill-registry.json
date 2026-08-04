@@ -4,7 +4,7 @@
   "skills": [
     {
       "name": "syntaro",
-      "description": "SYNTARO — Solving Tickets As A Service. Submit GitHub issues and get automated fix PRs.",
+      "description": "SYNTARO. Submit GitHub issues and get automated fix PRs.",
       "version": "0.2.0",
       "author": "Aimino Tech",
       "license": "MIT",

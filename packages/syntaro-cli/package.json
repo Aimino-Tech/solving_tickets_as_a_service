@@ -1,7 +1,7 @@
 {
   "name": "@aimino-tech/syntaro",
   "version": "0.1.0",
-  "description": "SYNTARO — Solving Tickets As A Service. AI-powered GitHub bot that fixes issues automatically.",
+  "description": "SYNTARO. AI-powered GitHub bot that fixes issues automatically.",
   "type": "module",
   "bin": {
     "syntaro": "./dist/cli.js"

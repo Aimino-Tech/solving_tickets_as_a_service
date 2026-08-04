@@ -1,6 +1,6 @@
 # Disaster Recovery Runbook
 
-> SYNTARO — Solving Tickets As A Service
+> SYNTARO
 > Last updated: 2026-06-08
 
 ## Table of Contents

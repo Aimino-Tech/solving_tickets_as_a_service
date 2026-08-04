@@ -161,10 +161,20 @@ describe('RedisSessionStore', () => {
     expect(sessions.length).toBeGreaterThanOrEqual(0);
   });
 
-  it('starts and stops zombie reaper', async () => {
-    store.startZombieReaper();
-    store.stopZombieReaper();
-    expect(true).toBe(true); // no crash
+  it('starts and stops zombie reaper idempotently', async () => {
+    const setSpy = vi.spyOn(globalThis, 'setInterval');
+    const clearSpy = vi.spyOn(globalThis, 'clearInterval');
+    try {
+      store.startZombieReaper();
+      store.startZombieReaper();
+      expect(setSpy).toHaveBeenCalledTimes(1);
+      store.stopZombieReaper();
+      store.stopZombieReaper();
+      expect(clearSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      setSpy.mockRestore();
+      clearSpy.mockRestore();
+    }
   });
 
   it('isZombie returns false for non-zombie session', async () => {

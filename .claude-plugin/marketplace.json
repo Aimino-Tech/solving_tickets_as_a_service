@@ -1,7 +1,7 @@
 {
   "$schema": "https://claude.ai/plugins/schema/marketplace.json",
   "name": "syntaro",
-  "title": "SYNTARO — Solving Tickets As A Service",
+  "title": "SYNTARO",
   "description": "Submit GitHub issue descriptions and get automated fix PRs. SYNTARO investigates your codebase, writes fixes, runs tests, and opens pull requests — all through natural language.",
   "version": "0.1.0",
   "author": {

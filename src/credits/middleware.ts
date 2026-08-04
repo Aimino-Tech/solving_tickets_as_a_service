@@ -70,7 +70,7 @@ export function defaultGetAccountId(req: Request): number | null {
  *
  * Usage:
  *   ```ts
- *   import { deductMiddleware } from './credits/index.js';
+ *   import { deductMiddleware } from './index.js';
  *
  *   app.post('/webhook', deductMiddleware({ amount: 50 }), handleWebhook);
  *   ```
@@ -155,7 +155,7 @@ export function deductMiddleware(options?: DeductOptions) {
  *
  * Usage:
  *   ```ts
- *   import { refundCredits } from './credits/index.js';
+ *   import { refundCredits } from './index.js';
  *
  *   try {
  *     await runFix();

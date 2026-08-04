@@ -25,7 +25,7 @@ Use the following values exactly:
 | Field | Value |
 |-------|-------|
 | Name | `@aimino/syntaro-mcp` |
-| Description | SYNTARO (Solving Tickets As A Service) — label a GitHub issue and get an automated fix PR. Open-source AI bot backed by OpenCode. |
+| Description | SYNTARO — label a GitHub issue and get an automated fix PR. Open-source AI bot backed by OpenCode. |
 | Homepage | https://github.com/Aimino-Tech/solving_tickets_as_a_service |
 | License | AGPL-3.0 |
 | Categories | Developer Tools, Code Quality, Automation |

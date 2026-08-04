@@ -60,7 +60,7 @@ export function buildDiscoveryManifest(baseUrl: string): McpDiscoveryManifest {
       name: 'syntaro-agent-discovery',
       version: '1.0.0',
       description:
-        'SYNTARO (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot for automated bug fixing.',
+        'SYNTARO — label a GitHub issue and get a pull request. Open-source AI bot for automated bug fixing.',
       homepage: 'https://github.com/tamnguyen08/solving_tickets_as_a_service',
       documentation: 'https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md',
     },
@@ -264,7 +264,7 @@ export function renderDiscoveryPage(baseUrl: string): string {
 <body>
   <div class="container">
     <h1><span>SYNTARO</span> Agent Discovery</h1>
-    <p class="subtitle">Solving Tickets As A Service — automated bug fixing for your GitHub issues.</p>
+    <p class="subtitle">SYNTARO — automated bug fixing for your GitHub issues.</p>
 
     <div class="badge-row">
       <a href="https://img.shields.io/badge/SYNTARO-MCP-8250DF" class="badge-link"><img src="https://img.shields.io/badge/SYNTARO-MCP-8250DF" alt="SYNTARO MCP" /></a>
@@ -340,7 +340,7 @@ export function renderDiscoveryPage(baseUrl: string): string {
 
     <hr />
     <div class="footer">
-      <p><a href="https://github.com/tamnguyen08/solving_tickets_as_a_service">SYNTARO</a> — Solving Tickets As A Service &mdash; MIT License</p>
+      <p><a href="https://github.com/tamnguyen08/solving_tickets_as_a_service">SYNTARO</a> — SYNTARO &mdash; MIT License</p>
     </div>
   </div>
 </body>

@@ -1,6 +1,6 @@
 {
   "name": "@aimino/syntaro-mcp",
-  "description": "MCP server for SYNTARO — Solving Tickets As A Service. Submit GitHub issues and get automated fix PRs via OpenCode agents.",
+  "description": "MCP server for SYNTARO. Submit GitHub issues and get automated fix PRs via OpenCode agents.",
   "version": "1.0.0",
   "author": {
     "name": "Aimino Tech",

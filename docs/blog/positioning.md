@@ -145,6 +145,6 @@ The thread connecting all of these is the same: **better understanding leads to 
 
 ---
 
-*SYNTARO — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
+*SYNTARO. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
 
 *This is a cross-post. The canonical version lives at [syntaro.io/blog/positioning](https://syntaro.io/blog/positioning).*

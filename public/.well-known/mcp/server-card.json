@@ -3,7 +3,7 @@
   "server": {
     "name": "@aimino/syntaro-mcp",
     "version": "1.0.0",
-    "description": "SYNTARO (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot backed by OpenCode.",
+    "description": "SYNTARO — label a GitHub issue and get a pull request. Open-source AI bot backed by OpenCode.",
     "homepage": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
     "documentation": "https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/README.md",
     "license": "AGPL-3.0-only",

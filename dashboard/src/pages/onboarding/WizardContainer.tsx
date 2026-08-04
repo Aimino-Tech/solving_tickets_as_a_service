@@ -16,8 +16,17 @@ const STEP_LABELS: Record<string, string> = {
 
 const STEP_ORDER = ['github-install', 'repo-selection', 'billing-setup', 'team-setup', 'complete'];
 
+/**
+ * Backend `src/onboarding/wizard.ts` emits step names in snake_case
+ * (`github_install`, `repo_selection`, ...) while this UI matches kebab-case.
+ * Normalize so the wizard actually renders the current step.
+ */
+function toKebab(step: string): string {
+  return step.replace(/_/g, '-');
+}
+
 function getStepIndex(step: string): number {
-  return STEP_ORDER.indexOf(step);
+  return STEP_ORDER.indexOf(toKebab(step));
 }
 
 export default function WizardContainer() {
@@ -27,6 +36,7 @@ export default function WizardContainer() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    sessionStorage.removeItem('syntaro:onboarding_pending');
     loadWizardState();
   }, []);
 
@@ -91,7 +101,7 @@ export default function WizardContainer() {
     );
   }
 
-  if (progress.state === 'completed' || progress.currentStep === 'complete') {
+  if (progress.state === 'completed' || toKebab(progress.currentStep) === 'complete') {
     return (
       <div className="mx-auto max-w-lg py-8">
         <Complete progress={progress} />
@@ -150,16 +160,16 @@ export default function WizardContainer() {
       </div>
 
       <div className="card">
-        {currentStep === 'github-install' && (
+        {toKebab(currentStep) === 'github-install' && (
           <GitHubInstall progress={progress} onComplete={handleStepComplete} onSkip={handleSkip} />
         )}
-        {currentStep === 'repo-selection' && (
+        {toKebab(currentStep) === 'repo-selection' && (
           <RepoSelection progress={progress} onComplete={handleStepComplete} onSkip={handleSkip} />
         )}
-        {currentStep === 'billing-setup' && (
+        {toKebab(currentStep) === 'billing-setup' && (
           <BillingSetup progress={progress} onComplete={handleStepComplete} onSkip={handleSkip} />
         )}
-        {currentStep === 'team-setup' && (
+        {toKebab(currentStep) === 'team-setup' && (
           <TeamSetup progress={progress} onComplete={handleStepComplete} onSkip={handleSkip} />
         )}
       </div>

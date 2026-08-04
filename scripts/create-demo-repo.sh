@@ -12,7 +12,7 @@ DEMO_REPO="${1:-syntaro-demo}"
 GITHUB_TOKEN="${GITHUB_TOKEN:?GITHUB_TOKEN required}"
 
 # Create repo
-gh repo create "$DEMO_REPO" --public --description "Demo repo for SYNTARO - Solving Tickets As A Service" --confirm
+gh repo create "$DEMO_REPO" --public --description "Demo repo for SYNTARO" --confirm
 
 # Seed the repo from the canonical demo app
 echo "Cloning canonical demo repo..."

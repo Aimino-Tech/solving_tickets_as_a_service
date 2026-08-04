@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/__tests__/test-utils';
 import Settings from '@/pages/Settings';
@@ -31,6 +31,13 @@ vi.mock('@/context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
 }));
 
+
+async function expandLinearPanel() {
+  const description = screen.getByText('Connect a Linear workspace to delegate issues to Cloud Agents');
+  const card = description.closest('div.p-4') as HTMLElement;
+  await userEvent.click(within(card).getByRole('button', { name: 'Connect' }));
+}
+
 describe('Settings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -60,6 +67,8 @@ describe('Settings', () => {
   it('renders API Keys section with Linear key in display mode first, shows input on Edit', async () => {
     renderWithProviders(<Settings />);
 
+    await expandLinearPanel();
+
     await waitFor(() => {
       expect(screen.getByText('Linear API Key')).toBeInTheDocument();
     });
@@ -78,23 +87,24 @@ describe('Settings', () => {
     });
   });
 
-  it('shows Connect link for Bitbucket and disabled Connect for Jira', async () => {
+  it('shows disabled Connect for GitLab, Azure, Bitbucket and Jira', async () => {
     renderWithProviders(<Settings />);
 
     await waitFor(() => {
       expect(screen.getByText('Bitbucket App Password')).toBeInTheDocument();
     });
 
-    // Bitbucket: clickable external link
-    const bitbucketLink = screen.getAllByRole('link', { name: 'Connect' });
-    expect(bitbucketLink.length).toBe(1);
-    expect(bitbucketLink[0]).toHaveAttribute('href');
-    expect(bitbucketLink[0]).toHaveAttribute('target', '_blank');
+    // No clickable Connect links remain
+    expect(screen.queryAllByRole('link', { name: 'Connect' }).length).toBe(0);
 
-    // Jira: disabled, not clickable
-    const jiraConnect = screen.getByTitle('Setup guide coming soon');
-    expect(jiraConnect.tagName).toBe('SPAN');
-    expect(jiraConnect).toHaveAttribute('aria-disabled', 'true');
+    // GitLab, Azure DevOps, Bitbucket and Jira: disabled, not clickable
+    const disabledConnects = screen.getAllByTitle('Setup guide coming soon');
+    expect(disabledConnects.length).toBe(4);
+    for (const el of disabledConnects) {
+      expect(el.tagName).toBe('SPAN');
+      expect(el).toHaveAttribute('aria-disabled', 'true');
+    }
+
     expect(screen.getByText('Jira API Token')).toBeInTheDocument();
   });
 
@@ -124,6 +134,8 @@ describe('Settings', () => {
 
   it('toggles API key visibility when eye icon is clicked', async () => {
     renderWithProviders(<Settings />);
+
+    await expandLinearPanel();
 
     await waitFor(() => {
       expect(screen.getByText('Linear API Key')).toBeInTheDocument();

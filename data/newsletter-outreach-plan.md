@@ -1,7 +1,7 @@
 # SYNTARO Newsletter Outreach Plan
 
 > Launch date: TBD | Outreach starts: T-3 weeks
-> Prepared for SYNTARO (Solving Tickets As A Service) by AImino
+> Prepared for SYNTARO by AImino
 
 ---
 

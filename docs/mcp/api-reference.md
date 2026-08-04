@@ -2,7 +2,7 @@
 
 ## Overview
 
-SYNTARO (Solving Tickets As A Service) exposes an MCP (Model Context Protocol) server that allows AI agents and MCP-compatible clients to submit GitHub issues for automated fixing and track their progress.
+SYNTARO exposes an MCP (Model Context Protocol) server that allows AI agents and MCP-compatible clients to submit GitHub issues for automated fixing and track their progress.
 
 ## Installation
 

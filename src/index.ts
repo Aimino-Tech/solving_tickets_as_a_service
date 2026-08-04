@@ -1,5 +1,5 @@
 /**
- * SYNTARO — Solving Tickets As A Service
+ * SYNTARO
  *
  * Entry point — starts the API server, or both API and worker based on RUN_MODE.
  * Also starts the CI monitor if CI_MONITOR_ENABLED is true.

@@ -295,7 +295,7 @@ export async function createTestHarness(options?: TestHarnessOptions): Promise<T
   process.env.OPENCODE_URL = openCode.baseUrl;
 
   // Create the SYNTARO app
-  const app = createApp();
+  const app = await createApp();
 
   // Start the SYNTARO server
   const syntaroServer = http.createServer(app);

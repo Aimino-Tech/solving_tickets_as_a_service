@@ -395,6 +395,7 @@ vi.mock('../../src/billing/index.js', () => ({
 }));
 vi.mock('../../src/monitoring/sentry.js', () => ({
   addBreadcrumb: vi.fn(),
+  captureError: vi.fn(),
   setupSentryExpressErrorHandler: vi.fn(),
 }));
 vi.mock('../../src/security/adminAuth.js', () => ({

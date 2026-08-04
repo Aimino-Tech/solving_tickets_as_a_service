@@ -62,7 +62,7 @@ export default function OnboardPage() {
             <span className="text-2xl">⚡</span>
             <span className="text-xl font-bold text-gray-900">SYNTARO</span>
             <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700">
-              Solving Tickets As A Service
+              SYNTARO
             </span>
           </div>
           <button

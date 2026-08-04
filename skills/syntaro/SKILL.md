@@ -1,6 +1,6 @@
 ---
 name: syntaro
-description: SYNTARO — Solving Tickets As A Service. Submit fix requests to a GitHub bot that investigates, fixes, tests, and opens PRs.
+description: SYNTARO. Submit fix requests to a GitHub bot that investigates, fixes, tests, and opens PRs.
 version: 0.2.0
 author: Aimino Tech
 license: MIT
@@ -46,7 +46,7 @@ capabilities:
       - stdio
 ---
 
-# SYNTARO Skill — Solving Tickets As A Service
+# SYNTARO Skill — SYNTARO
 
 SYNTARO is a GitHub bot that takes issue descriptions, investigates your codebase, writes a fix, runs tests, and opens a PR. Agents access SYNTARO through its MCP (Model Context Protocol) API.
 

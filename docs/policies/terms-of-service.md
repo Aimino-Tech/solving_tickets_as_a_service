@@ -7,7 +7,7 @@ status: active
 
 # Terms of Service
 
-**SYNTARO (Solving Tickets As A Service)**
+**SYNTARO**
 **Version 1.0.0**
 **Last Updated: July 28, 2026**
 
@@ -15,7 +15,7 @@ status: active
 
 ## 1. Introduction
 
-Welcome to SYNTARO ("Solving Tickets As A Service"), an AI-powered service that automatically fixes GitHub issues by generating and submitting pull requests. These Terms of Service ("Terms") govern your access to and use of the SYNTARO service, website, and associated applications (collectively, the "Service").
+Welcome to SYNTARO, an AI-powered service that automatically fixes GitHub issues by generating and submitting pull requests. These Terms of Service ("Terms") govern your access to and use of the SYNTARO service, website, and associated applications (collectively, the "Service").
 
 By registering for, accessing, or using the Service, you enter into a legally binding agreement with **Aimino Technologies GmbH** ("Aimino," "we," "us," or "our"), a company registered in Germany. If you are using the Service on behalf of an organization, you represent and warrant that you have the authority to bind that organization to these Terms.
 

@@ -97,7 +97,7 @@ confirm() {
 echo -e "${CYAN}"
 echo "  ███████  ████████  █████   ██████"
 echo "  ██         ██    ██   ██  ██   ██"
-echo "  ███████    ██    ███████  ██████       ${BOLD}Solving Tickets As A Service${NC}${CYAN}"
+echo "  ███████    ██    ███████  ██████       ${BOLD}SYNTARO${NC}${CYAN}"
 echo "       ██    ██    ██   ██  ██   ██"
 echo "  ███████    ██    ██   ██  ██   ██      ${DIM}Label an issue. Get a PR.${NC}${CYAN}"
 echo -e "${NC}"

@@ -4,7 +4,7 @@ Connect your MCP-compatible IDE (Claude, Cursor, Windsurf, etc.) to SYNTARO and 
 
 ## What is SYNTARO?
 
-SYNTARO (Solving Tickets As A Service) is an open-source GitHub bot that investigates your codebase, writes fixes, runs tests, and opens PRs — all triggered by a labeled issue.
+SYNTARO is an open-source GitHub bot that investigates your codebase, writes fixes, runs tests, and opens PRs — all triggered by a labeled issue.
 
 ## MCP Tools
 

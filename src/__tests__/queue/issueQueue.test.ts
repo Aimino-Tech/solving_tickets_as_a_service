@@ -5,9 +5,13 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { isConnected, setConnected } from '../../queue/rabbitmq.js';
 
 describe('issueQueue (removed - RabbitMQ only)', () => {
-  it('is a no-op after BullMQ removal', async () => {
-    expect(true).toBe(true);
+  it('delegates queue state to the RabbitMQ adapter after BullMQ removal', () => {
+    expect(setConnected).toBeTypeOf('function');
+    expect(isConnected).toBeTypeOf('function');
+    setConnected(false);
+    expect(isConnected()).toBe(false);
   });
 });

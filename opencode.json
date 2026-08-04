@@ -5,7 +5,7 @@
   "default_agent": "Sisyphus - ultraworker",
 
   "instructions": [
-    "This project is SYNTARO (Solving Tickets As A Service) — a GitHub bot that turns labeled issues into PRs.",
+    "This project is SYNTARO — a GitHub bot that turns labeled issues into PRs.",
     "READ ../.opencode.md BEFORE writing any code — it documents the exact tech stack, test helpers, and architecture patterns for both SYNTARO and OpenSymphony.",
     "NEVER fabricate libraries. This project uses Vitest (NOT Jest), Playwright (NOT Cypress), Biome (NOT ESLint for formatting), tsx (NOT ts-node).",
     "Test helpers already exist: createTestHarness() in tests/e2e/harness/, ConsoleCapture/ActionLogger/NetworkCapture in tests/automation/core/, mocks in src/__tests__/mocks.ts, fixtures in src/__tests__/fixtures.ts.",
@@ -24,7 +24,7 @@
 
   "skills": {
     "syntaro": {
-      "description": "SYNTARO — Solving Tickets As A Service. Submit GitHub issues and get automated fix PRs.",
+      "description": "SYNTARO. Submit GitHub issues and get automated fix PRs.",
       "url": "https://raw.githubusercontent.com/Aimino-Tech/solving_tickets_as_a_service/main/skills/syntaro/SKILL.md"
     }
   }

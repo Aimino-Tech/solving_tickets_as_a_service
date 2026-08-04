@@ -1,4 +1,4 @@
-# SYNTARO — Solving Tickets As A Service
+# SYNTARO
 
 ## Skill Installation
 

@@ -5,7 +5,7 @@
 
 ## 1. Executive Summary
 
-SYNTARO (Solving Tickets As A Service) is an open-source GitHub bot that autonomously investigates, fixes, and opens pull requests for labeled issues. This document assesses SYNTARO's readiness for SOC 2 Type I certification against the Security, Availability, and Confidentiality trust services criteria.
+SYNTARO is an open-source GitHub bot that autonomously investigates, fixes, and opens pull requests for labeled issues. This document assesses SYNTARO's readiness for SOC 2 Type I certification against the Security, Availability, and Confidentiality trust services criteria.
 
 ## 2. Trust Services Criteria Mapping
 

@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="footer-inner">
         <div className="footer-brand">
           <Link to="/" className="nav-logo" style={{ marginBottom: 8 } as React.CSSProperties}><span className="logo-icon">S</span> SYNTARO</Link>
-          <p>Solving Tickets As A Service. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
+          <p>SYNTARO. An open-source project by <a href="https://aimino.io">AImino</a>. Backed by OpenCode.</p>
         </div>
         <div>
           <h4>Product</h4>

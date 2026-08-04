@@ -202,9 +202,6 @@ creditRouter.get('/credits/balance', async (req: Request, res: Response) => {
  * ```
  */
 creditRouter.get('/credits/transactions', async (req: Request, res: Response) => {
-  const accountId = await requireAccount(req, res);
-  if (!accountId) return;
-
   const parsed = PaginationSchema.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({
@@ -215,6 +212,23 @@ creditRouter.get('/credits/transactions', async (req: Request, res: Response) =>
   }
 
   const { limit, offset } = parsed.data;
+
+  const accountId = await getAccountId(req);
+
+  // Not authenticated at all -> 401
+  if (!accountId && !req.user) {
+    res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Authentication required. Provide x-account-id header or valid JWT token.',
+    });
+    return;
+  }
+
+  // Authenticated but no account record yet -> graceful empty result (mirrors /credits/balance)
+  if (!accountId) {
+    res.json({ transactions: [], pagination: { limit, offset, total: 0 } });
+    return;
+  }
 
   try {
     const transactions = await creditsRepository.getTransactions(accountId, limit, offset);
@@ -331,9 +345,6 @@ creditRouter.post('/credits/top-up', async (req: Request, res: Response) => {
  * ```
  */
 creditRouter.get('/credits/usage', async (req: Request, res: Response) => {
-  const accountId = await requireAccount(req, res);
-  if (!accountId) return;
-
   const parsed = UsageSchema.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({
@@ -344,6 +355,23 @@ creditRouter.get('/credits/usage', async (req: Request, res: Response) => {
   }
 
   const { period } = parsed.data;
+
+  const accountId = await getAccountId(req);
+
+  // Not authenticated at all -> 401
+  if (!accountId && !req.user) {
+    res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Authentication required. Provide x-account-id header or valid JWT token.',
+    });
+    return;
+  }
+
+  // Authenticated but no account record yet -> graceful empty result (mirrors /credits/balance)
+  if (!accountId) {
+    res.json({ accountId: 0, period, usage: [] });
+    return;
+  }
 
   // Determine the SQL date truncation based on period
   const dateTrunc = period === 'daily' ? 'day' : period === 'weekly' ? 'week' : 'month';

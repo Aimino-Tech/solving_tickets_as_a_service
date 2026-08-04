@@ -9,6 +9,7 @@
  *   GET    /api/v1/billing/trial                     — Get trial status for account
  *   POST   /api/v1/billing/subscription/create-checkout  — Create Stripe Checkout Session
  *   POST   /api/v1/billing/subscription/portal       — Create billing portal session
+ *   GET    /api/v1/billing/invoices                  — List recent Stripe invoices for account
  *   POST   /api/v1/billing/subscription/cancel       — Cancel subscription
  *   POST   /api/v1/billing/subscription/reactivate   — Reactivate canceled subscription
  *   POST   /api/v1/billing/webhook                   — Stripe subscription webhook (raw body)
@@ -24,6 +25,7 @@ import {
   createBillingPortalSession,
   cancelSubscriptionAtPeriodEnd,
   reactivateSubscription,
+  listInvoices,
 } from './stripe.js';
 import { getTrialStatus, startTrial } from './trial.js';
 import { createBillingWebhookHandler } from './webhook.js';
@@ -294,6 +296,52 @@ router.post('/subscription/portal', requireAuth, async (req: Request, res: Respo
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to create billing portal session');
     res.status(500).json({ error: 'Failed to create billing portal session' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/billing/invoices — List recent Stripe invoices for account
+// ---------------------------------------------------------------------------
+
+router.get('/invoices', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const accountId = await getAccountId(req);
+    if (!accountId) {
+      res.status(400).json({ error: 'Account identification required. Provide x-account-id header or accountId query param.' });
+      return;
+    }
+
+    // Get the Stripe customer ID from the billing record
+    const result = await queryWithRetry<{ stripe_customer_id: string | null }>(
+      'SELECT stripe_customer_id FROM billing WHERE account_id = $1',
+      [accountId],
+    );
+
+    const customerId = result.rows[0]?.stripe_customer_id;
+    if (!customerId) {
+      // No billing record or no Stripe customer yet — no payments to list.
+      res.json({ invoices: [] });
+      return;
+    }
+
+    const invoices = await listInvoices(customerId, 20);
+    const mapped = invoices.map((invoice) => ({
+      id: invoice.id,
+      number: invoice.number ?? null,
+      status: invoice.status ?? 'unknown',
+      created: new Date((invoice.created ?? 0) * 1000).toISOString(),
+      periodStart: invoice.period_start ? new Date(invoice.period_start * 1000).toISOString() : null,
+      periodEnd: invoice.period_end ? new Date(invoice.period_end * 1000).toISOString() : null,
+      amountDueCents: invoice.amount_due ?? 0,
+      amountPaidCents: invoice.amount_paid ?? 0,
+      currency: invoice.currency ?? 'usd',
+      invoicePdf: invoice.invoice_pdf ?? null,
+      hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+    }));
+    res.json({ invoices: mapped });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to load invoices');
+    res.status(500).json({ error: 'Failed to load invoices' });
   }
 });
 

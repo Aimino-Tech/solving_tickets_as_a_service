@@ -86,7 +86,7 @@ Label an issue, get a pull request. → https://syntaro.io?utm_source=pythonweek
 
 Body:
 
-SYNTARO (Solving Tickets As A Service) is a free, open-source GitHub bot. Add the `syntaro:fix` label to an issue and it investigates your codebase, writes the fix, runs your tests, and opens a draft PR, typically inside 4 minutes. It posts a plan to the issue first, then delivers a PR with a regression test, after 6 deterministic quality gates. Median cost per fix: $3.80, with a 92% pass rate on real issues. Self-hosted for free, or install the cloud version in two minutes. No IDE, no context switching: label it and walk away.
+SYNTARO is a free, open-source GitHub bot. Add the `syntaro:fix` label to an issue and it investigates your codebase, writes the fix, runs your tests, and opens a draft PR, typically inside 4 minutes. It posts a plan to the issue first, then delivers a PR with a regression test, after 6 deterministic quality gates. Median cost per fix: $3.80, with a 92% pass rate on real issues. Self-hosted for free, or install the cloud version in two minutes. No IDE, no context switching: label it and walk away.
 
 CTA:
 

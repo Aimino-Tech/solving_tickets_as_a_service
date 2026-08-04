@@ -6,6 +6,7 @@ export interface User {
   avatarUrl?: string;
   plan?: string;
   createdAt?: string;
+  isAdmin?: boolean;
 }
 
 export interface Run {

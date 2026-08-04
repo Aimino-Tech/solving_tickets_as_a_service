@@ -7,7 +7,7 @@ last-updated: 2026-07-28
 # Post-Mortem: [Incident Title]
 
 > **Blameless, action-oriented incident analysis.**
-> Solving Tickets As A Service
+> SYNTARO
 
 ---
 

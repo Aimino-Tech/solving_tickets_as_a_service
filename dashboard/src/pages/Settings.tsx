@@ -177,6 +177,7 @@ export default function Settings() {
   const [editMode, setEditMode] = useState<Record<string, boolean>>({});
   const [showApiKey, setShowApiKey] = useState<Record<string, boolean>>({});
   const [verifying, setVerifying] = useState<Record<string, boolean>>({});
+  const [githubExpanded, setGithubExpanded] = useState(false);
   const [slackExpanded, setSlackExpanded] = useState(false);
   const [linearExpanded, setLinearExpanded] = useState(false);
   const [slackConnected, setSlackConnected] = useState(false);
@@ -358,7 +359,7 @@ export default function Settings() {
   const iconContainerClass = "integration-icon-container bg-gray-100 dark:bg-gray-800/80 flex size-7 shrink-0 items-center justify-center rounded-lg [&_img]:size-[18px] [&_img]:max-h-[18px] [&_img]:max-w-[18px] [&_img]:object-contain [&_svg]:size-[18px] [&_svg]:shrink-0 [&_svg]:text-gray-700 dark:[&_svg]:text-gray-300";
 
   return (
-    <div className="max-w-3xl space-y-10">
+    <div className="max-w-6xl space-y-10">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage integrations, API keys, and privacy settings</p>
@@ -376,57 +377,112 @@ export default function Settings() {
 
       {/* ── Source Control Section ────────────────────────────────────────── */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 tracking-wide">Source Control</h2>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 tracking-wide">Source Control</h2>
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 shadow-sm">
           {/* ── GitHub ── */}
-          <div className="flex flex-row flex-nowrap items-center justify-between gap-3 p-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={iconContainerClass}>
-                <GithubLogo />
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">GitHub</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  {githubInt?.connected
-                    ? 'Connected as xdnaimino to repositories accessible in organizations: Aimino-Tech'
-                    : 'Connect your GitHub account for Cloud Agents and automated PRs'}
+          <div className="p-4 space-y-3">
+            <div className="flex flex-row flex-nowrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={iconContainerClass}>
+                  <GithubLogo />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">GitHub</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {githubInt?.connected
+                      ? 'Connected as xdnaimino to repositories accessible in organizations: Aimino-Tech'
+                      : 'Connect your GitHub account for Cloud Agents and automated PRs'}
+                  </div>
                 </div>
               </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {githubInt?.connected ? (
+                  <button
+                    onClick={() => setGithubExpanded(!githubExpanded)}
+                    className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors"
+                  >
+                    Manage
+                    <ChevronDown size={14} className="text-gray-400" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const { url } = await githubApi.getOAuthUrl();
+                        if (url) {
+                          window.location.href = url;
+                        } else {
+                          setMessage({ type: 'success', text: 'GitHub connection is ready (dev mode)' });
+                        }
+                      } catch {
+                        setMessage({ type: 'error', text: 'Could not generate GitHub OAuth URL' });
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors"
+                  >
+                    Connect
+                    <ArrowUpRight size={13} className="text-gray-400" />
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {githubInt?.connected ? (
-                <button
-                  onClick={async () => {
-                    try {
-                      const { url } = await githubApi.getOAuthUrl();
-                      window.location.href = url;
-                    } catch {
-                      setMessage({ type: 'error', text: 'Could not generate GitHub reconnection URL' });
-                    }
-                  }}
-                  className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors"
-                >
-                  Manage
-                  <ChevronDown size={14} className="text-gray-400" />
-                </button>
-              ) : (
-                <button
-                  onClick={async () => {
-                    try {
-                      const { url } = await githubApi.getOAuthUrl();
-                      window.location.href = url;
-                    } catch {
-                      setMessage({ type: 'error', text: 'Could not generate GitHub OAuth URL' });
-                    }
-                  }}
-                  className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors"
-                >
-                  Connect
-                  <ArrowUpRight size={13} className="text-gray-400" />
-                </button>
-              )}
-            </div>
+
+            {githubExpanded && (
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2 border border-gray-200 dark:border-gray-700">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {githubInt?.connected
+                      ? 'Connected to GitHub. Reconnect to refresh the token or disconnect to remove access.'
+                      : 'Connect your GitHub account to enable Cloud Agents and automated PRs.'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={async () => {
+                      setMessage(null);
+                      try {
+                        const { url } = await githubApi.getOAuthUrl();
+                        if (url) {
+                          window.location.href = url;
+                        } else {
+                          setMessage({ type: 'success', text: 'GitHub connection is ready (dev mode)' });
+                        }
+                      } catch {
+                        setMessage({ type: 'error', text: 'Could not generate GitHub reconnection URL' });
+                      }
+                    }}
+                    className="btn-secondary text-xs min-h-[36px] px-3"
+                  >
+                    Reconnect
+                  </button>
+                  {githubInt?.connected && (
+                    <button
+                      onClick={async () => {
+                        setMessage(null);
+                        try {
+                          await githubApi.disconnect();
+                          setSysConfig((prev: any) => ({
+                            ...prev,
+                            integrations: prev.integrations?.map((i: any) =>
+                              i.id === 'github' ? { ...i, connected: false } : i,
+                            ) || prev.integrations,
+                          }));
+                          setGithubExpanded(false);
+                          setMessage({ type: 'success', text: 'GitHub disconnected.' });
+                          setTimeout(() => setMessage(null), 3000);
+                        } catch (err) {
+                          setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Could not disconnect GitHub' });
+                        }
+                      }}
+                      className="btn-danger text-xs min-h-[36px] px-3"
+                    >
+                      Disconnect
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── GitLab ── */}
@@ -443,13 +499,14 @@ export default function Settings() {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setMessage({ type: 'error', text: 'GitLab connection guide coming soon' })}
-                className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors"
+              <span
+                aria-disabled="true"
+                title="Setup guide coming soon"
+                className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 cursor-not-allowed select-none"
               >
                 Connect
-                <ArrowUpRight size={13} className="text-gray-400" />
-              </button>
+                <ArrowUpRight size={13} />
+              </span>
             </div>
           </div>
 
@@ -467,13 +524,14 @@ export default function Settings() {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setMessage({ type: 'error', text: 'Azure DevOps setup guide coming soon' })}
-                className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors"
+              <span
+                aria-disabled="true"
+                title="Setup guide coming soon"
+                className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 cursor-not-allowed select-none"
               >
                 Connect
-                <ArrowUpRight size={13} className="text-gray-400" />
-              </button>
+                <ArrowUpRight size={13} />
+              </span>
             </div>
           </div>
 
@@ -490,15 +548,14 @@ export default function Settings() {
                 </div>
               </div>
             </div>
-            <a
-              href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/docs/platforms/bitbucket-setup.md"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors shrink-0"
+            <span
+              aria-disabled="true"
+              title="Setup guide coming soon"
+              className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 cursor-not-allowed select-none shrink-0"
             >
               Connect
-              <ArrowUpRight size={13} className="text-gray-400" />
-            </a>
+              <ArrowUpRight size={13} />
+            </span>
           </div>
 
           {/* ── Bitbucket Data Center ── */}
@@ -525,7 +582,7 @@ export default function Settings() {
 
       {/* ── Integrations Section ────────────────────────────────────────── */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 tracking-wide">Integrations</h2>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 tracking-wide">Integrations</h2>
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 shadow-sm">
           {/* ── Slack ── */}
@@ -543,25 +600,19 @@ export default function Settings() {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                {slackConnected ? (
-                  <>
-                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                      Connected
-                    </span>
-                    <button
-                      onClick={() => setSlackExpanded(!slackExpanded)}
-                      className="p-1.5 rounded-md transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      title="Edit"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                  </>
-                ) : verifying['slack_bot_token'] ? (
+                {verifying['slack_bot_token'] ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
                     <span className="h-1.5 w-1.5 rounded-full bg-yellow-500" />
                     Connecting
                   </span>
+                ) : slackConnected ? (
+                  <button
+                    onClick={() => setSlackExpanded(!slackExpanded)}
+                    className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors"
+                  >
+                    Manage
+                    <ChevronDown size={14} className="text-gray-400" />
+                  </button>
                 ) : (
                   <button
                     onClick={() => setSlackExpanded(!slackExpanded)}
@@ -767,112 +818,115 @@ export default function Settings() {
             </div>
 
             {/* Linear API Key input inline field */}
-            <div className="pt-2 border-t border-gray-100 dark:border-gray-800/60 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${hasLinearKey ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Linear API Key</span>
-                <a href="https://linear.app/settings/api" target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:text-brand-700 ml-auto">
-                  How to get?
-                </a>
-              </div>
-              {editMode['linear_key'] ? (
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type={showApiKey['linear_key'] ? 'text' : 'password'}
-                      value={apiKeyValues['linear_key'] || ''}
-                      onChange={(e) => setApiKeyValues((prev) => ({ ...prev, linear_key: e.target.value }))}
-                      placeholder="lin_api_..."
-                      className="input-field w-full font-mono text-sm min-h-[36px] pr-10"
-                    />
+            {linearExpanded && (
+              <div className="pt-2 border-t border-gray-100 dark:border-gray-800/60 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${hasLinearKey ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Linear API Key</span>
+                  <a href="https://linear.app/settings/api" target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:text-brand-700 ml-auto">
+                    How to get?
+                  </a>
+                </div>
+                {editMode['linear_key'] ? (
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type={showApiKey['linear_key'] ? 'text' : 'password'}
+                        value={apiKeyValues['linear_key'] || ''}
+                        onChange={(e) => setApiKeyValues((prev) => ({ ...prev, linear_key: e.target.value }))}
+                        placeholder="lin_api_..."
+                        className="input-field w-full font-mono text-sm min-h-[36px] pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowApiKey((prev) => ({ ...prev, linear_key: !prev['linear_key'] }))}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showApiKey['linear_key'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                     <button
-                      type="button"
-                      onClick={() => setShowApiKey((prev) => ({ ...prev, linear_key: !prev['linear_key'] }))}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                      tabIndex={-1}
+                      onClick={async () => {
+                        setApiKeySaving((prev) => ({ ...prev, linear_key: true }));
+                        setMessage(null);
+                        try {
+                          await configApi.updateEnv({ LINEAR_API_KEY: apiKeyValues['linear_key'] || '' });
+                          setSysConfig((prev: any) => ({
+                            ...prev,
+                            env: { ...prev.env, LINEAR_API_KEY: apiKeyValues['linear_key'] || '' },
+                          }));
+                          setEditMode((prev) => ({ ...prev, linear_key: false }));
+                          setMessage({ type: 'success', text: 'Linear API key saved.' });
+                          setTimeout(() => setMessage(null), 3000);
+                          if (apiKeyValues['linear_key']) {
+                            setVerifying((prev) => ({ ...prev, linear_key: true }));
+                            try {
+                              const result = await configApi.verifyService('linear', apiKeyValues['linear_key']);
+                              if (result.connected) {
+                                setSysConfig((prev: any) => ({
+                                  ...prev,
+                                  integrations: prev.integrations?.map((i: any) =>
+                                    i.id === 'linear' ? { ...i, connected: true } : i,
+                                  ) || prev.integrations,
+                                }));
+                                setMessage({ type: 'success', text: 'Connected to Linear.' });
+                              } else {
+                                setMessage({ type: 'error', text: result.error || 'Failed to verify Linear API key' });
+                              }
+                            } catch {
+                              setMessage({ type: 'error', text: 'Could not verify Linear API key — connection test failed' });
+                            } finally {
+                              setVerifying((prev) => ({ ...prev, linear_key: false }));
+                            }
+                          }
+                        } catch (err) {
+                          setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save' });
+                        } finally {
+                          setApiKeySaving((prev) => ({ ...prev, linear_key: false }));
+                        }
+                      }}
+                      disabled={apiKeySaving['linear_key']}
+                      className="btn-primary text-xs min-h-[36px] px-3"
                     >
-                      {showApiKey['linear_key'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                      {apiKeySaving['linear_key'] ? '...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => setEditMode((prev) => ({ ...prev, linear_key: false }))}
+                      className="btn-secondary text-xs min-h-[36px] px-3"
+                    >
+                      Cancel
                     </button>
                   </div>
-                  <button
-                    onClick={async () => {
-                      setApiKeySaving((prev) => ({ ...prev, linear_key: true }));
-                      setMessage(null);
-                      try {
-                        await configApi.updateEnv({ LINEAR_API_KEY: apiKeyValues['linear_key'] || '' });
-                        setSysConfig((prev: any) => ({
-                          ...prev,
-                          env: { ...prev.env, LINEAR_API_KEY: apiKeyValues['linear_key'] || '' },
-                        }));
-                        setEditMode((prev) => ({ ...prev, linear_key: false }));
-                        setMessage({ type: 'success', text: 'Linear API key saved.' });
-                        setTimeout(() => setMessage(null), 3000);
-                        if (apiKeyValues['linear_key']) {
-                          setVerifying((prev) => ({ ...prev, linear_key: true }));
-                          try {
-                            const result = await configApi.verifyService('linear', apiKeyValues['linear_key']);
-                            if (result.connected) {
-                              setSysConfig((prev: any) => ({
-                                ...prev,
-                                integrations: prev.integrations?.map((i: any) =>
-                                  i.id === 'linear' ? { ...i, connected: true } : i,
-                                ) || prev.integrations,
-                              }));
-                              setMessage({ type: 'success', text: 'Connected to Linear.' });
-                            } else {
-                              setMessage({ type: 'error', text: result.error || 'Failed to verify Linear API key' });
-                            }
-                          } catch {
-                            setMessage({ type: 'error', text: 'Could not verify Linear API key — connection test failed' });
-                          } finally {
-                            setVerifying((prev) => ({ ...prev, linear_key: false }));
-                          }
+                ) : (
+                  <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2 border border-gray-200 dark:border-gray-700">
+                    {hasLinearKey ? (
+                      <span className="font-mono text-sm text-gray-400 select-all">
+                        {(() => {
+                          const v = env.LINEAR_API_KEY;
+                          return v.length > 8 ? `${v.slice(0, 8)}••••••••` : '••••••••••••••••';
+                        })()}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">Not configured</span>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (env.LINEAR_API_KEY && !apiKeyValues['linear_key']) {
+                          setApiKeyValues((prev) => ({ ...prev, linear_key: env.LINEAR_API_KEY }));
                         }
-                      } catch (err) {
-                        setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save' });
-                      } finally {
-                        setApiKeySaving((prev) => ({ ...prev, linear_key: false }));
-                      }
-                    }}
-                    disabled={apiKeySaving['linear_key']}
-                    className="btn-primary text-xs min-h-[36px] px-3"
-                  >
-                    {apiKeySaving['linear_key'] ? '...' : 'Save'}
-                  </button>
-                  <button
-                    onClick={() => setEditMode((prev) => ({ ...prev, linear_key: false }))}
-                    className="btn-secondary text-xs min-h-[36px] px-3"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2 border border-gray-200 dark:border-gray-700">
-                  {hasLinearKey ? (
-                    <span className="font-mono text-sm text-gray-400 select-all">
-                      {(() => {
-                        const v = env.LINEAR_API_KEY;
-                        return v.length > 8 ? `${v.slice(0, 8)}••••••••` : '••••••••••••••••';
-                      })()}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-gray-400">Not configured</span>
-                  )}
-                  <button
-                    onClick={() => {
-                      if (env.LINEAR_API_KEY && !apiKeyValues['linear_key']) {
-                        setApiKeyValues((prev) => ({ ...prev, linear_key: env.LINEAR_API_KEY }));
-                      }
-                      setEditMode((prev) => ({ ...prev, linear_key: true }));
-                    }}
-                    className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                    title="Edit"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                </div>
-              )}
-            </div>
+                        setEditMode((prev) => ({ ...prev, linear_key: true }));
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                      title="Edit"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
 
           {/* ── Jira ── */}

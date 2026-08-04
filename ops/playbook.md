@@ -1,6 +1,6 @@
 # SYNTARO Alert Response Playbooks
 
-> Solving Tickets As A Service — Incident Response
+> SYNTARO — Incident Response
 > Last updated: 2026-06-08
 
 ## Table of Contents

@@ -12,7 +12,7 @@ last-updated: 2026-07-28
 
 ## 1. System Description
 
-SYNTARO (Solving Tickets As A Service) is an AI-powered GitHub bot that automatically investigates, fixes, and opens pull requests for labeled issues. The system consists of:
+SYNTARO is an AI-powered GitHub bot that automatically investigates, fixes, and opens pull requests for labeled issues. The system consists of:
 
 - **Webhook receiver**: Express.js HTTP server that ingests webhooks from GitHub (and optionally GitLab, Bitbucket, Linear, Jira)
 - **Validation layer**: Issue label checking, deduplication, rate limiting

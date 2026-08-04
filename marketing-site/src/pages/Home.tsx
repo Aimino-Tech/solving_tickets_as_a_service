@@ -2,11 +2,11 @@ import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
 
 export default function Home() {
-  useEffect(() => { document.title = 'SYNTARO — Solving Tickets As A Service | AI-Powered GitHub Automation'; }, []);
+  useEffect(() => { document.title = 'SYNTARO | AI-Powered GitHub Automation'; }, []);
   return (<>
     <section className="hero">
       <div className="hero-content">
-        <div className="hero-label animate-in animate-in-d1">Solving Tickets As A Service</div>
+        <div className="hero-label animate-in animate-in-d1">SYNTARO</div>
         <h1 className="animate-in animate-in-d2">Label a Ticket.<br />Get a <em>Pull Request.</em></h1>
         <p className="sub animate-in animate-in-d3">
           <strong>SYNTARO</strong> is an open-source GitHub bot that takes a labeled issue, investigates your codebase, writes a fix, runs your tests, and opens a PR. Backed by <strong>OpenCode</strong> — the 162K★ open-source coding agent.

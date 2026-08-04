@@ -1,4 +1,4 @@
-# SYNTARO — Solving Tickets As A Service
+# SYNTARO
 
 ![CI](https://github.com/Aimino-Tech/solving_tickets_as_a_service/actions/workflows/ci.yml/badge.svg)
 ![CD](https://github.com/Aimino-Tech/solving_tickets_as_a_service/actions/workflows/cd.yml/badge.svg)

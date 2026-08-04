@@ -1,5 +1,5 @@
 /**
- * SYNTARO Plugin — OpenCode plugin for Solving Tickets As A Service.
+ * SYNTARO Plugin — OpenCode plugin for SYNTARO.
  *
  * Provides tools for local development, webhook testing, and status checks
  * of the SYNTARO GitHub bot. Installed via opencode.json:

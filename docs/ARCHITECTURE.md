@@ -24,7 +24,7 @@
 
 ## Overview
 
-SYNTARO (Solving Tickets As A Service) is an open-source GitHub bot that automatically fixes labeled issues. It receives webhooks from GitHub, classifies issues via a cheap LLM, dispatches a full OpenCode agent in an isolated sandbox to investigate and fix the bug, runs verification, and opens a pull request — all without human intervention.
+SYNTARO is an open-source GitHub bot that automatically fixes labeled issues. It receives webhooks from GitHub, classifies issues via a cheap LLM, dispatches a full OpenCode agent in an isolated sandbox to investigate and fix the bug, runs verification, and opens a pull request — all without human intervention.
 
 The architecture follows a **modular pipeline** design inspired by [KintsugiBot](https://github.com/kintsugi-bot) with significant extensions for production readiness: multi-backend queues, dual sandbox providers, a full verification gate, and multi-platform webhook support (GitHub, GitLab, Bitbucket, Linear, Jira).
 

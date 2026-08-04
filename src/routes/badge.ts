@@ -143,7 +143,7 @@ router.get('/syntaro-badge.json', (_req: Request, res: Response) => {
   res.json({
     schemaVersion: 1,
     label: 'SYNTARO',
-    message: 'Solving Tickets As A Service',
+    message: 'SYNTARO',
     color: '8250DF',
   });
 });

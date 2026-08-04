@@ -1,4 +1,4 @@
-# SYNTARO — Solving Tickets As A Service
+# SYNTARO
 
 **Label a GitHub issue. Get a pull request.**
 

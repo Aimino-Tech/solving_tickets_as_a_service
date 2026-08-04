@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             avatarUrl: res.avatarUrl,
             plan: res.plan,
             createdAt: res.createdAt,
+            isAdmin: res.isAdmin,
           });
         })
         .catch((err) => {
@@ -85,6 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       plan: 'solo',
       createdAt: result.user.createdAt || '',
     });
+    // Route fresh registrations through the onboarding wizard (US-5..9).
+    // App.tsx reads this flag when redirecting away from /login.
+    sessionStorage.setItem('syntaro:onboarding_pending', '1');
   }, []);
 
   const logout = useCallback(async () => {

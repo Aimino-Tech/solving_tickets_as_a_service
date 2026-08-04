@@ -1,7 +1,6 @@
 // @ts-nocheck
 
 import type { Octokit } from '@octokit/rest';
-import type { ReceiptManifest } from '../types.js';
 
 /**
  * ActionDispatcher — decides what action to take based on agent results.
@@ -32,6 +31,10 @@ import type { AgentResult, QualityGateResult } from '../types/agent-types.js';
 import type { SandboxExecutor } from '../types/sandbox-types.js';
 import { rootLogger } from '../utils/logger.js';
 import { getOctokit } from './auth.js';
+
+interface ReceiptManifest {
+  [key: string]: unknown;
+}
 
 const log = rootLogger.child({ module: 'action-dispatcher' });
 

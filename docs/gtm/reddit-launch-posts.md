@@ -8,7 +8,7 @@ version: 1.0
 
 # SYNTARO Launch — Reddit Community Launch Posts
 
-> **Product**: SYNTARO ("Solving Tickets As A Service") — an AI that reads your full GitHub repo, investigates issues, plans a fix, writes code, runs tests, and opens a PR. All unattended. Triggered by adding a `syntaro:fix` label to a GitHub issue.
+> **Product**: SYNTARO — an AI that reads your full GitHub repo, investigates issues, plans a fix, writes code, runs tests, and opens a PR. All unattended. Triggered by adding a `syntaro:fix` label to a GitHub issue.
 >
 > **Target Launch**: Week of August 3–7, 2026
 > **Coordinated Surface**: Reddit (3 posts) + Hacker News + Product Hunt (same day, 2-hour window)

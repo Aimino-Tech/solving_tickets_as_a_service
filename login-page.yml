@@ -1,7 +1,7 @@
 - generic [ref=e6]:
   - generic [ref=e7]:
     - generic [ref=e8]: SYNTARO
-    - paragraph [ref=e10]: Solving Tickets As A Service
+    - paragraph [ref=e10]: SYNTARO
   - generic [ref=e11]:
     - generic [ref=e12]:
       - button "Sign In" [ref=e13] [cursor=pointer]

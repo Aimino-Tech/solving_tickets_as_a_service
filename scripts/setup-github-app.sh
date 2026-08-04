@@ -36,7 +36,7 @@ MANIFEST=$(cat << 'MANIFEST_JSON'
 {
   "name": "SYNTARO-bot",
   "url": "https://github.com/tamnguyen08/solving_tickets_as_a_service",
-  "description": "Solving Tickets As A Service — automated fix bot",
+  "description": "SYNTARO — automated fix bot",
   "hook_attributes": {
     "url": "https://smee.io/syntaro-bot"
   },

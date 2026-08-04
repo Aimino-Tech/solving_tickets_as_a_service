@@ -149,6 +149,20 @@ export interface BillingPlan {
   hasBillingRecord?: boolean;
 }
 
+export interface Invoice {
+  id: string;
+  number: string | null;
+  status: string;
+  created: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+  amountDueCents: number;
+  amountPaidCents: number;
+  currency: string;
+  invoicePdf: string | null;
+  hostedInvoiceUrl: string | null;
+}
+
 export const litellm = {
   usage: () =>
     request<LitellmUsage>('/v1/litellm/usage'),
@@ -224,7 +238,7 @@ export const auth = {
       body: JSON.stringify({ accessToken, password }),
     }),
 me: () =>
-  request<{ id: string; email: string; name: string | null; username?: string; avatarUrl?: string; plan?: string; createdAt: string }>('/v1/auth/me'),
+  request<{ id: string; email: string; name: string | null; username?: string; avatarUrl?: string; plan?: string; createdAt: string; isAdmin?: boolean }>('/v1/auth/me'),
   refresh: (refreshToken: string) =>
     request<AuthResult>('/v1/auth/refresh', {
       method: 'POST',
@@ -383,6 +397,8 @@ export const billing = {
       method: 'POST',
       body: JSON.stringify({ returnUrl }),
     }),
+  invoices: () =>
+    request<{ invoices: Invoice[] }>('/v1/billing/invoices'),
 };
 
 export interface WizardProgress {

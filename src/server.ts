@@ -113,6 +113,7 @@ export async function createApp(): Promise<express.Application> {
 
   // -- Request ID + Trace ID middleware -------------------------------------
   app.use((req: Request, res: Response, next: NextFunction) => {
+    console.error('PROBE-MW1-ENTER', req.url);
     const requestId = (req.headers['x-request-id'] as string) || crypto.randomUUID();
     req.requestId = requestId;
     res.setHeader('x-request-id', requestId);
@@ -122,7 +123,10 @@ export async function createApp(): Promise<express.Application> {
     req.traceId = traceId;
     res.setHeader(TRACE_HEADER, traceId);
 
-    runWithTraceId(traceId, () => next());
+    runWithTraceId(traceId, () => {
+      console.error('PROBE-MW1-NEXT', req.url);
+      next();
+    });
   });
 
   // -- Security headers (Helmet) -------------------------------------------
@@ -954,7 +958,7 @@ export async function createApp(): Promise<express.Application> {
         name: '@aimino/syntaro-mcp',
         version: '1.0.0',
         description:
-          'SYNTARO (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source AI bot for automated bug fixing.',
+          'SYNTARO — label a GitHub issue and get a pull request. Open-source AI bot for automated bug fixing.',
         homepage: 'https://github.com/tamnguyen08/solving_tickets_as_a_service',
         documentation: 'https://github.com/tamnguyen08/solving_tickets_as_a_service/blob/main/docs/ARCHITECTURE.md',
         license: 'MIT',

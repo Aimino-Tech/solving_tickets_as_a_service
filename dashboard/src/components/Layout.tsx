@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { adminSteering } from '@/api/adminSteering';
 import NotificationBell from '@/components/NotificationBell';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -30,21 +29,13 @@ export default function Layout() {
   const { t, locale, setLocale } = useI18n();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  // Admin status comes from /v1/auth/me (backend ADMIN_EMAILS allowlist) —
+  // no per-page health probe that 503s for non-admins.
+  const isAdmin = !!user?.isAdmin;
 
+  // Landing on the dashboard means onboarding is no longer pending.
   useEffect(() => {
-    let cancelled = false;
-    adminSteering
-      .health()
-      .then(() => {
-        if (!cancelled) setIsAdmin(true);
-      })
-      .catch(() => {
-        if (!cancelled) setIsAdmin(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+    sessionStorage.removeItem('syntaro:onboarding_pending');
   }, []);
 
   const NAV_ITEMS: { to: string; label: string; icon: LucideIcon }[] = [
@@ -65,7 +56,7 @@ export default function Layout() {
       ?.label ?? t('nav.dashboard');
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-900">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -73,12 +64,12 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-transform lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform lg:static lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand */}
-        <div className="flex h-16 items-center gap-3 border-b border-gray-200 dark:border-gray-700 px-6">
+        <div className="flex h-16 items-center gap-3 border-b border-slate-200 dark:border-slate-800 px-6">
           <Zap className="h-6 w-6 text-brand-600 dark:text-brand-400" />
           <div>
             <h1 className="text-base font-bold text-gray-900 dark:text-gray-100">SYNTARO</h1>
@@ -110,7 +101,7 @@ export default function Layout() {
         </nav>
 
         {/* User footer */}
-        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-4">
+        <div className="border-t border-slate-200 dark:border-slate-800 px-4 py-4">
           <div className="flex items-center gap-3">
             {user?.avatarUrl ? (
               <img src={user.avatarUrl} alt={user.name || user.email || ''} className="h-8 w-8 rounded-full" />
@@ -161,7 +152,7 @@ export default function Layout() {
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar (mobile) */}
-        <header className="flex h-16 items-center gap-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 lg:px-8">
+        <header className="flex h-16 items-center gap-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 lg:px-8">
           <button
             onClick={() => setSidebarOpen(true)}
             className="rounded-lg p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden min-h-[44px] min-w-[44px] flex items-center justify-center"

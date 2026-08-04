@@ -40,7 +40,7 @@ export class LoginPage extends BasePage {
   }
 
   get pageTitleHeading(): Locator {
-    return this.page.getByRole('heading', { name: 'Solving Tickets As A Service' }).first();
+    return this.page.getByRole('heading', { name: 'SYNTARO' }).first();
   }
 
   async navigateTo(): Promise<void> {

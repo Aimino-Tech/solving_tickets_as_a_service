@@ -44,7 +44,7 @@ class LoginPage:
 
     @property
     def page_title_heading(self):
-        return self.page.get_by_role("heading", name="Solving Tickets As A Service").first
+        return self.page.get_by_role("heading", name="SYNTARO").first
 
     def switch_to_register(self):
         self.register_tab.click()

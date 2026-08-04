@@ -208,6 +208,6 @@ All 500 issues are drawn from the following repositories: Next.js, React, TypeSc
 
 ---
 
-*SYNTARO — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
+*SYNTARO. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
 
 *This is a cross-post. The canonical version lives at [syntaro.io/blog/benchmark-report](https://syntaro.io/blog/benchmark-report). Raw benchmark data available at [github.com/Aimino-Tech/solving_tickets_as_a_service/tree/main/eval/benchmarks](https://github.com/Aimino-Tech/solving_tickets_as_a_service/tree/main/eval/benchmarks).*

@@ -6,7 +6,7 @@ last-updated: 2026-07-28
 
 # Security Overview — SYNTARO
 
-> **End-to-end security architecture for the SYNTARO (Solving Tickets As A Service) platform.**
+> **End-to-end security architecture for the SYNTARO platform.**
 > This document describes data flows, encryption standards, access controls, audit trails, and network security for customers, prospects, and security reviewers.
 
 ---

@@ -1,4 +1,4 @@
-# GitHub Marketplace Submission Runbook — STAS
+# GitHub Marketplace Submission Runbook — SYNTARO
 
 > Tracks AIM-4363: "GitHub Marketplace Listing — Submit and Complete".
 > This runbook turns the remaining launch steps into a deterministic,
@@ -6,7 +6,7 @@
 > parts; the org-level actions (DNS, billing, GitHub org settings) require a
 > human with admin access.
 >
-> **Current state:** all copy, the action (`Aimino-Tech/solving_tickets_as_a_service/.github/actions/stas-fix`), the
+> **Current state:** all copy, the action (`Aimino-Tech/solving_tickets_as_a_service/.github/actions/syntaro-fix`), the
 > privacy/terms pages, and the deploy pipeline exist. The listing is **not yet
 > submitted** and the privacy/terms URLs are **not yet live** because the
 > website has never successfully deployed (blockers in Phase A below).
@@ -19,8 +19,8 @@
 |---|-------------|-------|---------------|
 | 1 | Submit action to GitHub Marketplace for review | ⛔ Blocked — Phase C | `docs/marketplace-listing.md` + this file |
 | 2 | Publisher verification (badge, 2FA, domain) | ⛔ Blocked — Phase B | `docs/marketplace/verified-publisher-guide.md` |
-| 3 | Privacy policy live at `stas.aimino.io/privacy` (200) | ⛔ Blocked — Phase A | `scripts/check-marketplace-live.sh` |
-| 4 | Terms live at `stas.aimino.io/terms` (200) | ⛔ Blocked — Phase A | `scripts/check-marketplace-live.sh` |
+| 3 | Privacy policy live at `syntaro.aimino.io/privacy` (200) | ⛔ Blocked — Phase A | `scripts/check-marketplace-live.sh` |
+| 4 | Terms live at `syntaro.aimino.io/terms` (200) | ⛔ Blocked — Phase A | `scripts/check-marketplace-live.sh` |
 | 5 | Track approval follow-up (3–6 weeks) | 📋 Phase D tracker below | `#follow-up-tracker` below |
 
 ---
@@ -29,33 +29,33 @@
 
 The pages already exist (`website/privacy.html`, `website/terms.html`) and the
 `Deploy Website` workflow (`deploy-website.yml`) pushes them to the Fly.io app
-`stas-website`. Nothing has ever gone live. Three independent blockers, in the
+`syntaro-website`. Nothing has ever gone live. Three independent blockers, in the
 order you must fix them:
 
-### A1. DNS — `stas.aimino.io` must resolve
+### A1. DNS — `syntaro.aimino.io` must resolve
 
-**Current state:** `dig stas.aimino.io` returns NXDOMAIN. The domain is not
+**Current state:** `dig syntaro.aimino.io` returns NXDOMAIN. The domain is not
 pointed anywhere.
 
 1. Log in to the DNS provider for `aimino.io` (check which provider hosts the
    zone; GitHub org domain verification in Phase B needs the same zone).
 2. Create a `CNAME` record:
-   - Host: `stas`
-   - Target: `stas-website.fly.dev`
+   - Host: `syntaro`
+   - Target: `syntaro-website.fly.dev`
    - TTL: 300
 3. Verify:
    ```bash
-   dig +short stas.aimino.io
-   # expect: stas-website.fly.dev (once the Fly app is deployed, this resolves to the app's IPs)
+   dig +short syntaro.aimino.io
+   # expect: syntaro-website.fly.dev (once the Fly app is deployed, this resolves to the app's IPs)
    ```
 
-> **Why CNAME to `stas-website.fly.dev`:** the Fly app owns its IPs. A CNAME
+> **Why CNAME to `syntaro-website.fly.dev`:** the Fly app owns its IPs. A CNAME
 > keeps DNS in sync with Fly's anycast addresses automatically. Do **not** add
 > an A record unless you are pinning a specific IP and understand the tradeoff.
 
 ### A2. Fly.io — app must exist and be deployable
 
-**Current state:** `stas-website.fly.dev` does not resolve, which means either
+**Current state:** `syntaro-website.fly.dev` does not resolve, which means either
 the app has not been created or it has never been deployed.
 
 1. Install the Fly CLI:
@@ -68,13 +68,13 @@ the app has not been created or it has never been deployed.
    ```
 3. Create the app (idempotent — errors if it already exists):
    ```bash
-   flyctl apps create stas-website
+   flyctl apps create syntaro-website
    ```
-4. Check the `website/fly.toml` (app `stas-website`, internal port 80, nginx)
+4. Check the `website/fly.toml` (app `syntaro-website`, internal port 80, nginx)
    is present, then deploy once from a machine with `FLY_API_TOKEN`:
    ```bash
    FLY_API_TOKEN=$FLY_API_TOKEN flyctl deploy --remote-only \
-     --app stas-website --dockerfile website/Dockerfile
+     --app syntaro-website --dockerfile website/Dockerfile
    ```
 
 ### A3. GitHub Actions — unblock deploys
@@ -110,9 +110,9 @@ bash scripts/check-marketplace-live.sh
 
 The script exits `0` only when all of the following hold:
 
-- `stas.aimino.io` resolves
-- `https://stas.aimino.io/privacy` returns HTTP 200 with a non-empty HTML body
-- `https://stas.aimino.io/terms` returns HTTP 200 with a non-empty HTML body
+- `syntaro.aimino.io` resolves
+- `https://syntaro.aimino.io/privacy` returns HTTP 200 with a non-empty HTML body
+- `https://syntaro.aimino.io/terms` returns HTTP 200 with a non-empty HTML body
 
 ---
 
@@ -142,7 +142,7 @@ The four org-level actions, all needing an org admin in the GitHub UI:
 1. Prepare the remaining assets (see `docs/marketplace-listing.md` →
    "Visual Assets Preparation Guide"):
    - Logo 120×120 PNG (≤1 MB)
-   - One or more screenshots 1280×640 PNG (≤2 MB) — use the `stas-demo` repo
+   - One or more screenshots 1280×640 PNG (≤2 MB) — use the `syntaro-demo` repo
    - Optional demo GIF (30–45 s, ≤10 MB)
 2. Configure the pricing plan in the Marketplace billing UI (tiers in the
    listing doc: Free OSS / Solo $49 / Team $149 / Enterprise).
@@ -150,7 +150,7 @@ The four org-level actions, all needing an org admin in the GitHub UI:
    in `docs/marketplace-listing.md` (short desc 162/180 chars, full desc
    ~990 chars, category "Code review / Automated fixes").
 4. Set the privacy/terms URLs on the listing to
-   `https://stas.aimino.io/privacy` and `https://stas.aimino.io/terms`
+   `https://syntaro.aimino.io/privacy` and `https://syntaro.aimino.io/terms`
    (must be live — Phase A).
 5. Submit for review. GitHub's review timeline is **3–6 weeks**.
 
@@ -163,8 +163,8 @@ listing review typically **3–6 weeks**; publisher verification **3–5 busines
 
 | Milestone | Target date | Date done | Notes / outcome |
 |-----------|-------------|-----------|-----------------|
-| DNS record for `stas.aimino.io` added | — | | `dig +short stas.aimino.io` must return `stas-website.fly.dev` |
-| Fly app `stas-website` created | — | | `flyctl apps create stas-website` |
+| DNS record for `syntaro.aimino.io` added | — | | `dig +short syntaro.aimino.io` must return `syntaro-website.fly.dev` |
+| Fly app `syntaro-website` created | — | | `flyctl apps create syntaro-website` |
 | `FLY_API_TOKEN` secret added to repo | — | | Repo Settings → Secrets → Actions |
 | Org billing/spending limit resolved | — | | Blocks ALL Actions runs |
 | First successful `Deploy Website` run | — | | `check-marketplace-live.sh` must PASS |

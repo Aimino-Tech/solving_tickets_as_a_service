@@ -1,6 +1,6 @@
 ---
 name: syntaro
-description: SYNTARO — Solving Tickets As A Service. Automatically fix GitHub issues by submitting them to the SYNTARO API.
+description: SYNTARO. Automatically fix GitHub issues by submitting them to the SYNTARO API.
 trigger: syntaro, fix issue, auto-fix, submit issue, automated PR, SYNTARO
 ---
 

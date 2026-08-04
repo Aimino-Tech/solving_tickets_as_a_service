@@ -41,4 +41,4 @@
 
 ---
 
-*SYNTARO — Solving Tickets As A Service. [Agent Discovery](https://syntaro.io/agents.html) | [Integrations](https://syntaro.io/integrations.html)*
+*SYNTARO. [Agent Discovery](https://syntaro.io/agents.html) | [Integrations](https://syntaro.io/integrations.html)*

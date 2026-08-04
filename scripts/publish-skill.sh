@@ -32,7 +32,7 @@ echo "Any OpenCode/OpenClaw agent can install by adding to opencode.json:"
 echo ""
 echo '  "skills": {'
 echo '    "syntaro": {'
-echo '      "description": "SYNTARO — Solving Tickets As A Service"'
+echo '      "description": "SYNTARO"'
 echo '      "url": "'"${RAW_URL}"'"'
 echo '    }'
 echo '  }'
@@ -46,7 +46,7 @@ if [[ "${1:-}" == "--install" ]]; then
     echo "Installing skill into ${CONFIG}..."
     # Use jq if available, otherwise print manual instructions
     if command -v jq &>/dev/null; then
-      jq '.skills.syntaro = {"description": "SYNTARO — Solving Tickets As A Service. Submit GitHub issues and get automated fix PRs.", "url": "'"${RAW_URL}"'"}' "$CONFIG" > "${CONFIG}.tmp" && mv "${CONFIG}.tmp" "$CONFIG"
+      jq '.skills.syntaro = {"description": "SYNTARO. Submit GitHub issues and get automated fix PRs.", "url": "'"${RAW_URL}"'"}' "$CONFIG" > "${CONFIG}.tmp" && mv "${CONFIG}.tmp" "$CONFIG"
       echo "✓ Skill installed in ${CONFIG}"
     else
       echo "jq not found. Add manually to ${CONFIG}:"

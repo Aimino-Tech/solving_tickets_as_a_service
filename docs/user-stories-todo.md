@@ -35,16 +35,16 @@
 
 > ⚠️ Not public yet — access directly at **http://localhost:5173/login**
 
-- [ ] Open `http://localhost:5173/login` → see 2 tabs: **Sign In** / **Register**
-- [ ] Switch to **Register** tab
-- [ ] Enter **Name** (optional)
-- [ ] Enter valid **Email**
-- [ ] Enter **Password** ≥ 8 characters
-- [ ] (If invalid input) Form shows validation errors — no submit
-- [ ] Click **Register** → `POST /v1/auth/register` (rate-limited) → backend creates user via Supabase (`email_confirm:false`, plan = `solo`)
-- [ ] Backend records `auth.register` to audit log + PostHog `user_signup` event
-- [ ] Backend returns `201` with token → `syntaro_token` + `refreshToken` saved to `localStorage`
-- [ ] Auto-redirect to dashboard (route `/`) — **Acceptance**: registration lands user in dashboard
+- [x] Open `http://localhost:5173/login` → see 2 tabs: **Sign In** / **Register**
+- [x] Switch to **Register** tab
+- [x] Enter **Name** (optional)
+- [x] Enter valid **Email**
+- [x] Enter **Password** ≥ 8 characters
+- [ ] (If invalid input) Form shows validation errors — no submit *(untested)*
+- [x] Click **Register** → `POST /v1/auth/register` (rate-limited) → backend creates user via Supabase (plan = `solo`) — *verified; code actually uses `email_confirm:true` (auto-confirmed), NOT `email_confirm:false` as this doc states*
+- [ ] Backend records `auth.register` to audit log + PostHog `user_signup` event *(code path exists; audit page shows 0 entries — unverified)*
+- [x] Backend returns `201` with token → `syntaro_token` + `refreshToken` saved to `localStorage`
+- [x] Auto-redirect to dashboard (route `/`) — **Acceptance**: registration lands user in dashboard — *verified: landed on `/`, user "QA New User", plan Solo*
 
 > Note: backend currently requires email confirmation (`email_confirmed_at`) before login/refresh. When public, a **confirm-email** step (link in inbox) is needed.
 
@@ -56,14 +56,14 @@
 > **I want** to sign in with email + password,
 > **so that** I can access the dashboard and manage runs/PRs.
 
-- [ ] Open `http://localhost:5173/login` → **Sign In** tab
-- [ ] Enter registered email + password
-- [ ] Click **Sign In** → `POST /v1/auth/login` (rate-limited `loginLimiter`) → Supabase `signInWithPassword`
-- [ ] Backend checks `email_confirmed_at` → success returns token
-- [ ] Token saved to `localStorage` → redirect to `/`
-- [ ] (If already authed and re-opening `/login`) → auto-redirect to `/`
-- [ ] (Error) Wrong password / unconfirmed email → clear error message
-- [ ] **Acceptance**: successful sign-in → see **Layout** with nav: Dashboard, Runs, Repos, Billing, Audit, Settings
+- [x] Open `http://localhost:5173/login` → **Sign In** tab
+- [x] Enter registered email + password
+- [x] Click **Sign In** → `POST /v1/auth/login` (rate-limited `loginLimiter`) → Supabase `signInWithPassword` — *verified: login OK*
+- [x] Backend checks `email_confirmed_at` → success returns token
+- [x] Token saved to `localStorage` → redirect to `/`
+- [x] (If already authed and re-opening `/login`) → auto-redirect to `/` *(code-confirmed: `App.tsx` `/login` → `/` guard)*
+- [ ] (Error) Wrong password / unconfirmed email → clear error message *(untested)*
+- [x] **Acceptance**: successful sign-in → see **Layout** with nav: Dashboard, Runs, Repos, Billing, Audit, Settings
 
 ---
 
@@ -73,9 +73,10 @@
 > **I want** to receive a magic link,
 > **so that** I can sign in without remembering my password.
 
-- [ ] Click magic-link option → `POST /v1/auth/magic-link` (anti-enumeration — does not reveal whether email exists)
-- [ ] Receive link via email → open → `POST /v1/auth/magic-link/verify` → signed in
-- [ ] **Acceptance**: successful sign-in via magic link
+- [ ] Click magic-link option → `POST /v1/auth/magic-link` (anti-enumeration — does not reveal whether email exists) *(no magic-link UI on login page — "Forgot password?" only; untested)*
+- [ ] Receive link via email → open → `POST /v1/auth/magic-link/verify` → signed in *(untested)*
+- [ ] **Acceptance**: successful sign-in via magic link *(untested)*
+> ❌ **2026-08-04**: `/forgot-password` submit → **500 "Internal server error"** (`POST /api/v1/auth/forgot-password`). Broken.
 
 ---
 
@@ -90,10 +91,11 @@
 > **I want** to connect GitHub and install the SYNTARO App,
 > **so that** I can receive issue events.
 
-- [ ] Click **"Sign in with GitHub"** → OAuth popup (`POST /v1/github/login` → window `github-oauth-callback` → sessionStorage)
-- [ ] Click **"Install SYNTARO App"** → `https://github.com/apps/syntaro-bot/installations/new` → select repo → Install
-- [ ] Complete → `onboarding.completeStep('github-install')`
-- [ ] **Acceptance**: step marked done, wizard advances
+- [ ] Click **"Sign in with GitHub"** → OAuth popup (`POST /v1/github/login` → window `github-oauth-callback` → sessionStorage) *(wizard broken — no content renders)*
+- [ ] Click **"Install SYNTARO App"** → `https://github.com/apps/syntaro-bot/installations/new` → select repo → Install *(wizard broken)*
+- [ ] Complete → `onboarding.completeStep('github-install')` *(wizard broken)*
+- [ ] **Acceptance**: step marked done, wizard advances *(wizard broken)*
+> ❌ **2026-08-04**: Wizard renders ONLY the 4-step header — the step card is empty. **Root cause**: backend `src/onboarding/wizard.ts` emits `currentStep` in snake_case (`"github_install"`) but frontend `WizardContainer.tsx` matches kebab-case (`'github-install'`) → no step component matches → empty card. Also `config.enabled=false` and `githubAppUrl` = `https://github.com/apps/123456/installations/new` (placeholder). No auto-redirect to `/onboarding` after register either (App.tsx has no guard).
 
 ### US-6: Onboarding step 2 — Select repository
 
@@ -135,18 +137,19 @@
 
 ### US-11: User tracks runs on the dashboard
 
-- [ ] Open **Dashboard** (`/`) → see stats / recent runs
-- [ ] Open **Runs** (`/runs`) → run list, click a run → `/runs/:id` details
-- [ ] (If available) **Live View** (`/liveview`) to watch agent progress in real time
-- [ ] Send **feedback** on a result (`/v1/run-feedback`), escalate/rollback if needed
+- [x] Open **Dashboard** (`/`) → see stats / recent runs — *verified: plan Solo, 0 runs, nav OK*
+- [x] Open **Runs** (`/runs`) → run list (filters + "No runs found." for new user)
+- [ ] (If available) **Live View** (`/liveview`) to watch agent progress in real time *(untested — no run to watch)*
+- [ ] Send **feedback** on a result (`/v1/run-feedback`), escalate/rollback if needed *(untested — no run)*
 
 ### US-12: User manages repos, credits, billing, audit
 
-- [ ] **Repos** (`/repos`): view connected repos, sync installations (`POST /v1/github/installations/sync`), disconnect
-- [ ] **Credits**: view balance/transactions/usage, top up (`/v1/credits/*`)
-- [ ] **Billing**: view plan, upgrade
-- [ ] **Audit** (`/audit`): view activity audit log
-- [ ] **Settings** (`/settings`): update profile, create API keys, manage integrations
+- [x] **Repos** (`/repos`): view connected repos, sync installations (`POST /v1/github/installations/sync`), disconnect — *verified: page renders, "Connect GitHub" buttons, empty state OK*
+- [ ] **Credits**: view balance/transactions/usage, top up (`/v1/credits/*`) *(untested)*
+- [x] **Billing**: view plan, upgrade — *verified: Current Plan, Stripe Portal button, LiteLLM budget, cost chart render*
+- [x] **Audit** (`/audit`): view activity audit log — *verified: page renders ("0 total entries")*
+- [ ] **Settings** (`/settings`): update profile, create API keys, manage integrations *(untested)*
+> ❌ **2026-08-04**: `/settings` page does NOT render — vite/babel transform error `Settings.tsx: Unexpected token, expected "," (821:19)`. tsc/biome/esbuild all parse the file fine; only babel fails → ErrorBoundary shows "Something went wrong". Also every dashboard page logs `GET /api/v1/admin/steering/health → 503`.
 
 ---
 
@@ -331,11 +334,11 @@
 | # | User Story | Status | Part |
 |---|-----------|--------|------|
 | US-1 | Visit syntaro.io first time | ✅ Live (`website/`) | 1 |
-| US-2 | Register account | ✅ Backend ready (local) | 1 |
-| US-3 | Sign in | ✅ Live at localhost:5173/login | 1 |
-| US-4 | Magic link / forgot password | ✅ Backend ready | 1 |
-| US-5–9 | Onboarding (5 steps) | ✅ Local | 2 |
-| US-10–12 | Core features (label→PR, runs, repo/credit/billing/audit) | ✅ Live | 3 |
+| US-2 | Register account | ✅ Verified (browser 2026-08-04) | 1 |
+| US-3 | Sign in | ✅ Verified (browser 2026-08-04) | 1 |
+| US-4 | Magic link / forgot password | ❌ Broken — forgot-password 500 | 1 |
+| US-5–9 | Onboarding (5 steps) | ❌ Broken — empty wizard (snake/kebab mismatch) | 2 |
+| US-10–12 | Core features (label→PR, runs, repo/credit/billing/audit) | 🟡 Runs/Repos/Billing/Audit ✅; **Settings page broken** | 3 |
 | US-13 | GitHub | ✅ Live | 4 |
 | US-14 | GitLab / Bitbucket | 🟡 Beta | 4 |
 | US-15 | Jira (tracker + write-back) | 🟡 Tracker surface | 4 |

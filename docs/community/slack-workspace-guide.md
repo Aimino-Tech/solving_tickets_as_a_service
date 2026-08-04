@@ -8,7 +8,7 @@ last-updated: "2026-07-28"
 
 ## Overview
 
-This document describes the setup, channel structure, moderation rules, bot integrations, and onboarding workflow for the SYNTARO community Slack workspace (`syntaro-community`). SYNTARO (Solving Tickets As A Service) is an AI-powered GitHub issue fix bot. This workspace exists to foster a collaborative community of developers using, contributing to, and extending SYNTARO.
+This document describes the setup, channel structure, moderation rules, bot integrations, and onboarding workflow for the SYNTARO community Slack workspace (`syntaro-community`). SYNTARO is an AI-powered GitHub issue fix bot. This workspace exists to foster a collaborative community of developers using, contributing to, and extending SYNTARO.
 
 ---
 
@@ -57,7 +57,7 @@ This document describes the setup, channel structure, moderation rules, bot inte
 
 > **Welcome to the SYNTARO Community! 👋**
 >
-> SYNTARO (Solving Tickets As A Service) is an AI agent that automatically fixes GitHub issues — just tag `@syntaro` on any issue and it produces a pull request.
+> SYNTARO is an AI agent that automatically fixes GitHub issues — just tag `@syntaro` on any issue and it produces a pull request.
 >
 > **Getting Started**
 > - 📖 Read the docs: https://docs.syntaro.ai

@@ -1,5 +1,5 @@
 {
-  "name": "SYNTARO - Solving Tickets As A Service",
+  "name": "SYNTARO",
   "url": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
   "description": "SYNTARO is a GitHub bot that automatically investigates, fixes, and opens pull requests for labeled issues. Label an issue with 'syntaro:fix' and our AI agent analyzes the codebase, implements a fix, runs tests, and opens a PR — all autonomously.",
   "hook_attributes": {

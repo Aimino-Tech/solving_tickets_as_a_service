@@ -41,7 +41,7 @@ router.get('/mcp/discovery', (_req: Request, res: Response) => {
       name: 'syntaro-agent-discovery',
       version: '1.0.0',
       protocolVersion: '2024-11-05',
-      description: 'SYNTARO (Solving Tickets As A Service) -- label a GitHub issue and get a PR.',
+      description: 'SYNTARO -- label a GitHub issue and get a PR.',
     },
     transports: [
       {

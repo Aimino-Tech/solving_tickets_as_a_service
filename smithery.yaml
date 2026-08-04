@@ -1,7 +1,7 @@
 # Smithery configuration for SYNTARO MCP server
 # https://smithery.ai/docs/deploy
 name: "@aimino/syntaro-mcp"
-description: "SYNTARO (Solving Tickets As A Service) — label a GitHub issue and get a pull request. Open-source bot backed by OpenCode."
+description: "SYNTARO — label a GitHub issue and get a pull request. Open-source bot backed by OpenCode."
 version: "1.0.0"
 author: "Aimino"
 homepage: "https://github.com/Aimino-Tech/solving_tickets_as_a_service"

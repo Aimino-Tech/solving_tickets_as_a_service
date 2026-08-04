@@ -3,7 +3,7 @@
   "name": "@aimino/syntaro-mcp",
   "mcpName": "syntaro-agent-discovery",
   "version": "1.0.0",
-  "description": "MCP server for SYNTARO — Solving Tickets As A Service. Submit GitHub issues, list runs, search codebase, and get automated fix PRs via OpenCode agents.",
+  "description": "MCP server for SYNTARO. Submit GitHub issues, list runs, search codebase, and get automated fix PRs via OpenCode agents.",
   "author": {
     "name": "Aimino",
     "url": "https://github.com/Aimino-Tech"

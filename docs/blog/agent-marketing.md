@@ -8,7 +8,7 @@
 
 ## The Vision: Agent-to-Agent Marketing
 
-In the emerging world of AI agents, the most successful tools won't be those marketed to humans — they'll be those discovered and installed by agents themselves. This is **agent-to-agent marketing**, and SYNTARO (Solving Tickets As A Service) is leading the charge.
+In the emerging world of AI agents, the most successful tools won't be those marketed to humans — they'll be those discovered and installed by agents themselves. This is **agent-to-agent marketing**, and SYNTARO is leading the charge.
 
 SYNTARO is now fully discoverable by AI agents across multiple registries and protocols. Here's how agents find, install, and use SYNTARO — and how you can too.
 
@@ -179,4 +179,4 @@ Or visit [syntaro.io/agents.html](https://syntaro.io/agents.html) for the full g
 
 ---
 
-*SYNTARO — Solving Tickets As A Service. Label a GitHub issue. Get a pull request. Now with full AI agent support.*
+*SYNTARO. Label a GitHub issue. Get a pull request. Now with full AI agent support.*

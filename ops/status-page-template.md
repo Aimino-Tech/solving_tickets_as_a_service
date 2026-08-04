@@ -7,7 +7,7 @@ last-updated: 2026-07-28
 # SYNTARO Status Page Templates
 
 > Templates for communicating incidents to users via the public [status page](https://syntaro.betteruptime.com).
-> Solving Tickets As A Service — Customer Communication Guide
+> SYNTARO — Customer Communication Guide
 
 ---
 

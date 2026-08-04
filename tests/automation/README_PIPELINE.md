@@ -239,7 +239,7 @@ Every ticket MUST contain the following sections. AI agents tend to skip details
 ```markdown
 # TICKET-{ID}: {Short Descriptive Title}
 
-> **Project**: [SYNTARO - Solving Tickets As A Service](https://linear.app/aimino/project/syntaro-solving-tickets-as-a-service-7ce85efdc6bd/overview)
+> **Project**: [SYNTARO](https://linear.app/aimino/project/syntaro-solving-tickets-as-a-service-7ce85efdc6bd/overview)
 > **Team**: [AIM - All](https://linear.app/aimino/team/AIM/all)
 > **Status**: `open` | `in_progress` | `merged` | `closed`
 > **Type**: `bug` | `feature` | `task` | `automation`

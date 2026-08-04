@@ -1,7 +1,7 @@
 {
   "name": "@aimino/syntaro-mcp",
   "version": "1.1.0",
-  "description": "MCP server for SYNTARO — Solving Tickets As A Service. Let agents (opencode, Claude, ...) dispatch fixes, check Linear tickets, read/write agent memory, post to Slack, and resume sessions.",
+  "description": "MCP server for SYNTARO. Let agents (opencode, Claude, ...) dispatch fixes, check Linear tickets, read/write agent memory, post to Slack, and resume sessions.",
   "license": "AGPL-3.0-only",
   "type": "module",
   "bin": {

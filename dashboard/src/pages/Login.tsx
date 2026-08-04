@@ -96,6 +96,8 @@ export default function Login() {
       } else {
         await register(email, password, name || undefined);
       }
+      // Fresh registrations are routed to /onboarding by App.tsx (onboarding_pending flag);
+      // this navigate is just the fallback for the authed /login guard.
       navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
@@ -114,7 +116,7 @@ export default function Login() {
         </div>
 
         <div className="max-w-md">
-          <h1 className="text-4xl font-bold leading-tight">Solving Tickets As A Service</h1>
+          <h1 className="text-4xl font-bold leading-tight">SYNTARO</h1>
           <p className="mt-4 text-lg text-brand-100">
             Label a GitHub issue. Get a pull request. Powered by OpenCode + frontier models.
           </p>
@@ -160,7 +162,7 @@ export default function Login() {
             <div className="flex items-center justify-center gap-2">
               <span className="text-2xl font-bold text-gray-900">SYNTARO</span>
             </div>
-            <p className="mt-1 text-sm text-gray-500">Solving Tickets As A Service</p>
+            <p className="mt-1 text-sm text-gray-500">SYNTARO</p>
           </div>
 
           <div className="card">

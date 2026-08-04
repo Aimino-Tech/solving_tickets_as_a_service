@@ -2,7 +2,7 @@
 
 > **AIM-3204**: Deploying the SYNTARO GitHub webhook server and GitHub App integration to production.
 
-This guide covers deploying the SYNTARO (Solving Tickets As A Service) bot to production. SYNTARO is a GitHub App that automatically investigates, fixes, and opens pull requests for labeled issues.
+This guide covers deploying the SYNTARO bot to production. SYNTARO is a GitHub App that automatically investigates, fixes, and opens pull requests for labeled issues.
 
 ## Table of Contents
 
@@ -107,7 +107,7 @@ Or use the template at `public/github-app-manifest.json`:
 ### Manual Setup
 
 1. Go to https://github.com/settings/apps/new
-2. **GitHub App Name**: `SYNTARO - Solving Tickets As A Service`
+2. **GitHub App Name**: `SYNTARO`
 3. **Homepage URL**: `https://your-domain.com`
 4. **Webhook URL**: `https://your-domain.com/webhook`
 5. **Webhook secret**: Generate with `openssl rand -hex 32` and save to `GITHUB_WEBHOOK_SECRET`

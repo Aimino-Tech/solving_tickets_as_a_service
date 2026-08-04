@@ -27,7 +27,7 @@
 
 ## 1. Overview
 
-SYNTARO (Solving Tickets As A Service) dispatches fix-generation work to OpenCode serve — an HTTP server running on `http://localhost:4096` (configurable via `OPENCODE_URL`). This document defines the formal contract between the two systems.
+SYNTARO dispatches fix-generation work to OpenCode serve — an HTTP server running on `http://localhost:4096` (configurable via `OPENCODE_URL`). This document defines the formal contract between the two systems.
 
 **Key principle**: SYNTARO owns the orchestration pipeline (triage, sandboxing, verification, PR creation). OpenCode owns the investigation and fix-generation loop. They communicate over HTTP with a JSON request/response protocol.
 

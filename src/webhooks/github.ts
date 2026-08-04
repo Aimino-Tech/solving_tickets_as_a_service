@@ -162,7 +162,7 @@ async function createWelcomeIssue(installationId: number, repoOwner: string, rep
     }
 
     const welcomeBody = [
-      '## 👋 Welcome to Syntaro — Solving Tickets As A Service',
+      '## 👋 Welcome to Syntaro — SYNTARO',
       '',
       'This issue was created automatically when the Syntaro GitHub App was installed.',
       '',

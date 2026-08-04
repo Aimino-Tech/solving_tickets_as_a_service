@@ -101,7 +101,7 @@ A three-panel horizontal layout (left → center → right) on a dark GitHub-the
 **Visual treatment:**
 - Dark mode GitHub UI (#0d1117 background)
 - Sharp 1px borders between panels with a subtle gradient (#58a6ff → #3fb950)
-- Bottom banner: "SYNTARO — Solving Tickets As A Service" with a lightning bolt icon
+- Bottom banner: "SYNTARO" with a lightning bolt icon
 - Font: Monospace for code panels, system UI for descriptions
 - Arrow overlay (animated arrow suggested) flowing left→right showing the journey
 
@@ -147,7 +147,7 @@ A three-panel horizontal layout (left → center → right) on a dark GitHub-the
 
 **End card (0:40-0:45):**
 - SYNTARO logo + URL: syntaro.ai
-- Tagline: "Solving Tickets As A Service"
+- Tagline: "SYNTARO"
 - CTA: "Install on GitHub →"
 - Green "92% fix pass rate" badge
 - "$3.80 avg cost per fix" badge

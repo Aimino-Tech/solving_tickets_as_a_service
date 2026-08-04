@@ -7,7 +7,7 @@ status: active
 
 # Privacy Policy
 
-**SYNTARO (Solving Tickets As A Service)**
+**SYNTARO**
 **Version 1.0.0**
 **Last Updated: July 28, 2026**
 
@@ -15,7 +15,7 @@ status: active
 
 ## 1. Introduction
 
-Aimino Technologies GmbH ("Aimino," "we," "us," or "our") operates SYNTARO ("Solving Tickets As A Service"), an AI-powered GitHub issue resolution service. This Privacy Policy explains how we collect, use, process, store, and protect your personal data when you use our Service.
+Aimino Technologies GmbH ("Aimino," "we," "us," or "our") operates SYNTARO, an AI-powered GitHub issue resolution service. This Privacy Policy explains how we collect, use, process, store, and protect your personal data when you use our Service.
 
 We are committed to protecting your privacy and complying with the **General Data Protection Regulation (GDPR)** (Regulation (EU) 2016/679), the **German Federal Data Protection Act (BDSG)**, and the **German Telemedia Act (TMG)**.
 

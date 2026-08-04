@@ -2,7 +2,7 @@
 
 ## Context
 
-SYNTARO (Solving Tickets As A Service) is an open-source GitHub bot that turns labeled issues into pull requests. The codebase has been architecturally designed with all 8 phases of the agent pipeline (triage → OpenCode dispatch → E2B sandbox → verification → PR creation), webhook receivers for 5 platforms, Stripe billing, Slack notifications, and admin API. However, the code has **never been compiled or run** — there are 33 TypeScript compilation errors and missing runtime configuration.
+SYNTARO is an open-source GitHub bot that turns labeled issues into pull requests. The codebase has been architecturally designed with all 8 phases of the agent pipeline (triage → OpenCode dispatch → E2B sandbox → verification → PR creation), webhook receivers for 5 platforms, Stripe billing, Slack notifications, and admin API. However, the code has **never been compiled or run** — there are 33 TypeScript compilation errors and missing runtime configuration.
 
 ## Input
 

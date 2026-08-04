@@ -1,6 +1,6 @@
-# STAS User Journey — Code Verification Report (AIM-4530)
+# SYNTARO User Journey — Code Verification Report (AIM-4530)
 
-Verifies the US-1..US-31 user-journey checklist against the implemented STAS codebase
+Verifies the US-1..US-31 user-journey checklist against the implemented SYNTARO codebase
 (`origin/main`, commit `b95252d`). Each story is mapped to the concrete code that
 implements it. Stories marked **Live** have working code and (where verifiable) the
 described surface; stories marked **Beta/Pending** carry a status note.
@@ -128,13 +128,13 @@ described surface; stories marked **Beta/Pending** carry a status note.
 
 ### US-20: MCP (Model Context Protocol — Live) — ✅ Live
 
-- MCP server: `mcp/` (`manifest.json`, `stas_mcp.py`); publish workflow
+- MCP server: `mcp/` (`manifest.json`, `syntaro_mcp.py`); publish workflow
   `.github/workflows/publish-mcp.yml`.
 - Discovery endpoints + tools/resources: MCP server tool set.
 
 ### US-21..24: OpenCode / Claude Desktop / Cursor / Codex — ✅ Live
 
-- OpenCode skill: `skills/stas/SKILL.md`; MCP config docs for Claude Desktop,
+- OpenCode skill: `skills/syntaro/SKILL.md`; MCP config docs for Claude Desktop,
   Cursor (`.cursor/mcp.json`), Codex (stdio).
 
 ### US-25: Windsurf (Beta — SSE) — 🟡 Beta
@@ -145,7 +145,7 @@ described surface; stories marked **Beta/Pending** carry a status note.
 
 - Published package `@aimino/syntaro-mcp`; `.mcp.json`; MCP Registry server card.
 
-### US-27: GitHub Marketplace (Pending — action stas-eval) — ⏳ Pending
+### US-27: GitHub Marketplace (Pending — action syntaro-eval) — ⏳ Pending
 
 - `src/marketplace/action.ts`; listing pending external submission (see AIM-4363).
 

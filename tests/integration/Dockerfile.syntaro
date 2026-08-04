@@ -47,9 +47,9 @@ EXPOSE 4095
 STOPSIGNAL SIGTERM
 HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=15 CMD ["node", "-e", "fetch('http://localhost:4095/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
 LABEL maintainer="SYNTARO Team"
-LABEL description="Solving Tickets As A Service — GitHub bot that turns labeled issues into pull requests"
+LABEL description="SYNTARO — GitHub bot that turns labeled issues into pull requests"
 LABEL org.opencontainers.image.source="https://github.com/tamnguyen08/solving_tickets_as_a_service"
 LABEL org.opencontainers.image.title="SYNTARO Bot"
-LABEL org.opencontainers.image.description="Solving Tickets As A Service — GitHub bot"
+LABEL org.opencontainers.image.description="SYNTARO — GitHub bot"
 LABEL org.opencontainers.image.licenses="MIT"
 CMD ["node", "dist/src/index.js"]

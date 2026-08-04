@@ -7,7 +7,7 @@ last-updated: 2026-07-28
 # SYNTARO Incident Response Checklist
 
 > One-page quick reference for on-call engineers.
-> Solving Tickets As A Service — On-Call Runbook
+> SYNTARO — On-Call Runbook
 
 ---
 

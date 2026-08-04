@@ -37,7 +37,7 @@ I spent the last few months building something different.
 
 ### What SYNTARO Does
 
-SYNTARO (Solving Tickets As A Service) is an AI senior architect for your GitHub repository. When you label an issue with `syntaro:fix`, here's what happens:
+SYNTARO is an AI senior architect for your GitHub repository. When you label an issue with `syntaro:fix`, here's what happens:
 
 1. **Investigates**: SYNTARO reads your entire repository — not just the file mentioned in the issue, but the whole codebase. It maps the architecture, finds relevant code paths, and understands how components connect.
 

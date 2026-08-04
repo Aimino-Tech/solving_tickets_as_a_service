@@ -136,6 +136,6 @@ That's what happened with the todo app. The bug was real, the fix was small, and
 
 ---
 
-*SYNTARO — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
+*SYNTARO. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
 
 *This is a cross-post. The canonical version lives at [syntaro.io/blog/post-mortem-flask-todo-race](https://syntaro.io/blog/post-mortem-flask-todo-race).*

@@ -6,7 +6,7 @@
 
 ## App Name
 
-**SYNTARO — Solving Tickets As A Service**
+**SYNTARO**
 
 ---
 

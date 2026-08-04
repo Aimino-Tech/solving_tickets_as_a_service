@@ -1,7 +1,7 @@
 {
   "name": "@aimino/syntaro-mcp",
   "mcpName": "syntaro-agent-discovery",
-  "description": "MCP server for SYNTARO — Solving Tickets As A Service. AI-powered automated code review and bug fixing for GitHub issues. Submit issues, list runs, search codebase, and get automated fix PRs via OpenCode agents that improve code quality.",
+  "description": "MCP server for SYNTARO. AI-powered automated code review and bug fixing for GitHub issues. Submit issues, list runs, search codebase, and get automated fix PRs via OpenCode agents that improve code quality.",
   "version": "1.0.0",
   "agent": {
     "name": "syntaro-agent",

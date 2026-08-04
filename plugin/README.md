@@ -1,6 +1,6 @@
 # @tarquinen/syntaro-plugin
 
-**OpenCode plugin for [SYNTARO — Solving Tickets As A Service](https://github.com/tamnguyen08/solving_tickets_as_a_service)**
+**OpenCode plugin for [SYNTARO](https://github.com/tamnguyen08/solving_tickets_as_a_service)**
 
 Provides local development tools for operating and testing the SYNTARO GitHub bot directly from within OpenCode.
 

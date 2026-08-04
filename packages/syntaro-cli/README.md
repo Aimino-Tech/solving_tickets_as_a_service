@@ -1,6 +1,6 @@
 # @aimino-tech/syntaro
 
-SYNTARO — Solving Tickets As A Service CLI. Install SYNTARO on a repository, create a test issue, and watch a fix land as a pull request.
+SYNTARO CLI. Install SYNTARO on a repository, create a test issue, and watch a fix land as a pull request.
 
 ## Quickstart
 

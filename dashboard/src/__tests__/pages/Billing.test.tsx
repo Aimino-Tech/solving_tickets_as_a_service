@@ -17,16 +17,17 @@ vi.mock('recharts', () => ({
   Legend: () => null,
 }));
 
-const { mockStatsGet, mockBillingPlan, mockBillingPortal, mockLitellmUsage } = vi.hoisted(() => ({
+const { mockStatsGet, mockBillingPlan, mockBillingPortal, mockLitellmUsage, mockBillingInvoices } = vi.hoisted(() => ({
   mockStatsGet: vi.fn(),
   mockBillingPlan: vi.fn(),
   mockBillingPortal: vi.fn(),
   mockLitellmUsage: vi.fn(),
+  mockBillingInvoices: vi.fn(),
 }));
 
 vi.mock('@/api/client', () => ({
   stats: { get: mockStatsGet },
-  billing: { plan: mockBillingPlan, portal: mockBillingPortal },
+  billing: { plan: mockBillingPlan, portal: mockBillingPortal, invoices: mockBillingInvoices },
   litellm: { usage: mockLitellmUsage },
 }));
 
@@ -54,11 +55,29 @@ describe('Billing', () => {
     });
 
     mockLitellmUsage.mockResolvedValue({
-      totalSpend: 12.50,
+      totalSpend: 12.5,
       maxBudget: 100,
-      spendPerModel: [{ model: 'claude-sonnet-4', spend: 8.00 }],
+      spendPerModel: [{ model: 'claude-sonnet-4', spend: 8 }],
       rpmLimit: 100,
       tpmLimit: 100000,
+    });
+
+    mockBillingInvoices.mockResolvedValue({
+      invoices: [
+        {
+          id: 'inv_1',
+          number: 'INV-001',
+          status: 'paid',
+          created: '2024-01-15T00:00:00Z',
+          periodStart: '2024-01-01',
+          periodEnd: '2024-01-31',
+          amountDueCents: 4900,
+          amountPaidCents: 4900,
+          currency: 'usd',
+          invoicePdf: 'https://invoice.stripe.com/pdf/inv_1',
+          hostedInvoiceUrl: 'https://invoice.stripe.com/inv_1',
+        },
+      ],
     });
   });
 
@@ -86,7 +105,7 @@ describe('Billing', () => {
     renderWithProviders(<Billing />);
 
     await waitFor(() => {
-      expect(screen.getByText('Manage Subscription')).toBeInTheDocument();
+      expect(screen.getAllByText('Manage Subscription').length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -96,10 +115,12 @@ describe('Billing', () => {
     renderWithProviders(<Billing />);
 
     await waitFor(() => {
-      expect(screen.getByText('Manage Subscription')).toBeInTheDocument();
+      expect(screen.getAllByText('Manage Subscription').length).toBeGreaterThanOrEqual(1);
     });
 
-    await userEvent.click(screen.getByText('Manage Subscription'));
+    const buttons = screen.getAllByText('Manage Subscription');
+    const cardButton = buttons.find((b) => b.classList.contains('w-full'));
+    await userEvent.click(cardButton!);
     expect(mockBillingPortal).toHaveBeenCalled();
   });
 
@@ -185,10 +206,14 @@ describe('Billing', () => {
     renderWithProviders(<Billing />);
 
     await waitFor(() => {
-      expect(screen.getByText('View Plans')).toBeInTheDocument();
+      expect(screen.getAllByText('View Plans').length).toBeGreaterThanOrEqual(1);
     });
 
-    expect(screen.getByText('View Plans').closest('a')).toHaveAttribute('href', 'https://syntaro.io/pricing');
+      const viewPlanLinks = screen.getAllByText('View Plans');
+    const pricingLink = viewPlanLinks.find(
+      (el) => el.closest('a')?.getAttribute('href') === 'https://syntaro.io/pricing',
+    );
+    expect(pricingLink).toBeDefined();
   });
 
   it('shows portal error message when portal call fails', async () => {
@@ -197,10 +222,12 @@ describe('Billing', () => {
     renderWithProviders(<Billing />);
 
     await waitFor(() => {
-      expect(screen.getByText('Manage Subscription')).toBeInTheDocument();
+      expect(screen.getAllByText('Manage Subscription').length).toBeGreaterThanOrEqual(1);
     });
 
-    await userEvent.click(screen.getByText('Manage Subscription'));
+    const buttons = screen.getAllByText('Manage Subscription');
+    const cardButton = buttons.find((b) => b.classList.contains('w-full'));
+    await userEvent.click(cardButton!);
 
     await waitFor(() => {
       expect(screen.getByText(/failed to open portal/i)).toBeInTheDocument();
@@ -228,6 +255,38 @@ describe('Billing', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/liteLLM API error/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows invoice table with data when invoices resolve', async () => {
+    renderWithProviders(<Billing />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Payment History')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('INV-001')).toBeInTheDocument();
+    expect(screen.getByText('paid')).toBeInTheDocument();
+    expect(screen.getByText('$49.00')).toBeInTheDocument();
+  });
+
+  it('shows "No payments yet" when invoices is empty', async () => {
+    mockBillingInvoices.mockResolvedValue({ invoices: [] });
+
+    renderWithProviders(<Billing />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No payments yet')).toBeInTheDocument();
+    });
+  });
+
+  it('shows invoice error state when invoices reject', async () => {
+    mockBillingInvoices.mockRejectedValue(new Error('Invoice fetch failed'));
+
+    renderWithProviders(<Billing />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Invoice fetch failed')).toBeInTheDocument();
     });
   });
 });

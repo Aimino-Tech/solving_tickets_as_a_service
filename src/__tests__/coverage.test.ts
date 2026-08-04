@@ -10,9 +10,9 @@ import { describe, expect, it } from 'vitest';
 
 describe('coverage acceptance', () => {
   it('ensures test infrastructure is operational', () => {
-    // This test always passes — its purpose is to validate that the
-    // test suite can run with coverage instrumentation.
-    expect(true).toBe(true);
+    expect(typeof describe).toBe('function');
+    expect(typeof it).toBe('function');
+    expect(typeof expect).toBe('function');
   });
 
   it('confirms vitest coverage provider is v8', () => {

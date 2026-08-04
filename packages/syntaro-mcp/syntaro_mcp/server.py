@@ -85,7 +85,7 @@ def _hook(payload):
 
 mcp = FastMCP(
     SERVER_NAME,
-    instructions="""Syntaro (Solving Tickets As A Service) — label a GitHub issue and get a PR.
+    instructions="""Syntaro (SYNTARO) — label a GitHub issue and get a PR.
 
 Tools:
 - **syntaro_label_issue**: Add a label (e.g. "syntaro:fix") to a GitHub issue.

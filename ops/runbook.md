@@ -1,6 +1,6 @@
 # SYNTARO Production Deployment Runbook
 
-> Solving Tickets As A Service — Operations Guide
+> SYNTARO — Operations Guide
 > Last updated: 2026-07-28
 
 ## Table of Contents

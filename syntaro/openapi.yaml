@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: SYNTARO API — Solving Tickets As A Service
+  title: SYNTARO API — SYNTARO
   version: "1.0.0"
   description: |
     SYNTARO is an open-source GitHub bot that turns labeled issues into pull requests.

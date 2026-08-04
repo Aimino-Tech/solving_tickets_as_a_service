@@ -42,7 +42,7 @@ These aren't edge cases — they're the dominant failure mode of reactive genera
 
 ## Plan-first architecture: how SYNTARO approaches fixes differently
 
-SYNTARO (Solving Tickets As A Service) takes the opposite approach. Before a single line of code is generated, SYNTARO executes a multi-phase investigation pipeline that builds a structured understanding of the issue, the codebase, and the expected outcome.
+SYNTARO takes the opposite approach. Before a single line of code is generated, SYNTARO executes a multi-phase investigation pipeline that builds a structured understanding of the issue, the codebase, and the expected outcome.
 
 ```
 Issue labeled syntaro:fix
@@ -218,6 +218,6 @@ The fundamental belief driving SYNTARO is this: **AI coding tools fail not becau
 
 ---
 
-*SYNTARO — Solving Tickets As A Service. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
+*SYNTARO. [Label a GitHub issue. Get a pull request.](https://syntaro.io)*
 
 *This is a cross-post. The canonical version lives at [syntaro.io/blog/architecture-deep-dive](https://syntaro.io/blog/architecture-deep-dive).*

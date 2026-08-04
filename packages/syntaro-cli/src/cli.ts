@@ -4,7 +4,7 @@ import { quickstart } from './commands/quickstart.js';
 
 const program = new Command();
 
-program.name('syntaro').description('SYNTARO — Solving Tickets As A Service CLI').version('0.1.0');
+program.name('syntaro').description('SYNTARO CLI').version('0.1.0');
 
 program
   .command('quickstart')

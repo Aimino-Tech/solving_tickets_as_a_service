@@ -4,6 +4,7 @@ import { captureEvent } from '../analytics/tracker.js';
 import { auditLog } from '../audit/middleware.js';
 import { queryWithRetry } from '../db/connection.js';
 import { rootLogger } from '../utils/logger.js';
+import { config } from '../config.js';
 import { requireAuth } from './middleware.js';
 import { loginLimiter, refreshLimiter, registerLimiter } from './rateLimit.js';
 import { AuthError, authService } from './service.js';
@@ -360,7 +361,9 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
       }
     }
 
-    res.json({ id: userId, email, name, plan, createdAt });
+    const isAdmin = config.adminSteering.adminEmails.includes(email.toLowerCase());
+
+    res.json({ id: userId, email, name, plan, createdAt, isAdmin });
   } catch (err) {
     log.error({ err }, 'Failed to get user');
     res.status(500).json({ error: 'Failed to get user' });

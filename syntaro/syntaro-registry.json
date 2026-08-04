@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/aimino/syntaro-registry/main/schemas/registry-v1.json",
-  "name": "SYNTARO — Solving Tickets As A Service",
+  "name": "SYNTARO",
   "version": "1.0.0",
-  "description": "SYNTARO (Solving Tickets As A Service) is an AI-powered GitHub bot that automatically fixes bugs and implements features. Label an issue, get a pull request.",
+  "description": "SYNTARO is an AI-powered GitHub bot that automatically fixes bugs and implements features. Label an issue, get a pull request.",
   "tagline": "Label a GitHub issue. Get a pull request — automatically.",
   "capabilities": {
     "fix_generation": {

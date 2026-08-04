@@ -207,7 +207,10 @@ export class AuthService {
       // Supabase intentionally does not reveal whether an email exists; treat
       // user-not-found responses as success for anti-enumeration.
       const msg = error.message?.toLowerCase() ?? '';
-      if (msg.includes('not found') || msg.includes('no user')) return;
+      // Anti-enumeration: never reveal whether an email exists. Treat
+      // unknown-user AND provider-rejected emails (e.g. blocked disposable
+      // domains) as success — mirror the magic-link behavior.
+      if (msg.includes('not found') || msg.includes('no user') || msg.includes('invalid')) return;
       throw new AuthError('Failed to send password reset email', 500);
     }
   }

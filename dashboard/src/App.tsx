@@ -44,6 +44,10 @@ function PageFallback() {
 
 export default function App() {
   const { isAuthenticated, isLoading } = useAuth();
+  // A user who just registered is routed to the onboarding wizard instead of
+  // the dashboard (US-5..9). The flag is set by AuthContext.register() and
+  // cleared once the wizard/dashboard mounts.
+  const onboardingPending = sessionStorage.getItem('syntaro:onboarding_pending') === '1';
 
   if (isLoading) {
     return <PageFallback />;
@@ -53,7 +57,12 @@ export default function App() {
     <ErrorBoundary>
       <Suspense fallback={<PageFallback />}>
         <Routes>
-          <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
+          <Route
+            path="/login"
+            element={
+              isAuthenticated ? <Navigate to={onboardingPending ? '/onboarding' : '/'} replace /> : <Login />
+            }
+          />
           <Route path="/logout" element={<Logout />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/auth/reset-password" element={<ResetPassword />} />
