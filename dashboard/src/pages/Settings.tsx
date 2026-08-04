@@ -310,26 +310,19 @@ export default function Settings() {
             </div>
             <div className="flex items-center gap-2">
               {githubInt?.connected ? (
-                <>
-                  <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                    Connected
-                  </span>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const { url } = await githubApi.getOAuthUrl();
-                        window.location.href = url;
-                      } catch {
-                        setMessage({ type: 'error', text: 'Could not generate GitHub reconnection URL' });
-                      }
-                    }}
-                    className="p-1.5 rounded-md transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                    title="Reconnect GitHub"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                </>
+                <button
+                  onClick={async () => {
+                    try {
+                      const { url } = await githubApi.getOAuthUrl();
+                      window.location.href = url;
+                    } catch {
+                      setMessage({ type: 'error', text: 'Could not generate GitHub reconnection URL' });
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-md px-2 h-7 text-sm font-medium ring-1 ring-inset ring-gray-300 dark:ring-gray-600 bg-transparent text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Manage
+                </button>
               ) : (
                 <button
                   onClick={async () => {
@@ -397,19 +390,12 @@ export default function Settings() {
                   Connecting
                 </span>
               ) : linearConnected ? (
-                <>
-                  <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                    Connected
-                  </span>
-                  <button
-                    onClick={() => setLinearExpanded(!linearExpanded)}
-                    className="p-1.5 rounded-md transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                    title="Edit"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                </>
+                <button
+                  onClick={() => setLinearExpanded(true)}
+                  className="inline-flex items-center gap-1.5 rounded-md px-2 h-7 text-sm font-medium ring-1 ring-inset ring-gray-300 dark:ring-gray-600 bg-transparent text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Manage
+                </button>
               ) : (
                 <button
                   onClick={() => setLinearExpanded(true)}
@@ -770,15 +756,14 @@ export default function Settings() {
                 <div className="text-sm text-gray-500 dark:text-gray-400">Beta — connect via setup guide</div>
               </div>
             </div>
-            <a
-              href="https://github.com/Aimino-Tech/solving_tickets_as_a_service/blob/main/docs/platforms/README.md"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            <span
+              aria-disabled="true"
+              title="Setup guide coming soon"
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed select-none"
             >
               Connect
               <ArrowUpRight size={12} />
-            </a>
+            </span>
           </div>
         </div>
       </section>

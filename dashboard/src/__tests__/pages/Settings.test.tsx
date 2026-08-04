@@ -66,19 +66,23 @@ describe('Settings', () => {
     });
   });
 
-  it('shows Connect links for Bitbucket and Jira', async () => {
+  it('shows Connect link for Bitbucket and disabled Connect for Jira', async () => {
     renderWithProviders(<Settings />);
 
     await waitFor(() => {
       expect(screen.getByText('Bitbucket App Password')).toBeInTheDocument();
     });
 
-    const connectLinks = screen.getAllByRole('link', { name: 'Connect' });
-    expect(connectLinks.length).toBeGreaterThanOrEqual(2);
-    for (const link of connectLinks) {
-      expect(link).toHaveAttribute('href');
-      expect(link).toHaveAttribute('target', '_blank');
-    }
+    // Bitbucket: clickable external link
+    const bitbucketLink = screen.getAllByRole('link', { name: 'Connect' });
+    expect(bitbucketLink.length).toBe(1);
+    expect(bitbucketLink[0]).toHaveAttribute('href');
+    expect(bitbucketLink[0]).toHaveAttribute('target', '_blank');
+
+    // Jira: disabled, not clickable
+    const jiraConnect = screen.getByTitle('Setup guide coming soon');
+    expect(jiraConnect.tagName).toBe('SPAN');
+    expect(jiraConnect).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByText('Jira API Token')).toBeInTheDocument();
   });
 
