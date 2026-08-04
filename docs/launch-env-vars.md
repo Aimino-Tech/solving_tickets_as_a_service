@@ -222,6 +222,19 @@ OPENCODE_URL=http://localhost:4096
 | `OPENAI_API_KEY` | — | API key for triage/classification | https://platform.openai.com/api-keys |
 | `OPENAI_CHEAP_MODEL` | `gpt-4o-mini` | Cheap model for triage | `gpt-4o-mini`, `deepseek-chat`, etc. |
 
+### LLM Routing (AIM-4622)
+
+Difficulty-tier routing maps triage difficulty to a per-tier model. ON by default; disable with `ROUTING_ENABLED=false` to force `OPENCODE_MODEL` for all runs.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ROUTING_ENABLED` | `true` | Enable difficulty-tier model routing |
+| `ROUTING_TIER1_MODEL` | `gpt-4o-mini` | Model for Tier 1 (easy, variant `low`) |
+| `ROUTING_TIER2_MODEL` | `gpt-4o-mini` | Model for Tier 2 (medium, variant `medium`) |
+| `ROUTING_TIER3_MODEL` | `anthropic/claude-sonnet-4-20250514` | Model for Tier 3 (hard, variant `high`) |
+| `ROUTING_TIER4_MODEL` | `anthropic/claude-sonnet-4-20250514` | Model for Tier 4 (unknown/deep, variant `max`) |
+| `ROUTING_TIER_MODEL_OVERRIDE` | `''` | Comma-separated `tier=model` overrides, e.g. `2=deepseek-v4-flash` |
+
 ---
 
 ## 5. Redis 🟡

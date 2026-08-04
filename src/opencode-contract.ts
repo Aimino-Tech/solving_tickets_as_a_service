@@ -60,16 +60,18 @@ export interface OpenCodeDispatchRequest {
   model: string;
 }
 
-export const openCodeDispatchRequestSchema = z.object({
-  prompt: z
-    .string()
-    .min(1, 'prompt is required and must be non-empty')
-    .max(100_000, 'prompt exceeds maximum length of 100,000 characters'),
-  model: z
-    .string()
-    .min(1, 'model is required and must be non-empty')
-    .max(200, 'model identifier exceeds maximum length of 200 characters'),
-}).strict();
+export const openCodeDispatchRequestSchema = z
+  .object({
+    prompt: z
+      .string()
+      .min(1, 'prompt is required and must be non-empty')
+      .max(100_000, 'prompt exceeds maximum length of 100,000 characters'),
+    model: z
+      .string()
+      .min(1, 'model is required and must be non-empty')
+      .max(200, 'model identifier exceeds maximum length of 200 characters'),
+  })
+  .strict();
 
 // ---------------------------------------------------------------------------
 // 2. OpenCodeDispatchResponse — what OpenCode Serve returns
@@ -104,15 +106,17 @@ export interface OpenCodeDispatchResponse {
   metadata?: Record<string, unknown>;
 }
 
-export const openCodeDispatchResponseSchema = z.object({
-  summary: z.string().min(1, 'summary is required'),
-  confidence: confidenceLevelSchema,
-  diff: z.string().optional(),
-  branch: z.string().optional(),
-  testOutput: z.string().optional(),
-  errors: z.array(z.string()).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-}).strict();
+export const openCodeDispatchResponseSchema = z
+  .object({
+    summary: z.string().min(1, 'summary is required'),
+    confidence: confidenceLevelSchema,
+    diff: z.string().optional(),
+    branch: z.string().optional(),
+    testOutput: z.string().optional(),
+    errors: z.array(z.string()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict();
 
 // ---------------------------------------------------------------------------
 // 3. OpenCodeProgress — progress updates (for future streaming support)
@@ -134,15 +138,7 @@ export interface OpenCodeProgress {
   runId: string;
 
   /** The current phase of the agent lifecycle. */
-  phase:
-    | 'cloning'
-    | 'investigating'
-    | 'fixing'
-    | 'testing'
-    | 'verifying'
-    | 'committing'
-    | 'done'
-    | 'error';
+  phase: 'cloning' | 'investigating' | 'fixing' | 'testing' | 'verifying' | 'committing' | 'done' | 'error';
 
   /** Human-readable description of what the agent is doing right now. */
   message: string;
@@ -157,23 +153,16 @@ export interface OpenCodeProgress {
   timestamp: string;
 }
 
-export const openCodeProgressSchema = z.object({
-  runId: z.string().min(1, 'runId is required'),
-  phase: z.enum([
-    'cloning',
-    'investigating',
-    'fixing',
-    'testing',
-    'verifying',
-    'committing',
-    'done',
-    'error',
-  ]),
-  message: z.string().min(1, 'message is required'),
-  progress: z.number().int().min(0).max(100).optional(),
-  detail: z.string().optional(),
-  timestamp: z.string().datetime({ offset: true }).or(z.string().min(1)),
-}).strict();
+export const openCodeProgressSchema = z
+  .object({
+    runId: z.string().min(1, 'runId is required'),
+    phase: z.enum(['cloning', 'investigating', 'fixing', 'testing', 'verifying', 'committing', 'done', 'error']),
+    message: z.string().min(1, 'message is required'),
+    progress: z.number().int().min(0).max(100).optional(),
+    detail: z.string().optional(),
+    timestamp: z.string().datetime({ offset: true }).or(z.string().min(1)),
+  })
+  .strict();
 
 // ---------------------------------------------------------------------------
 // 4. OpenCodeResult — the consolidated result after dispatch
@@ -213,16 +202,18 @@ export interface OpenCodeResult {
   metadata?: Record<string, unknown>;
 }
 
-export const openCodeResultSchema = z.object({
-  success: z.boolean(),
-  summary: z.string(),
-  confidence: confidenceLevelSchema,
-  branchName: z.string().optional(),
-  diff: z.string().optional(),
-  testOutput: z.string().optional(),
-  errors: z.array(z.string()).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-}).strict();
+export const openCodeResultSchema = z
+  .object({
+    success: z.boolean(),
+    summary: z.string(),
+    confidence: confidenceLevelSchema,
+    branchName: z.string().optional(),
+    diff: z.string().optional(),
+    testOutput: z.string().optional(),
+    errors: z.array(z.string()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict();
 
 // ---------------------------------------------------------------------------
 // 5. ModelChainConfig — model fallback chain
@@ -240,10 +231,12 @@ export interface ModelChainConfig {
   fallbacks: string[];
 }
 
-export const modelChainConfigSchema = z.object({
-  primary: z.string().min(1, 'primary model is required'),
-  fallbacks: z.array(z.string().min(1)),
-}).strict();
+export const modelChainConfigSchema = z
+  .object({
+    primary: z.string().min(1, 'primary model is required'),
+    fallbacks: z.array(z.string().min(1)),
+  })
+  .strict();
 
 // ---------------------------------------------------------------------------
 // 6. Helpers
@@ -323,10 +316,22 @@ export interface McpSubmitIssueResponse {
 
 export interface McpJobStatus {
   runId: string;
-  status: 'queued' | 'investigating' | 'fixing' | 'testing' | 'verifying' | 'committing' | 'completed' | 'failed' | 'error';
+  status:
+    | 'queued'
+    | 'investigating'
+    | 'fixing'
+    | 'testing'
+    | 'verifying'
+    | 'committing'
+    | 'completed'
+    | 'failed'
+    | 'error';
   progress?: number;
   message?: string;
   prUrl?: string;
+  model?: string;
+  routingTier?: number;
+  routingVariant?: string;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
@@ -341,16 +346,22 @@ export interface McpRunHistoryEntry {
   status: string;
   confidence?: string;
   prUrl?: string;
+  model?: string;
+  routingTier?: number;
+  routingVariant?: string;
   createdAt: string;
   completedAt?: string;
 }
 
-export const mcpSubmitIssueRequestSchema = z.object({
-  repoOwner: z.string().min(1),
-  repoName: z.string().min(1),
-  issueTitle: z.string().min(1).max(500),
-  issueBody: z.string().min(1).max(50000),
-  labels: z.array(z.string()).optional(),
-  channel: z.string().optional(),
-  channelTarget: z.string().optional(),
-}).strict();
+export const mcpSubmitIssueRequestSchema = z
+  .object({
+    repoOwner: z.string().min(1),
+    repoName: z.string().min(1),
+    issueTitle: z.string().min(1).max(500),
+    issueBody: z.string().min(1).max(50000),
+    labels: z.array(z.string()).optional(),
+    channel: z.string().optional(),
+    channelTarget: z.string().optional(),
+    routingTier: z.number().int().min(1).max(4).optional(),
+  })
+  .strict();

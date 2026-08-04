@@ -87,7 +87,20 @@ function classifyGroup(fileName) {
   if (fileName.startsWith('group2')) return 'eval-group-2';
   if (fileName.startsWith('group3')) return 'eval-group-3';
   if (fileName.startsWith('redteam')) return 'red-team';
+  if (fileName.startsWith('tier')) return 'tier';
   return 'unknown';
+}
+
+// Map a test-case filename (or name) to a routing tier (1-4) when the test
+// carries tier metadata. Filenames may look like "tier1-...", "tier2-...",
+// "group1-...", or include a `tier: N` marker in the name.
+function classifyTier(fileName, testName = '') {
+  const joined = `${fileName} ${testName}`;
+  const tierMatch = joined.match(/tier\s*[=:]?\s*([1-4])/i);
+  if (tierMatch) return Number(tierMatch[1]);
+  const groupMatch = joined.match(/(?:^|[-_ ])group([1-3])(?:[-_ ]|$)/i);
+  if (groupMatch) return Number(groupMatch[1]);
+  return null;
 }
 
 /**
@@ -105,6 +118,7 @@ function extractTestResults(data) {
         pass: r.pass ?? r.success ?? false,
         score: r.score ?? (r.pass ? 1 : 0),
         duration: r.duration ?? 0,
+        cost: extractCost(r),
         error: r.error ?? null,
         prompt: truncate(r.prompt?.raw || r.prompt || '', 200),
         response: truncate(r.response?.output || r.output || '', 200),
@@ -126,6 +140,7 @@ function extractTestResults(data) {
         pass: passVal === true || passVal === 'true' || passVal === 'PASS',
         score: scoreIdx >= 0 ? Number(row[scoreIdx]) ?? (passVal ? 1 : 0) : passVal ? 1 : 0,
         duration: 0,
+        cost: 0,
         error: null,
         prompt: '',
         response: '',
@@ -141,6 +156,7 @@ function extractTestResults(data) {
         pass: r.pass ?? r.success ?? false,
         score: r.score ?? (r.pass ? 1 : 0),
         duration: r.duration ?? 0,
+        cost: extractCost(r),
         error: r.error ?? null,
         prompt: truncate(r.prompt || '', 200),
         response: truncate(r.response || '', 200),
@@ -149,6 +165,18 @@ function extractTestResults(data) {
   }
 
   return results;
+}
+
+// Extract a numeric cost (in USD) from a promptfoo result, if present.
+function extractCost(r) {
+  if (r == null) return 0;
+  for (const key of ['cost', 'totalCost', 'latencyCost', 'costUsd']) {
+    const v = r[key];
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+  }
+  const nested = r.response?.cost ?? r.cost ?? r.prompt?.cost;
+  if (typeof nested === 'number' && Number.isFinite(nested)) return nested;
+  return 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -217,8 +245,10 @@ function computeStats(results) {
   const passRate = total > 0 ? passed / total : 0;
   const durations = results.map((r) => r.duration).filter((d) => d > 0);
   const avgDuration = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+  const totalCost = results.reduce((acc, r) => acc + (typeof r.cost === 'number' ? r.cost : 0), 0);
+  const avgCost = total > 0 ? totalCost / total : 0;
 
-  return { total, passed, failed, passRate, avgDuration };
+  return { total, passed, failed, passRate, avgDuration, totalCost, avgCost };
 }
 
 /**
@@ -238,8 +268,16 @@ function buildReport(inputDir) {
     'eval-group-1': { tests: [] },
     'eval-group-2': { tests: [] },
     'eval-group-3': { tests: [] },
+    tier: { tests: [] },
     'red-team': { findings: [] },
     unknown: { tests: [] },
+  };
+
+  const tiers = {
+    1: { tests: [] },
+    2: { tests: [] },
+    3: { tests: [] },
+    4: { tests: [] },
   };
 
   for (const filePath of files) {
@@ -256,6 +294,11 @@ function buildReport(inputDir) {
       const tests = extractTestResults(data);
       groups[group].tests.push(...tests);
       console.log(`  [${group}] ${filePath}: ${tests.length} test results`);
+    }
+
+    const tier = classifyTier(fileName);
+    if (tier && groups[group] && group !== 'red-team') {
+      tiers[tier].tests.push(...extractTestResults(data));
     }
   }
 
@@ -290,8 +333,15 @@ function buildReport(inputDir) {
     ...groups['eval-group-1'].tests,
     ...groups['eval-group-2'].tests,
     ...groups['eval-group-3'].tests,
+    ...groups['tier'].tests,
   ];
   const overallEval = computeStats(allEvalTests);
+
+  // Per-routing-tier stats (Tier 1-4, from filename/name markers)
+  const tierStats = {};
+  for (const [tierNum, tierData] of Object.entries(tiers)) {
+    tierStats[tierNum] = computeStats(tierData.tests);
+  }
 
   // Red team summary
   const allRedTeamFindings = groups['red-team'].findings;
@@ -334,6 +384,8 @@ function buildReport(inputDir) {
       failedEvalTests: overallEval.failed,
       evalPassRate: overallEval.passRate,
       avgTestDuration: overallEval.avgDuration,
+      totalEvalCost: overallEval.totalCost,
+      avgTestCost: overallEval.avgCost,
       redTeamTotalFindings: allRedTeamFindings.length,
       redTeamPassedFindings: redTeamPassed,
       redTeamFailedFindings: allRedTeamFindings.length - redTeamPassed,
@@ -341,6 +393,7 @@ function buildReport(inputDir) {
       redTeamOverallPassed: redTeamPassRate >= 0.8,
     },
     groups: groupStats,
+    tierStats,
     redTeamSummary: {
       bySeverity: Object.fromEntries(
         Object.entries(redTeamBySeverity).map(([sev, findings]) => [
@@ -377,6 +430,8 @@ function createEmptyReport() {
       failedEvalTests: 0,
       evalPassRate: 0,
       avgTestDuration: 0,
+      totalEvalCost: 0,
+      avgTestCost: 0,
       redTeamTotalFindings: 0,
       redTeamPassedFindings: 0,
       redTeamFailedFindings: 0,
@@ -384,6 +439,7 @@ function createEmptyReport() {
       redTeamOverallPassed: false,
     },
     groups: {},
+    tierStats: { 1: { total: 0, passed: 0, failed: 0, passRate: 0, avgDuration: 0, totalCost: 0, avgCost: 0 }, 2: { total: 0, passed: 0, failed: 0, passRate: 0, avgDuration: 0, totalCost: 0, avgCost: 0 }, 3: { total: 0, passed: 0, failed: 0, passRate: 0, avgDuration: 0, totalCost: 0, avgCost: 0 }, 4: { total: 0, passed: 0, failed: 0, passRate: 0, avgDuration: 0, totalCost: 0, avgCost: 0 } },
     redTeamSummary: { bySeverity: {}, byPlugin: {} },
   };
 }
@@ -414,10 +470,25 @@ function generateMarkdown(report) {
   lines.push(`| Failed | ${summary.failedEvalTests} |`);
   lines.push(`| Eval Pass Rate | ${(summary.evalPassRate * 100).toFixed(1)}% |`);
   lines.push(`| Avg Test Duration | ${summary.avgTestDuration.toFixed(1)}ms |`);
+  lines.push(`| Total Eval Cost | $${(summary.totalEvalCost || 0).toFixed(4)} |`);
+  lines.push(`| Avg Test Cost | $${(summary.avgTestCost || 0).toFixed(4)} |`);
   lines.push(`| Red Team Findings | ${summary.redTeamTotalFindings} |`);
   lines.push(`| Red Team Passed | ${summary.redTeamPassedFindings} |`);
   lines.push(`| Red Team Pass Rate | ${(summary.redTeamPassRate * 100).toFixed(1)}% |`);
   lines.push(`| Red Team Threshold Met | ${summary.redTeamOverallPassed ? '✅ Yes' : '❌ No'} |`);
+  lines.push('');
+
+  lines.push('---');
+  lines.push('');
+  lines.push('## Per-Routing-Tier Results');
+  lines.push('');
+  lines.push('| Tier | Tests | Passed | Pass Rate | Total Cost | Avg Cost |');
+  lines.push('|---|---|---|---|---|---|');
+  for (const [tierNum, stats] of Object.entries(report.tierStats || {})) {
+    lines.push(
+      `| ${tierNum} | ${stats.total} | ${stats.passed} | ${(stats.passRate * 100).toFixed(1)}% | $${(stats.totalCost || 0).toFixed(4)} | $${(stats.avgCost || 0).toFixed(4)} |`
+    );
+  }
   lines.push('');
 
   lines.push('---');
@@ -461,6 +532,8 @@ function generateMarkdown(report) {
       lines.push(`| Failed | ${stats.failed} |`);
       lines.push(`| Pass Rate | ${(stats.passRate * 100).toFixed(1)}% |`);
       lines.push(`| Avg Duration | ${stats.avgDuration.toFixed(1)}ms |`);
+      lines.push(`| Total Cost | $${(stats.totalCost || 0).toFixed(4)} |`);
+      lines.push(`| Avg Cost | $${(stats.avgCost || 0).toFixed(4)} |`);
       lines.push('');
 
       if (stats.tests && stats.tests.length > 0) {

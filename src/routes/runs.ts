@@ -13,7 +13,7 @@
  * @module routes/runs
  */
 
-import { Router, type Request, type Response } from 'express';
+import { type Request, type Response, Router } from 'express';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'runs-public' });
@@ -36,6 +36,8 @@ interface PublicRunResponse {
   error: string | null;
   durationMs: number | null;
   modelUsed: string | null;
+  routingTier: number | null;
+  routingVariant: string | null;
   createdAt: string;
 }
 
@@ -78,14 +80,21 @@ router.get('/:id', async (req: Request, res: Response) => {
       status: String(raw.status ?? 'unknown'),
       confidence: raw.confidence ? String(raw.confidence) : null,
       summary: raw.summary ? String(raw.summary) : null,
-      prUrl: raw.prUrl ?? raw.pr_url ? String(raw.prUrl ?? raw.pr_url) : null,
-      branchName: raw.branchName ?? raw.branch_name ? String(raw.branchName ?? raw.branch_name) : null,
+      prUrl: (raw.prUrl ?? raw.pr_url) ? String(raw.prUrl ?? raw.pr_url) : null,
+      branchName: (raw.branchName ?? raw.branch_name) ? String(raw.branchName ?? raw.branch_name) : null,
       diff: raw.diff ? String(raw.diff) : null,
-      testOutput: raw.testOutput ?? raw.test_output ? String(raw.testOutput ?? raw.test_output) : null,
+      testOutput: (raw.testOutput ?? raw.test_output) ? String(raw.testOutput ?? raw.test_output) : null,
       error: raw.error ? String(raw.error) : null,
-      durationMs: raw.durationMs ?? raw.duration_ms ? Number(raw.durationMs ?? raw.duration_ms) : null,
-      modelUsed: raw.modelUsed ?? raw.model_used ? String(raw.modelUsed ?? raw.model_used) : null,
-      createdAt: raw.createdAt ? String(raw.createdAt) : raw.created_at ? String(raw.created_at) : new Date().toISOString(),
+      durationMs: (raw.durationMs ?? raw.duration_ms) ? Number(raw.durationMs ?? raw.duration_ms) : null,
+      modelUsed: (raw.modelUsed ?? raw.model_used) ? String(raw.modelUsed ?? raw.model_used) : null,
+      routingTier: (raw.routingTier ?? raw.routing_tier) ? Number(raw.routingTier ?? raw.routing_tier) : null,
+      routingVariant:
+        (raw.routingVariant ?? raw.routing_variant) ? String(raw.routingVariant ?? raw.routing_variant) : null,
+      createdAt: raw.createdAt
+        ? String(raw.createdAt)
+        : raw.created_at
+          ? String(raw.created_at)
+          : new Date().toISOString(),
     };
 
     const accept = req.headers.accept || '';
@@ -105,31 +114,47 @@ router.get('/:id', async (req: Request, res: Response) => {
 function renderRunPage(run: PublicRunResponse): string {
   const statusColor = (s: string): string => {
     switch (s) {
-      case 'completed': case 'success': return 'oklch(0.68 0.22 145)';
-      case 'failed': return 'oklch(0.59 0.22 25)';
-      case 'running': return 'oklch(0.64 0.22 230)';
-      case 'queued': return 'oklch(0.7 0.05 260)';
-      default: return 'oklch(0.7 0.05 260)';
+      case 'completed':
+      case 'success':
+        return 'oklch(0.68 0.22 145)';
+      case 'failed':
+        return 'oklch(0.59 0.22 25)';
+      case 'running':
+        return 'oklch(0.64 0.22 230)';
+      case 'queued':
+        return 'oklch(0.7 0.05 260)';
+      default:
+        return 'oklch(0.7 0.05 260)';
     }
   };
 
   const statusEmoji = (s: string): string => {
     switch (s) {
-      case 'completed': case 'success': return '\u2705';
-      case 'failed': return '\u274C';
-      case 'running': return '\uD83D\uDD04';
-      case 'queued': return '\u23F3';
-      default: return '\u2753';
+      case 'completed':
+      case 'success':
+        return '\u2705';
+      case 'failed':
+        return '\u274C';
+      case 'running':
+        return '\uD83D\uDD04';
+      case 'queued':
+        return '\u23F3';
+      default:
+        return '\u2753';
     }
   };
 
   const confidenceLabel = run.confidence ?? 'unknown';
   const confidenceColor = (c: string): string => {
     switch (c) {
-      case 'high': return 'oklch(0.68 0.22 145)';
-      case 'medium': return 'oklch(0.75 0.22 85)';
-      case 'low': return 'oklch(0.59 0.22 25)';
-      default: return 'oklch(0.7 0.05 260)';
+      case 'high':
+        return 'oklch(0.68 0.22 145)';
+      case 'medium':
+        return 'oklch(0.75 0.22 85)';
+      case 'low':
+        return 'oklch(0.59 0.22 25)';
+      default:
+        return 'oklch(0.7 0.05 260)';
     }
   };
 
@@ -201,6 +226,7 @@ function renderRunPage(run: PublicRunResponse): string {
       <div class="card">
         <div class="label">Model</div>
         <div class="value">${escapeHtml(run.modelUsed ?? '\u2014')}</div>
+        ${run.routingTier ? `<div class="subvalue">Tier ${run.routingTier} &middot; variant ${escapeHtml(run.routingVariant ?? '\u2014')}</div>` : ''}
       </div>
       <div class="card">
         <div class="label">Created</div>

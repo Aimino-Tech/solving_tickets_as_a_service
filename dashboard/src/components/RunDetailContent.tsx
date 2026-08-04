@@ -1,6 +1,6 @@
+import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import type { Run } from '@/api/types';
-import { CheckCircle, AlertTriangle, XCircle, ArrowUp, ArrowDown } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { formatCost, formatDurationShort } from '@/utils/format';
 
@@ -51,9 +51,19 @@ export default function RunDetailContent({ run }: RunDetailContentProps) {
         </div>
 
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Cost &amp; Model</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            Cost &amp; Model
+          </h3>
           <DetailRow label="Cost" value={formatCost(run.costCents)} />
           <DetailRow label="Model" value={run.modelUsed || '\u2014'} />
+          <DetailRow
+            label="Routed Variant"
+            value={
+              run.routingTier
+                ? `Tier ${run.routingTier}${run.routingVariant ? ` (${run.routingVariant})` : ''}`
+                : '\u2014'
+            }
+          />
           <DetailRow label="Credits Used" value={run.creditsUsed != null ? String(run.creditsUsed) : '\u2014'} />
         </div>
       </div>
@@ -61,9 +71,13 @@ export default function RunDetailContent({ run }: RunDetailContentProps) {
       {/* Confidence Score */}
       {run.confidence && (
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Confidence Score</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            Confidence Score
+          </h3>
           <div className="mt-2 flex items-center gap-3">
-            <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${confStyles[run.confidence] || 'text-gray-600 bg-gray-50'}`}>
+            <span
+              className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${confStyles[run.confidence] || 'text-gray-600 bg-gray-50'}`}
+            >
               {run.confidence === 'high' && <CheckCircle size={16} className="mr-1" />}
               {run.confidence === 'medium' && <AlertTriangle size={16} className="mr-1" />}
               {run.confidence === 'low' && <XCircle size={16} className="mr-1" />}
@@ -82,7 +96,10 @@ export default function RunDetailContent({ run }: RunDetailContentProps) {
       {diff && (
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Changes</h3>
-          <pre id="diff-content" className="mt-2 max-h-96 overflow-auto rounded-lg bg-gray-900 p-4 text-xs leading-relaxed text-green-400 font-mono">
+          <pre
+            id="diff-content"
+            className="mt-2 max-h-96 overflow-auto rounded-lg bg-gray-900 p-4 text-xs leading-relaxed text-green-400 font-mono"
+          >
             {diffPreview || '(no diff preview available)'}
           </pre>
           {hasMoreDiff && (
@@ -92,7 +109,15 @@ export default function RunDetailContent({ run }: RunDetailContentProps) {
               aria-controls="diff-content"
               className="mt-2 text-sm font-medium text-brand-600 hover:text-brand-700"
             >
-              {showFullDiff ? <>Show less <ArrowUp size={14} className="inline" /></> : <>Show all ({formatBytes(diff.length)})<ArrowDown size={14} className="inline" /></>}
+              {showFullDiff ? (
+                <>
+                  Show less <ArrowUp size={14} className="inline" />
+                </>
+              ) : (
+                <>
+                  Show all ({formatBytes(diff.length)})<ArrowDown size={14} className="inline" />
+                </>
+              )}
             </button>
           )}
         </div>
@@ -101,7 +126,9 @@ export default function RunDetailContent({ run }: RunDetailContentProps) {
       {/* Test Results */}
       {run.testOutput && (
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Test Results</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            Test Results
+          </h3>
           <pre className="mt-2 max-h-64 overflow-auto rounded-lg bg-gray-50 p-4 text-xs leading-relaxed text-gray-700 font-mono border border-gray-200">
             {run.testOutput.slice(0, 5000)}
           </pre>
@@ -114,7 +141,9 @@ export default function RunDetailContent({ run }: RunDetailContentProps) {
       {/* PR Link */}
       {run.prUrl && (
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pull Request</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            Pull Request
+          </h3>
           <a
             href={run.prUrl}
             target="_blank"
@@ -122,7 +151,11 @@ export default function RunDetailContent({ run }: RunDetailContentProps) {
             className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-brand-600 hover:text-brand-700"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+              />
             </svg>
             View Pull Request
           </a>

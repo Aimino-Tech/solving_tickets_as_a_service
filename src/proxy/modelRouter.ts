@@ -41,6 +41,8 @@ export type TaskComplexity = 'triage' | 'fix' | 'review';
 
 export type AccountTier = 'free' | 'pro' | 'enterprise';
 
+export type RoutingTier = 1 | 2 | 3 | 4;
+
 export interface ModelOption {
   /** Model identifier (e.g. "gpt-4o", "claude-sonnet-4-20250514") */
   id: string;
@@ -63,6 +65,9 @@ export interface ModelSelectionParams {
   preferredModel?: string;
   /** Whether to skip availability checks (default: false) */
   skipAvailabilityCheck?: boolean;
+  /** Difficulty tier (1-4) for routing (AIM-4622). When set, the router
+   *  resolves the model for that tier instead of the registry default. */
+  routingTier?: RoutingTier;
 }
 
 export interface ModelSelectionResult {
@@ -78,6 +83,10 @@ export interface ModelSelectionResult {
   fallbackChain: string[];
   /** Current availability state of the selected model */
   available: boolean;
+  /** Routed difficulty tier (1-4) — present when difficulty-tier routing applied */
+  routingTier?: RoutingTier;
+  /** Routing variant label: "low" | "medium" | "high" | "max" (AIM-4622) */
+  routingVariant?: 'low' | 'medium' | 'high' | 'max';
 }
 
 // ---------------------------------------------------------------------------
@@ -229,11 +238,24 @@ export class ModelRouter {
    * available, falls back to the configured default Opencode model.
    */
   async selectModel(params: ModelSelectionParams): Promise<ModelSelectionResult> {
-    const { complexity, accountTier, preferredModel, skipAvailabilityCheck } = params;
+    const { complexity, accountTier, preferredModel, skipAvailabilityCheck, routingTier } = params;
     const tier: AccountTier = accountTier ?? 'free';
     const fallbackChain: string[] = [];
 
     try {
+      // 0. Difficulty-tier routing (AIM-4622) — resolve model for the routed tier.
+      //    Only applies when routing is enabled (config.routing.enabled).
+      if (routingTier !== undefined) {
+        const routed = await this.selectByRoutingTier(routingTier, {
+          complexity,
+          tier,
+          preferredModel,
+          skipAvailabilityCheck,
+          fallbackChain,
+        });
+        if (routed) return routed;
+      }
+
       // 1. Preferred model override — check if it exists in the registry
       if (preferredModel) {
         fallbackChain.push(`preferred:${preferredModel}`);
@@ -299,6 +321,55 @@ export class ModelRouter {
         available: false,
       };
     }
+  }
+
+  // ── Difficulty-tier routing (AIM-4622) ──────────────────────────────────
+
+  private async selectByRoutingTier(
+    routingTier: RoutingTier,
+    ctx: {
+      complexity: TaskComplexity;
+      tier: AccountTier;
+      preferredModel?: string;
+      skipAvailabilityCheck?: boolean;
+      fallbackChain: string[];
+    },
+  ): Promise<ModelSelectionResult | null> {
+    const { complexity, tier, preferredModel, fallbackChain } = ctx;
+
+    if (!config.routing.enabled) {
+      log.info({ routingTier }, 'Routing disabled — using default model for tier');
+      return this.buildRoutingResult(this.defaultModelId, routingTier, true);
+    }
+
+    const modelId =
+      (preferredModel ?? '') ||
+      config.routing.tierModelOverride[routingTier] ||
+      config.routing.tierModels[routingTier] ||
+      this.defaultModelId;
+
+    fallbackChain.push(`tier${routingTier}:${modelId}`);
+    log.info({ model: modelId, complexity, tier, routingTier }, 'Selected model for routed tier');
+    return this.buildRoutingResult(modelId, routingTier, false);
+  }
+
+  private buildRoutingResult(modelId: string, routingTier: RoutingTier, usedFallback: boolean): ModelSelectionResult {
+    const variantMap: Record<RoutingTier, ModelSelectionResult['routingVariant']> = {
+      1: 'low',
+      2: 'medium',
+      3: 'high',
+      4: 'max',
+    };
+    return {
+      model: modelId,
+      modelName: modelId,
+      confidence: usedFallback ? 'low' : 'high',
+      usedFallback,
+      fallbackChain: [],
+      available: !usedFallback,
+      routingTier,
+      routingVariant: variantMap[routingTier],
+    };
   }
 
   // ── Availability check ────────────────────────────────────────────────────

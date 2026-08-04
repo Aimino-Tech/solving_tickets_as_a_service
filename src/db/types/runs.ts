@@ -15,6 +15,8 @@ export interface Run {
   error: string | null;
   durationMs: number | null;
   modelUsed: string | null;
+  routingTier: number | null;
+  routingVariant: string | null;
   creditsUsed: number | null;
   costCents: number | null;
   createdAt: Date;
@@ -33,6 +35,8 @@ export interface NewRun {
   error?: string | null;
   durationMs?: number | null;
   modelUsed?: string | null;
+  routingTier?: number | null;
+  routingVariant?: string | null;
   creditsUsed?: number | null;
   costCents?: number | null;
   createdAt?: Date;

@@ -22,6 +22,16 @@ vi.mock('../../config.js', () => ({
       model: 'anthropic/claude-sonnet-4-20250514',
       fallbackModels: ['claude-opus-4-20250514'],
     },
+    routing: {
+      enabled: true,
+      tierModels: {
+        1: 'gpt-4o-mini',
+        2: 'gpt-4o-mini',
+        3: 'anthropic/claude-sonnet-4-20250514',
+        4: 'anthropic/claude-sonnet-4-20250514',
+      },
+      tierModelOverride: {},
+    },
   },
 }));
 
@@ -174,6 +184,46 @@ describe('ModelRouter', () => {
     const result = await router.selectModel({ complexity: 'fix' });
     expect(result.model).toBe('anthropic/claude-sonnet-4-20250514');
     expect(result.available).toBe(false);
+  });
+
+  it('routes a difficulty tier to its configured model and variant', async () => {
+    const router = new ModelRouter(makeRegistry());
+    const result = await router.selectModel({ complexity: 'fix', routingTier: 1 });
+    expect(result.model).toBe('gpt-4o-mini');
+    expect(result.routingTier).toBe(1);
+    expect(result.routingVariant).toBe('low');
+    expect(result.available).toBe(true);
+  });
+
+  it('maps tier 4 to the max (frontier) variant', async () => {
+    const router = new ModelRouter(makeRegistry());
+    const result = await router.selectModel({ complexity: 'fix', routingTier: 4 });
+    expect(result.model).toBe('anthropic/claude-sonnet-4-20250514');
+    expect(result.routingTier).toBe(4);
+    expect(result.routingVariant).toBe('max');
+  });
+
+  it('applies ROUTING_TIER_MODEL_OVERRIDE for a specific tier', async () => {
+    const router = new ModelRouter(makeRegistry());
+    const { config } = await import('../../config.js');
+    const routing = config.routing;
+    routing.tierModelOverride = { 2: 'deepseek-v4-flash' };
+    const result = await router.selectModel({ complexity: 'fix', routingTier: 2 });
+    expect(result.model).toBe('deepseek-v4-flash');
+    expect(result.routingVariant).toBe('medium');
+    delete routing.tierModelOverride;
+  });
+
+  it('uses the configured routed tier model even when not in the registry', async () => {
+    const router = new ModelRouter(makeRegistry());
+    const { config } = await import('../../config.js');
+    const routing = config.routing;
+    routing.tierModelOverride = { 1: 'gpt-4o-mini' };
+    vi.spyOn(router, 'checkAvailability').mockResolvedValue(false);
+    const result = await router.selectModel({ complexity: 'fix', routingTier: 1 });
+    expect(result.model).toBe('gpt-4o-mini');
+    expect(result.routingVariant).toBe('low');
+    delete routing.tierModelOverride;
   });
 
   it('updates the registry via setModels and getRegistry reflects the change', async () => {

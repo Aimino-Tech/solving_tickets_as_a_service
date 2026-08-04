@@ -2,10 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { type Request, type Response, Router } from 'express';
 import { Redis } from 'ioredis';
 import { config } from '../config.js';
+import { mcpKeyAuth } from '../mcp/auth.js';
 import type { McpJobStatus, McpRunHistoryEntry, McpSubmitIssueResponse } from '../opencode-contract.js';
 import { mcpSubmitIssueRequestSchema } from '../opencode-contract.js';
 import { mcpRateLimitMiddleware } from '../ratelimit/mcpRateLimit.js';
-import { mcpKeyAuth } from '../mcp/auth.js';
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'mcp-routes' });
@@ -81,7 +81,7 @@ router.post('/mcp/submit_issue', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Validation failed', details: errors });
   }
 
-  const { repoOwner, repoName, issueTitle, issueBody, labels, channel, channelTarget } = parseResult.data;
+  const { repoOwner, repoName, issueTitle, issueBody, labels, channel, channelTarget, routingTier } = parseResult.data;
 
   try {
     const client = await getRedis();
@@ -96,6 +96,18 @@ router.post('/mcp/submit_issue', async (req: Request, res: Response) => {
       updatedAt: now,
     };
 
+    if (routingTier) {
+      const { modelRouter } = await import('../proxy/modelRouter.js');
+      const selection = await modelRouter.selectModel({
+        complexity: 'fix',
+        accountTier: 'free',
+        routingTier: routingTier as 1 | 2 | 3 | 4,
+      });
+      jobData.model = selection.model;
+      jobData.routingTier = selection.routingTier;
+      jobData.routingVariant = selection.routingVariant;
+    }
+
     await saveJob(client, runId, jobData);
 
     const historyEntry: McpRunHistoryEntry = {
@@ -105,6 +117,9 @@ router.post('/mcp/submit_issue', async (req: Request, res: Response) => {
       issueTitle,
       status: 'queued',
       createdAt: now,
+      model: jobData.model,
+      routingTier: jobData.routingTier,
+      routingVariant: jobData.routingVariant,
     };
     await addToHistory(client, historyEntry);
 

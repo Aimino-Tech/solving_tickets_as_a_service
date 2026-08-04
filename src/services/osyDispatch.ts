@@ -1,5 +1,5 @@
 import { config } from '../config.js';
-import type { AccountTier, TaskComplexity } from '../proxy/modelRouter.js';
+import type { AccountTier, RoutingTier, TaskComplexity } from '../proxy/modelRouter.js';
 import { modelRouter } from '../proxy/modelRouter.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -25,6 +25,8 @@ export interface IssueDispatchPayload {
   accountTier?: AccountTier;
   /** Task complexity for model routing. */
   complexity?: TaskComplexity;
+  /** Difficulty tier (1-4) from triage — drives variant routing. */
+  routingTier?: RoutingTier;
 }
 
 function getDispatchUrl(): string | undefined {
@@ -49,13 +51,18 @@ export async function dispatchIssueToOsy(payload: IssueDispatchPayload): Promise
       headers.traceparent = `00-${payload.traceId.replace(/-/g, '')}-${payload.traceId.slice(0, 16)}-01`;
     }
     let model: string | undefined;
+    let routingTier: number | undefined;
+    let routingVariant: string | undefined;
     if (config.proxy?.modelRouterEnabled) {
       try {
         const selection = await modelRouter.selectModel({
           complexity: payload.complexity ?? 'fix',
           accountTier: payload.accountTier ?? 'free',
+          routingTier: payload.routingTier,
         });
         model = selection.model;
+        routingTier = selection.routingTier;
+        routingVariant = selection.routingVariant;
       } catch (err) {
         log.warn({ err: String(err) }, 'Model router selection failed — using default model');
       }
@@ -72,6 +79,8 @@ export async function dispatchIssueToOsy(payload: IssueDispatchPayload): Promise
         labels: payload.labels,
         installation_id: payload.installationId,
         model,
+        routing_tier: routingTier,
+        routing_variant: routingVariant,
       }),
     });
 

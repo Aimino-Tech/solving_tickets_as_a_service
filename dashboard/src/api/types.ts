@@ -20,6 +20,8 @@ export interface Run {
   issueTitle: string;
   status: 'queued' | 'running' | 'success' | 'failed' | 'cancelled';
   modelUsed?: string;
+  routingTier?: number;
+  routingVariant?: string;
   costCents?: number;
   durationSeconds?: number;
   durationMs?: number;

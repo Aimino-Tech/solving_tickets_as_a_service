@@ -7,16 +7,16 @@
 
 import type {
   Account,
-  NewAccount,
   AuditLog,
+  NewAccount,
   NewAuditLog,
   NewRunHistory,
+  NewTeam,
+  NewTeamMember,
   NewUsageRecord,
   RunHistory,
   Team,
-  NewTeam,
   TeamMember,
-  NewTeamMember,
   UsageRecord,
 } from '../db/types/index.js';
 
@@ -38,6 +38,8 @@ export interface RunRecord {
   updatedAt?: Date;
   durationMs?: number;
   modelUsed?: string;
+  routingTier?: number | null;
+  routingVariant?: string | null;
 }
 
 export interface RunFilter {

@@ -196,6 +196,18 @@ OPENCODE_URL=http://opencode:4096              # Docker network URL
 OPENCODE_MODEL=anthropic/claude-sonnet-4-20250514
 FALLBACK_MODELS=gpt-4o,claude-haiku
 
+# === LLM Routing (AIM-4622) — optional, ON by default ===
+# Difficulty-tier routing maps triage difficulty (easy→1 … hard/unknown→4) to
+# a per-tier model. Tier 1-2 use a cheap model; Tier 3-4 use a frontier model.
+# Set ROUTING_ENABLED=false to disable routing and force OPENCODE_MODEL for all runs.
+ROUTING_ENABLED=true
+ROUTING_TIER1_MODEL=gpt-4o-mini
+ROUTING_TIER2_MODEL=gpt-4o-mini
+ROUTING_TIER3_MODEL=anthropic/claude-sonnet-4-20250514
+ROUTING_TIER4_MODEL=anthropic/claude-sonnet-4-20250514
+# Per-tier override, comma-separated "tier=model" pairs (highest specificity wins):
+# ROUTING_TIER_MODEL_OVERRIDE=2=deepseek-v4-flash,3=anthropic/claude-sonnet-4-20250514
+
 # === Sandbox (Choose one) ===
 # E2B (recommended for production):
 E2B_API_KEY=e2b_api_key_here
@@ -228,6 +240,16 @@ BOT_NAME=SYNTARO
 MAX_AGENT_ITERATIONS=40
 FIX_TIMEOUT_MS=600000                          # 10 minutes
 ```
+
+#### LLM Routing & BYO Model
+
+Difficulty-tier routing is **on by default** (`ROUTING_ENABLED=true`): triage difficulty maps to a tier (easy→1 … hard/unknown→4), and each tier selects its own model (Tier 1-2 cheap, Tier 3-4 frontier). This is the recommended configuration for cost/quality balance.
+
+- **Bring your own model**: set `ROUTING_TIER1_MODEL` … `ROUTING_TIER4_MODEL` to any provider model ID your OpenCode setup can reach (e.g. `deepseek-v4-flash`, `gpt-4o`, a private endpoint model). The tier model is authoritative when routing is enabled.
+- **Per-tier override**: `ROUTING_TIER_MODEL_OVERRIDE=2=deepseek-v4-flash` pins a single tier to a specific model.
+- **Disable routing**: set `ROUTING_ENABLED=false`. All runs then use `OPENCODE_MODEL` (plus `FALLBACK_MODELS` for degradation) regardless of difficulty — equivalent to the pre-routing behavior.
+
+The routed decision (tier + variant `low/medium/high/max` + model) is persisted per run (`routing_tier`, `routing_variant` columns) and surfaced in the run detail page and MCP `syntaro_check_status`.
 
 ### Validating Configuration
 

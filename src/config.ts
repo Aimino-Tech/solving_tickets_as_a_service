@@ -148,6 +148,14 @@ const envSchema = z.object({
   PROXY_API_KEY: z.string().default(''),
   PROXY_ALLOWED_ORGS: z.string().default(''),
 
+  // Difficulty-tier model routing (AIM-4622)
+  ROUTING_ENABLED: boolSchema(true),
+  ROUTING_TIER1_MODEL: z.string().default('gpt-4o-mini'),
+  ROUTING_TIER2_MODEL: z.string().default('gpt-4o-mini'),
+  ROUTING_TIER3_MODEL: z.string().default('anthropic/claude-sonnet-4-20250514'),
+  ROUTING_TIER4_MODEL: z.string().default('anthropic/claude-sonnet-4-20250514'),
+  ROUTING_TIER_MODEL_OVERRIDE: z.string().default(''),
+
   // Governance proxy (AIM-4451); PROXY_DISPATCH_URL remains the legacy fallback.
   GOVERNANCE_ENABLED: boolSchema(false),
   GOVERNANCE_URL: z.string().default(''),
@@ -839,6 +847,29 @@ function buildConfig(env: ParsedEnv) {
       allowedOrgs: env.PROXY_ALLOWED_ORGS.split(',')
         .map((s) => s.trim())
         .filter(Boolean),
+    },
+
+    routing: {
+      enabled: env.ROUTING_ENABLED,
+      tierModels: {
+        1: env.ROUTING_TIER1_MODEL,
+        2: env.ROUTING_TIER2_MODEL,
+        3: env.ROUTING_TIER3_MODEL,
+        4: env.ROUTING_TIER4_MODEL,
+      },
+      tierModelOverride: env.ROUTING_TIER_MODEL_OVERRIDE.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .reduce<Record<number, string>>((acc, entry) => {
+          const eqIdx = entry.indexOf('=');
+          if (eqIdx === -1) return acc;
+          const tier = Number(entry.slice(0, eqIdx).trim());
+          const model = entry.slice(eqIdx + 1).trim();
+          if (Number.isInteger(tier) && tier >= 1 && tier <= 4 && model) {
+            acc[tier] = model;
+          }
+          return acc;
+        }, {}),
     },
 
     governance: {
