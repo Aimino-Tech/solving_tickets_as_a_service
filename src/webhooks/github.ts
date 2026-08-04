@@ -32,6 +32,7 @@ import { dispatchThroughGovernance, isGovernanceEnabled } from '../governance/cl
 import type { AccountTier } from '../proxy/modelRouter.js';
 import { rateLimiter } from '../ratelimit/limiter.js';
 import { getTierForAccount, type Tier } from '../ratelimit/tiers.js';
+import { checkDispatchAllowed, recordDispatchedFix } from '../billing/dispatchGate.js'; // AIM-4647
 import { dispatchIssueToOsy } from '../services/osyDispatch.js';
 import { rootLogger } from '../utils/logger.js';
 import { generateTraceId, getCurrentTraceId } from '../utils/trace.js';
@@ -107,8 +108,7 @@ async function postGateRejectionComment(
   repoName: string,
   issueNumber: number,
   checks: Array<{ check: string; valid: boolean; error?: string }>,
-): Promise<void> {
-  try {
+): Promise<void> {  try {
     const { getOctokit } = await import('../github/auth.js');
     const octokit = await getOctokit(installationId);
     const failed = checks.filter((c) => !c.valid);
@@ -124,6 +124,39 @@ async function postGateRejectionComment(
     log.warn(
       { err: String(err), repo: `${repoOwner}/${repoName}`, issueNumber },
       'Failed to post common-sense gate rejection comment',
+    );
+  }
+}
+
+/**
+ * Post a billing/quota rejection comment (AIM-4647).
+ *
+ * Shown when an account has exhausted its monthly fix quota and has neither
+ * the balance-after-limits override enabled nor sufficient credits. Mirrors
+ * postGateRejectionComment: best-effort, failures are logged and swallowed.
+ */
+async function postQuotaRejectionComment(
+  installationId: number,
+  repoOwner: string,
+  repoName: string,
+  issueNumber: number,
+  usage: number,
+  limit: number,
+): Promise<void> {
+  try {
+    const { getOctokit } = await import('../github/auth.js');
+    const octokit = await getOctokit(installationId);
+    await octokit.issues.createComment({
+      owner: repoOwner,
+      repo: repoName,
+      issue_number: issueNumber,
+      body: `### ⚠️ Monthly Fix Limit Reached\n\nSyntaro could not start a fix for this issue: your plan's monthly fix quota (${limit}) has been used up (${usage} fixes this month).\n\nNo agent run was started and no credits were charged.\n\n> Upgrade your plan for a higher monthly limit, or enable **"Use available balance after usage limits are reached"** in the Syntaro dashboard to keep running fixes on credit balance.`,
+    });
+    log.info({ repo: `${repoOwner}/${repoName}`, issueNumber }, 'Posted quota rejection comment');
+  } catch (err) {
+    log.warn(
+      { err: String(err), repo: `${repoOwner}/${repoName}`, issueNumber },
+      'Failed to post quota rejection comment',
     );
   }
 }
@@ -515,6 +548,42 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
     await rateLimiter.increment('account', String(jobData.installationId));
     await rateLimiter.increment('repo', repo);
 
+    // ── Billing/quota gate (AIM-4647) ─────────────────────────────
+    // Enforce the plan's monthly fix quota before spending any agent
+    // resources. If the quota is exhausted, the balance-after-limits
+    // override (AIM-4645) may consume credits instead; otherwise the fix
+    // is rejected with a comment and no run is dispatched.
+    const billingGate = await checkDispatchAllowed(jobData.installationId, tier);
+    if (!billingGate.allowed) {
+      log.warn(
+        { installationId: jobData.installationId, repo, issueNumber: jobData.issueNumber, usage: billingGate.usage, limit: billingGate.limit },
+        'Monthly fix quota exhausted — not dispatching',
+      );
+      auditService.logFixJobEvent({
+        jobId: `gh-${jobData.repoOwner}-${jobData.repoName}-${jobData.issueNumber}`,
+        event: 'failed',
+        accountId: String(jobData.installationId),
+        repo,
+        issueNumber: jobData.issueNumber,
+        error: billingGate.reason ?? 'Monthly fix limit reached',
+      });
+      await postQuotaRejectionComment(
+        installationId || 0,
+        jobData.repoOwner,
+        jobData.repoName,
+        jobData.issueNumber,
+        billingGate.usage,
+        billingGate.limit,
+      );
+      return;
+    }
+    if (billingGate.consumedCredits > 0) {
+      log.info(
+        { installationId: jobData.installationId, repo, issueNumber: jobData.issueNumber, consumedCredits: billingGate.consumedCredits },
+        'Balance-after-limits override consumed credits — dispatching fix',
+      );
+    }
+
     // ── Route through governance proxy, OpenSymphony, or local queue ─────
     const governanceActive = isGovernanceEnabled();
     auditService.logFixJobEvent({
@@ -563,6 +632,8 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
           jobData.repoName,
           jobData.issueNumber,
         );
+      } else {
+        await recordDispatchedFix(jobData.installationId); // AIM-4647
       }
     } else if (config.osy?.dispatchUrl) {
       log.info(
@@ -600,11 +671,14 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
           jobData.repoName,
           jobData.issueNumber,
         );
+      } else {
+        await recordDispatchedFix(jobData.installationId); // AIM-4647
       }
     } else {
       log.info({ traceId, repo, issueNumber: jobData.issueNumber }, 'No dispatch URL configured — using local queue');
       try {
         await enqueue(jobData);
+        await recordDispatchedFix(jobData.installationId); // AIM-4647
       } catch (err) {
         log.error(
           {
@@ -759,6 +833,33 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         await rateLimiter.increment('repo', repo);
       }
 
+      // ── Billing/quota gate (AIM-4647) ─────────────────────────────
+      const billingGate = await checkDispatchAllowed(jobData.installationId, tier);
+      if (!billingGate.allowed) {
+        log.warn(
+          { installationId: jobData.installationId, issueNumber: jobData.issueNumber, usage: billingGate.usage, limit: billingGate.limit },
+          'Monthly fix quota exhausted — not re-enqueuing edited issue',
+        );
+        const { logFixJobEvent } = await import('../audit/service.js');
+        await logFixJobEvent({
+          jobId: `gh-${jobData.repoOwner}-${jobData.repoName}-${jobData.issueNumber}`,
+          event: 'failed',
+          accountId: String(jobData.installationId),
+          repo: `${jobData.repoOwner}/${jobData.repoName}`,
+          issueNumber: jobData.issueNumber,
+          error: billingGate.reason ?? 'Monthly fix limit reached',
+        });
+        await postQuotaRejectionComment(
+          installationId || 0,
+          jobData.repoOwner,
+          jobData.repoName,
+          jobData.issueNumber,
+          billingGate.usage,
+          billingGate.limit,
+        );
+        return;
+      }
+
       const traceId = getCurrentTraceId() ?? generateTraceId();
       if (isGovernanceEnabled()) {
         log.info(
@@ -792,6 +893,8 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
             jobData.repoName,
             jobData.issueNumber,
           );
+        } else {
+          await recordDispatchedFix(jobData.installationId); // AIM-4647
         }
       } else if (config.osy?.dispatchUrl) {
         log.info(
@@ -825,10 +928,13 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
             jobData.repoName,
             jobData.issueNumber,
           );
+        } else {
+          await recordDispatchedFix(jobData.installationId); // AIM-4647
         }
       } else {
         try {
           await enqueue(jobData);
+          await recordDispatchedFix(jobData.installationId); // AIM-4647
         } catch (err) {
           log.error(
             {

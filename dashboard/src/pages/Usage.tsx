@@ -90,8 +90,11 @@ export default function Usage() {
   );
 
   const monthLabel = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  const hasSeries = (data?.series.length ?? 0) > 0;
-  const hasRequests = (data?.requests.length ?? 0) > 0;
+  const series = data?.series ?? [];
+  const totalsByModel = data?.totalsByModel ?? [];
+  const requests = data?.requests ?? [];
+  const hasSeries = series.length > 0;
+  const hasRequests = requests.length > 0;
 
   return (
     <div className="space-y-6">
@@ -197,7 +200,7 @@ export default function Usage() {
         ) : hasSeries ? (
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.series}>
+              <BarChart data={series}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis
                   dataKey="date"
@@ -226,11 +229,11 @@ export default function Usage() {
       </div>
 
       {/* Per-model totals */}
-      {(data?.totalsByModel.length ?? 0) > 0 && (
+      {totalsByModel.length > 0 && (
         <div className="card">
           <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">Kosten pro Modell</h2>
           <div className="space-y-2">
-            {data.totalsByModel.map((t) => (
+            {totalsByModel.map((t) => (
               <div key={t.model} className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                   <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: modelColors.get(t.model) }} />
@@ -263,7 +266,7 @@ export default function Usage() {
                 </tr>
               </thead>
               <tbody>
-                {data.requests.map((r) => (
+                {requests.map((r) => (
                   <tr key={r.runId ?? r.sessionId ?? r.date} className="border-b border-gray-100 dark:border-gray-800">
                     <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{formatDateTime(r.date)}</td>
                     <td className="px-3 py-2 text-gray-900 dark:text-gray-100">{r.model ?? '—'}</td>
