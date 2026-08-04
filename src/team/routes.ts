@@ -17,6 +17,7 @@
 
 import { Router, type Request, type Response } from 'express';
 import { rootLogger } from '../utils/logger.js';
+import { optionalAuth } from '../auth/middleware.js';
 import {
   createTeam,
   listTeams,
@@ -24,6 +25,11 @@ import {
   inviteMember,
   changeMemberRole,
   removeMember,
+  getMyTeam,
+  listTeamMembers,
+  setMemberMonthlyLimit,
+  inviteByEmail,
+  revokeInvite,
 } from './index.js';
 import type { TeamRole } from './index.js';
 
@@ -34,6 +40,10 @@ const log = rootLogger.child({ module: 'team-api' });
 // ---------------------------------------------------------------------------
 
 const router: import('express').Router = Router();
+
+// Optional JWT auth: populates req.user when a Bearer token is present.
+// Existing x-account-id (gateway) callers are unaffected.
+router.use(optionalAuth);
 
 // ---------------------------------------------------------------------------
 // Helper: extract account ID from request
@@ -55,6 +65,31 @@ function getAccountId(req: Request): number | undefined {
   return undefined;
 }
 
+/**
+ * Resolve the numeric account ID for the request.
+ * Prefers the gateway x-account-id header, then falls back to the JWT
+ * identity (dashboard) via an accounts.email lookup.
+ */
+async function resolveAccountId(req: Request): Promise<number | undefined> {
+  const headerId = getAccountId(req);
+  if (headerId) return headerId;
+
+  if (req.user?.email) {
+    try {
+      const { queryWithRetry } = await import('../db/connection.js');
+      const result = await queryWithRetry<{ id: number }>(
+        'SELECT id FROM accounts WHERE email = $1 LIMIT 1',
+        [req.user.email],
+      );
+      if (result.rows.length > 0) return result.rows[0].id;
+    } catch (err) {
+      log.error({ err: String(err) }, 'Failed to resolve account from JWT email');
+    }
+  }
+
+  return undefined;
+}
+
 // ---------------------------------------------------------------------------
 // POST /api/teams — Create a new team
 // ---------------------------------------------------------------------------
@@ -65,7 +100,7 @@ function getAccountId(req: Request): number | undefined {
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await resolveAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required. Provide x-account-id header or accountId query param.' });
       return;
@@ -111,7 +146,7 @@ router.post('/', async (req: Request, res: Response) => {
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const accountId = getAccountId(req);
+    const accountId = await resolveAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
@@ -122,6 +157,34 @@ router.get('/', async (req: Request, res: Response) => {
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to list teams');
     res.status(500).json({ error: 'Failed to list teams' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/teams/me — Resolve the caller's team
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the caller's team (first membership) with their role.
+ */
+router.get('/me', async (req: Request, res: Response) => {
+  try {
+    const accountId = await resolveAccountId(req);
+    if (!accountId) {
+      res.status(400).json({ error: 'Account identification required. Provide x-account-id header, accountId query param, or a valid JWT.' });
+      return;
+    }
+
+    const mine = await getMyTeam(accountId);
+    if (!mine) {
+      res.status(404).json({ error: 'You are not a member of any team' });
+      return;
+    }
+
+    res.json({ team: { ...mine.team, role: mine.role } });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to resolve my team');
+    res.status(500).json({ error: 'Failed to resolve my team' });
   }
 });
 
@@ -140,7 +203,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       return;
     }
 
-    const accountId = getAccountId(req);
+    const accountId = await resolveAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
@@ -175,6 +238,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 /**
  * Invite a user to join a team.
  * Body: { accountId: number, role?: 'admin' | 'member' | 'viewer' }
+ *    or: { email: string, role?: 'admin' | 'member' | 'viewer', monthlyLimitCredits?: number | null }
  */
 router.post('/:id/invite', async (req: Request, res: Response) => {
   try {
@@ -184,27 +248,58 @@ router.post('/:id/invite', async (req: Request, res: Response) => {
       return;
     }
 
-    const accountId = getAccountId(req);
+    const accountId = await resolveAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
     }
 
-    const { accountId: targetAccountId, role } = req.body as {
+    const { accountId: targetAccountId, email, role, monthlyLimitCredits } = req.body as {
       accountId?: number;
+      email?: string;
       role?: string;
+      monthlyLimitCredits?: number | null;
     };
 
-    if (!targetAccountId || typeof targetAccountId !== 'number') {
-      res.status(400).json({ error: 'accountId is required and must be a number' });
-      return;
-    }
-
-    // Validate role if provided
     if (role && !['admin', 'member', 'viewer'].includes(role)) {
       res.status(400).json({
         error: 'Invalid role. Valid roles: admin, member, viewer',
       });
+      return;
+    }
+
+    if (email !== undefined) {
+      const normalized = email.trim().toLowerCase();
+      if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+        res.status(400).json({ error: 'A valid email is required for email invites' });
+        return;
+      }
+      if (
+        monthlyLimitCredits !== null &&
+        monthlyLimitCredits !== undefined &&
+        (typeof monthlyLimitCredits !== 'number' ||
+          !Number.isInteger(monthlyLimitCredits) ||
+          monthlyLimitCredits < 0)
+      ) {
+        res.status(400).json({ error: 'monthlyLimitCredits must be a non-negative integer or null' });
+        return;
+      }
+
+      const result = await inviteByEmail({
+        teamId,
+        email: normalized,
+        role: role as TeamRole | undefined,
+        monthlyLimitCredits: monthlyLimitCredits ?? null,
+        invitedByAccountId: accountId,
+        correlationId: req.requestId,
+      });
+
+      res.status(201).json({ success: true, invite: result });
+      return;
+    }
+
+    if (!targetAccountId || typeof targetAccountId !== 'number') {
+      res.status(400).json({ error: 'accountId (number) or email (string) is required' });
       return;
     }
 
@@ -221,7 +316,7 @@ router.post('/:id/invite', async (req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : String(err);
     log.error({ err: message, teamId: req.params.id }, 'Failed to invite member');
 
-    if (message.includes('not found')) {
+    if (message.includes('not found') || message.includes('already exists')) {
       res.status(404).json({ error: message });
       return;
     }
@@ -260,7 +355,7 @@ router.post('/:id/members/:userId/role', async (req: Request, res: Response) => 
       return;
     }
 
-    const accountId = getAccountId(req);
+    const accountId = await resolveAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
@@ -305,6 +400,176 @@ router.post('/:id/members/:userId/role', async (req: Request, res: Response) => 
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/teams/:id/members — List members + pending invites
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns team members (email, role, monthly limit) and pending invites.
+ */
+router.get('/:id/members', async (req: Request, res: Response) => {
+  try {
+    const teamId = Number(req.params.id);
+    if (Number.isNaN(teamId) || teamId <= 0) {
+      res.status(400).json({ error: 'Invalid team ID' });
+      return;
+    }
+
+    const accountId = await resolveAccountId(req);
+    if (!accountId) {
+      res.status(400).json({ error: 'Account identification required.' });
+      return;
+    }
+
+    const { hasRole } = await import('./index.js');
+    const isMember = await hasRole(teamId, accountId, 'viewer');
+    if (!isMember) {
+      res.status(403).json({ error: 'You are not a member of this team' });
+      return;
+    }
+
+    const result = await listTeamMembers(teamId);
+    res.json({ teamId, ...result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log.error({ err: message, teamId: req.params.id }, 'Failed to list team members');
+
+    if (message.startsWith('Team not found')) {
+      res.status(404).json({ error: message });
+      return;
+    }
+
+    res.status(500).json({ error: 'Failed to list team members' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/teams/:id/members/:userId/limit — Set member monthly limit
+// ---------------------------------------------------------------------------
+
+/**
+ * Set or clear a member's monthly credit limit.
+ * Body: { monthlyLimitCredits: number | null }
+ */
+router.post('/:id/members/:userId/limit', async (req: Request, res: Response) => {
+  try {
+    const teamId = Number(req.params.id);
+    if (Number.isNaN(teamId) || teamId <= 0) {
+      res.status(400).json({ error: 'Invalid team ID' });
+      return;
+    }
+
+    const targetAccountId = Number(req.params.userId);
+    if (Number.isNaN(targetAccountId) || targetAccountId <= 0) {
+      res.status(400).json({ error: 'Invalid user ID' });
+      return;
+    }
+
+    const accountId = await resolveAccountId(req);
+    if (!accountId) {
+      res.status(400).json({ error: 'Account identification required.' });
+      return;
+    }
+
+    const { monthlyLimitCredits } = req.body as { monthlyLimitCredits?: number | null };
+    if (monthlyLimitCredits !== null && monthlyLimitCredits !== undefined) {
+      if (
+        typeof monthlyLimitCredits !== 'number' ||
+        !Number.isInteger(monthlyLimitCredits) ||
+        monthlyLimitCredits < 0
+      ) {
+        res.status(400).json({ error: 'monthlyLimitCredits must be a non-negative integer or null' });
+        return;
+      }
+    }
+
+    const result = await setMemberMonthlyLimit({
+      teamId,
+      targetAccountId,
+      monthlyLimitCredits: monthlyLimitCredits ?? null,
+      changedByAccountId: accountId,
+      correlationId: req.requestId,
+    });
+
+    res.json({ success: true, ...result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log.error({ err: message, teamId: req.params.id }, 'Failed to set member limit');
+
+    if (message.startsWith('Team not found')) {
+      res.status(404).json({ error: message });
+      return;
+    }
+    if (message.includes('Only admins')) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    if (message.includes('not a member')) {
+      res.status(404).json({ error: message });
+      return;
+    }
+
+    res.status(500).json({ error: 'Failed to set member limit' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/teams/:id/invites/:inviteId — Revoke a pending invite
+// ---------------------------------------------------------------------------
+
+/**
+ * Revoke a pending invite by id.
+ */
+router.delete('/:id/invites/:inviteId', async (req: Request, res: Response) => {
+  try {
+    const teamId = Number(req.params.id);
+    if (Number.isNaN(teamId) || teamId <= 0) {
+      res.status(400).json({ error: 'Invalid team ID' });
+      return;
+    }
+
+    const inviteId = Number(req.params.inviteId);
+    if (Number.isNaN(inviteId) || inviteId <= 0) {
+      res.status(400).json({ error: 'Invalid invite ID' });
+      return;
+    }
+
+    const accountId = await resolveAccountId(req);
+    if (!accountId) {
+      res.status(400).json({ error: 'Account identification required.' });
+      return;
+    }
+
+    const revoked = await revokeInvite({
+      teamId,
+      inviteId,
+      revokedByAccountId: accountId,
+      correlationId: req.requestId,
+    });
+
+    if (!revoked) {
+      res.status(404).json({ error: 'Pending invite not found' });
+      return;
+    }
+
+    res.json({ success: true, teamId, inviteId });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log.error({ err: message, teamId: req.params.id }, 'Failed to revoke invite');
+
+    if (message.startsWith('Team not found')) {
+      res.status(404).json({ error: message });
+      return;
+    }
+    if (message.includes('Only admins')) {
+      res.status(403).json({ error: message });
+      return;
+    }
+
+    res.status(500).json({ error: 'Failed to revoke invite' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // DELETE /api/teams/:id/members/:userId — Remove a member
 // ---------------------------------------------------------------------------
 
@@ -325,7 +590,7 @@ router.delete('/:id/members/:userId', async (req: Request, res: Response) => {
       return;
     }
 
-    const accountId = getAccountId(req);
+    const accountId = await resolveAccountId(req);
     if (!accountId) {
       res.status(400).json({ error: 'Account identification required.' });
       return;
