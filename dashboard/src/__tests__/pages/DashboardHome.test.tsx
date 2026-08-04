@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders, deferredPromise } from '@/__tests__/test-utils';
 import DashboardHome from '@/pages/DashboardHome';
@@ -82,7 +82,7 @@ describe('DashboardHome', () => {
     renderWithProviders(<DashboardHome />);
 
     expect(screen.queryByText('Active Repos')).not.toBeInTheDocument();
-    expect(screen.queryByText('Total Fix Runs')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pass Rate')).not.toBeInTheDocument();
 
     deferredPlan.resolve({ id: 'free', name: 'Free', monthlyFixLimit: 10 });
     deferredRuns.resolve({ data: [], total: 0, page: 1, perPage: 5, totalPages: 0 });
@@ -94,7 +94,7 @@ describe('DashboardHome', () => {
 
   it('shows Active Repos count from stats API', async () => {
     mockStatsGet.mockResolvedValue(makeStats({ activeRepos: 12 }));
-    mockBillingPlan.mockResolvedValue({ id: 'solo', name: 'Solo', monthlyFixLimit: 500 });
+    mockBillingPlan.mockResolvedValue({ id: 'solo', name: 'Solo', monthlyFixLimit: 100 });
 
     renderWithProviders(<DashboardHome />);
 
@@ -109,11 +109,12 @@ describe('DashboardHome', () => {
     renderWithProviders(<DashboardHome />);
 
     await waitFor(() => {
-      expect(screen.getByText('\u2014')).toBeInTheDocument();
+      expect(screen.getAllByText('\u2014').length).toBeGreaterThanOrEqual(1);
     });
   });
 
-  it('shows Total Fix Runs count from runs data', async () => {
+  it('shows total runs from stats, not recent list length', async () => {
+    mockStatsGet.mockResolvedValue(makeStats({ totalRuns: 42, passRate: 90, activeRepos: 3 }));
     mockRunsList.mockResolvedValue({
       data: [makeRun('1'), makeRun('2'), makeRun('3')],
       total: 3, page: 1, perPage: 5, totalPages: 1,
@@ -122,27 +123,30 @@ describe('DashboardHome', () => {
     renderWithProviders(<DashboardHome />);
 
     await waitFor(() => {
-      expect(screen.getByText('3')).toBeInTheDocument();
+      expect(screen.getByText(/42\/10/)).toBeInTheDocument();
+      expect(screen.getByText('90%')).toBeInTheDocument();
+      expect(screen.getByText(/Total Runs:\s*42/)).toBeInTheDocument();
     });
   });
 
-  it('shows "0" for Total Fix Runs when no runs exist', async () => {
+  it('shows fixes this period as 0/limit when no runs', async () => {
+    mockStatsGet.mockResolvedValue(makeStats({ totalRuns: 0, runsByDay: [] }));
     mockRunsList.mockResolvedValue({ data: [], total: 0, page: 1, perPage: 5, totalPages: 0 });
 
     renderWithProviders(<DashboardHome />);
 
     await waitFor(() => {
-      expect(screen.getByText('0')).toBeInTheDocument();
+      expect(screen.getByText('0/10')).toBeInTheDocument();
     });
   });
 
-  it('shows "No fixes yet" empty state when no runs', async () => {
+  it('shows empty state when no runs', async () => {
     mockRunsList.mockResolvedValue({ data: [], total: 0, page: 1, perPage: 5, totalPages: 0 });
 
     renderWithProviders(<DashboardHome />);
 
     await waitFor(() => {
-      expect(screen.getByText(/no fixes yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/no runs yet/i)).toBeInTheDocument();
     });
   });
 
@@ -155,7 +159,7 @@ describe('DashboardHome', () => {
       register: vi.fn(),
       logout: vi.fn(),
     });
-    mockBillingPlan.mockResolvedValue({ id: 'solo', name: 'Solo', monthlyFixLimit: 500, hasBillingRecord: true });
+    mockBillingPlan.mockResolvedValue({ id: 'solo', name: 'Solo', monthlyFixLimit: 100, hasBillingRecord: true });
     mockBillingPortal.mockResolvedValue({ url: 'https://stripe.com/portal' });
 
     renderWithProviders(<DashboardHome />);
@@ -177,7 +181,7 @@ describe('DashboardHome', () => {
       register: vi.fn(),
       logout: vi.fn(),
     });
-    mockBillingPlan.mockResolvedValue({ id: 'solo', name: 'Solo', monthlyFixLimit: 500, hasBillingRecord: true });
+    mockBillingPlan.mockResolvedValue({ id: 'solo', name: 'Solo', monthlyFixLimit: 100, hasBillingRecord: true });
     mockBillingPortal.mockRejectedValue(new Error('No billing record found'));
 
     renderWithProviders(<DashboardHome />);
@@ -193,28 +197,35 @@ describe('DashboardHome', () => {
     });
   });
 
-  it('shows View Plans link for free users', async () => {
+  it('shows View Plans link and Solo 100-fix CTA for free users', async () => {
     mockDefaultUser({ plan: 'free' });
 
     renderWithProviders(<DashboardHome />);
 
     await waitFor(() => {
       expect(screen.getByText('View Plans')).toBeInTheDocument();
+      expect(screen.getByText(/100 fixes\/mo/i)).toBeInTheDocument();
     });
   });
 
+  it('links billing shortcut without credit-balance wording', async () => {
+    renderWithProviders(<DashboardHome />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Plan & usage')).toBeInTheDocument();
+      expect(screen.getByText(/metered usage/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/credit balance/i)).not.toBeInTheDocument();
+  });
+
   it('gracefully handles individual API failures', async () => {
-    // Each API call has its own .catch() handler, so individual failures
-    // render the component with fallback default values
     mockRunsList.mockRejectedValue(new Error('Network error'));
 
     renderWithProviders(<DashboardHome />);
 
     await waitFor(() => {
-      expect(screen.getByText('Current Plan')).toBeInTheDocument();
+      expect(screen.getByText('Fixes this period')).toBeInTheDocument();
     });
-    // Falls back to free plan, zero runs
-    expect(screen.getByText('0')).toBeInTheDocument();
-    expect(screen.getByText(/no fixes yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no runs yet/i)).toBeInTheDocument();
   });
 });

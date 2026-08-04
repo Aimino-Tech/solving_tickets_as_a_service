@@ -140,7 +140,7 @@ describe('Rate limiting (429 error handling)', () => {
     // Individual API rejections are caught by .catch() handlers,
     // so the component renders with default/fallback values instead of an error state
     await waitFor(() => {
-      expect(screen.getByText('Current Plan')).toBeInTheDocument();
+      expect(screen.getByText('Fixes this period')).toBeInTheDocument();
     });
   });
 
@@ -184,10 +184,10 @@ describe('Empty state handling across all pages', () => {
     renderWithProviders(<DashboardHome />);
 
     await waitFor(() => {
-      expect(screen.getByText('Current Plan')).toBeInTheDocument();
+      expect(screen.getByText('Fixes this period')).toBeInTheDocument();
     });
-    expect(screen.getByText('Free')).toBeInTheDocument();
-    expect(screen.getByText(/no fixes yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/Free/)).toBeInTheDocument();
+    expect(screen.getByText(/no runs yet/i)).toBeInTheDocument();
   });
 
   it('RunsHistory renders without data', async () => {
@@ -246,10 +246,10 @@ describe('Auth context - unauthenticated user', () => {
     renderWithProviders(<DashboardHome />);
 
     await waitFor(() => {
-      expect(screen.getByText('Current Plan')).toBeInTheDocument();
+      expect(screen.getByText('Fixes this period')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Free')).toBeInTheDocument();
+    expect(screen.getByText(/Free/)).toBeInTheDocument();
   });
 
   it('Settings renders with unauthenticated user', async () => {

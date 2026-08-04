@@ -344,7 +344,7 @@ export default function Billing() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Billing</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Subscription, credit balance, payment history, and usage
+          Subscription, invoices, payment history, and metered usage
         </p>
       </div>
 
