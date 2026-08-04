@@ -8,6 +8,7 @@ import {
   ScrollText,
   Settings as SettingsIcon,
   ShieldCheck,
+  Users,
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -52,6 +53,8 @@ export default function Layout() {
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
     { to: '/runs', label: t('nav.runs'), icon: RotateCw },
     { to: '/repos', label: t('nav.repos'), icon: GitFork },
+    // AIM-4642
+    { to: '/members', label: 'Members', icon: Users },
     { to: '/billing', label: 'Billing', icon: CreditCard },
     { to: '/audit', label: t('nav.audit'), icon: ScrollText },
     // AIM-4643

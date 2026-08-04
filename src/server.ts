@@ -880,10 +880,14 @@ export async function createApp(): Promise<express.Application> {
   // ── Team Management API ───────────────────────────────────────────
   // POST   /api/teams                          — Create a new team
   // GET    /api/teams                          — List teams for current account
+  // GET    /api/teams/me                       — Resolve the caller's team
   // GET    /api/teams/:id                       — Get team details with members
-  // POST   /api/teams/:id/invite               — Invite a member
-  // POST   /api/teams/:id/members/:userId/role  — Change member role
-  // DELETE /api/teams/:id/members/:userId       — Remove member
+  // GET    /api/teams/:id/members               — List members + pending invites
+  // POST   /api/teams/:id/invite               — Invite a member (accountId or email)
+  // POST   /api/teams/:id/members/:userId/role  — Change a member's role
+  // POST   /api/teams/:id/members/:userId/limit — Set a member's monthly credit limit
+  // DELETE /api/teams/:id/members/:userId       — Remove a member
+  // DELETE /api/teams/:id/invites/:inviteId     — Revoke a pending invite
   app.use('/api/teams', teamRouter);
 
   // Repos API (repo picker with webhook status)
