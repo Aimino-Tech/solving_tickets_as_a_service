@@ -273,4 +273,114 @@ router.post('/mcp/load_data', async (req: Request, res: Response) => {
   }
 });
 
+// ── OpenSymphony incident API proxy (AIM-4648/4649) ─────────────────────────
+// Mirrors the hosted incident-mcp tool surface so agents can list/get/trigger
+// incidents and report new ones through the same /mcp endpoint + key auth.
+
+async function incidentRequest(
+  path: string,
+  init: { method: string; body?: unknown; headers?: Record<string, string> } = { method: 'GET' },
+): Promise<Awaited<ReturnType<typeof fetch>>> {
+  const baseUrl = (config.incidents.osBaseUrl || 'http://localhost:4000').replace(/\/+$/, '');
+  const headers: Record<string, string> = { Accept: 'application/json', ...(init.headers ?? {}) };
+  if (!headers.Authorization) {
+    if (!config.incidents.osApiKey) {
+      throw new Error('OS_API_KEY not configured: set OS_API_KEY to an OpenSymphony API key');
+    }
+    headers['x-api-key'] = config.incidents.osApiKey;
+  }
+  return fetch(`${baseUrl}${path}`, {
+    method: init.method,
+    headers,
+    body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+    signal: AbortSignal.timeout(10_000),
+  });
+}
+
+async function incidentJson(res: Awaited<ReturnType<typeof fetch>>): Promise<unknown> {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
+}
+
+// GET /mcp/incidents?severity=&triggered= — list incidents (proxy to OS).
+router.get('/mcp/incidents', async (req: Request, res: Response) => {
+  try {
+    const query = new URLSearchParams();
+    if (req.query.severity) query.set('severity', String(req.query.severity));
+    if (req.query.triggered !== undefined) query.set('triggered', String(req.query.triggered));
+    const qs = query.toString();
+    const resp = await incidentRequest(`/api/v1/incidents${qs ? `?${qs}` : ''}`);
+    const body = await incidentJson(resp);
+    if (!resp.ok) {
+      return res.status(resp.status).json(body ?? { error: `HTTP ${resp.status}` });
+    }
+    res.json(body);
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to list incidents');
+    res.status(502).json({ error: 'Incident API unreachable', detail: String(err) });
+  }
+});
+
+// GET /mcp/incidents/:fingerprint — single incident (proxy to OS).
+router.get('/mcp/incidents/:fingerprint', async (req: Request, res: Response) => {
+  try {
+    const fingerprint = encodeURIComponent(req.params.fingerprint);
+    const resp = await incidentRequest(`/api/v1/incidents/${fingerprint}`);
+    const body = await incidentJson(resp);
+    if (!resp.ok) {
+      return res.status(resp.status).json(body ?? { error: `HTTP ${resp.status}` });
+    }
+    res.json(body);
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to get incident');
+    res.status(502).json({ error: 'Incident API unreachable', detail: String(err) });
+  }
+});
+
+// POST /mcp/incidents/:fingerprint/trigger — dispatch investigation/fix.
+router.post('/mcp/incidents/:fingerprint/trigger', async (req: Request, res: Response) => {
+  try {
+    const fingerprint = encodeURIComponent(req.params.fingerprint);
+    const resp = await incidentRequest(`/api/v1/incidents/${fingerprint}/trigger`, { method: 'POST' });
+    const body = await incidentJson(resp);
+    if (!resp.ok) {
+      return res.status(resp.status).json(body ?? { error: `HTTP ${resp.status}` });
+    }
+    res.json({ status: 'triggered', fingerprint: req.params.fingerprint, ...(body as object) });
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to trigger incident');
+    res.status(502).json({ error: 'Incident API unreachable', detail: String(err) });
+  }
+});
+
+// POST /mcp/incidents — report a new incident (Bearer OS_INCIDENT_TOKEN).
+router.post('/mcp/incidents', async (req: Request, res: Response) => {
+  try {
+    if (!config.incidents.osIncidentToken) {
+      return res.status(502).json({
+        error: 'OS_INCIDENT_TOKEN not configured: set it to the incidents.webhook_token',
+      });
+    }
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${config.incidents.osIncidentToken}`,
+      'Content-Type': 'application/json',
+    };
+    if (req.body?.trace_id) headers['x-trace-id'] = String(req.body.trace_id);
+    const resp = await incidentRequest('/api/v1/incidents', { method: 'POST', body: req.body, headers });
+    const body = await incidentJson(resp);
+    if (!resp.ok) {
+      return res.status(resp.status).json(body ?? { error: `HTTP ${resp.status}` });
+    }
+    res.status(resp.status === 201 ? 201 : 200).json(body);
+  } catch (err) {
+    log.error({ err: String(err) }, 'Failed to report incident');
+    res.status(502).json({ error: 'Incident API unreachable', detail: String(err) });
+  }
+});
+
 export default router;

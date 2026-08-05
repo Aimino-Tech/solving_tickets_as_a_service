@@ -312,6 +312,11 @@ const envSchema = z.object({
   MCP_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   MCP_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
 
+  // OpenSymphony incident API (proxy target for /mcp/incidents*)
+  OS_BASE_URL: z.string().default('http://localhost:4000'),
+  OS_API_KEY: z.string().optional(),
+  OS_INCIDENT_TOKEN: z.string().optional(),
+
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_PATH: z.string().default('/webhook/telegram'),
 
@@ -588,6 +593,12 @@ function buildConfig(env: ParsedEnv) {
         windowMs: env.MCP_RATE_LIMIT_WINDOW_MS,
         maxRequests: env.MCP_RATE_LIMIT_MAX,
       },
+    },
+
+    incidents: {
+      osBaseUrl: env.OS_BASE_URL,
+      osApiKey: env.OS_API_KEY,
+      osIncidentToken: env.OS_INCIDENT_TOKEN,
     },
 
     telegram: {
