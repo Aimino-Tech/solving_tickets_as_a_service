@@ -168,6 +168,7 @@ export default function Settings() {
         if (ac.signal.aborted) return;
         setBbConnected(status.connected);
         setBbWorkspace(status.workspace || '');
+        setBbUsername(status.username || '');
       })
       .catch((err: unknown) => {
         if ((err as Error).name !== 'AbortError') {/* status load is best-effort */}
@@ -181,6 +182,8 @@ export default function Settings() {
   }, []);
 
   // Bitbucket OAuth return: /settings?bitbucket_code=...
+  // React Strict Mode double-mounts effects in dev — authorization codes are single-use,
+  // so we clear the URL immediately and lock per code in sessionStorage.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('bitbucket_code');
@@ -192,32 +195,61 @@ export default function Settings() {
       return;
     }
     if (!code) return;
-    let cancelled = false;
-    (async () => {
-      setBbConnecting(true);
-      setBbFormError(null);
-      try {
-        const result = await bitbucketApi.handleOAuthCallback(code);
-        if (cancelled) return;
+
+    window.history.replaceState({}, '', window.location.pathname);
+
+    const lockKey = `syntaro_bb_oauth_${code}`;
+    if (sessionStorage.getItem(lockKey)) return;
+    sessionStorage.setItem(lockKey, 'pending');
+
+    setBbConnecting(true);
+    setBbFormError(null);
+    bitbucketApi
+      .handleOAuthCallback(code)
+      .then((result) => {
+        sessionStorage.setItem(lockKey, 'done');
         setBbConnected(true);
-        setBbWorkspace(result.workspace);
+        setBbWorkspace(result.workspace || '');
+        setBbUsername(result.username || '');
         setBitbucketExpanded(true);
         setMessage({
           type: 'success',
-          text: `Connected to Bitbucket workspace ${result.workspace} (${result.repoCount} repos) via OAuth.`,
+          text: result.workspace
+            ? `Connected to Bitbucket workspace ${result.workspace} (${result.repoCount} repos) via OAuth.`
+            : `Bitbucket connected as ${result.username || 'your account'}. Create or join a workspace on Bitbucket, then refresh to sync repos.`,
         });
         setTimeout(() => setMessage(null), 8000);
-      } catch (err) {
-        if (!cancelled) {
-          setBbFormError(err instanceof Error ? err.message : 'Bitbucket OAuth failed');
-          setBitbucketExpanded(true);
+      })
+      .catch(async (err) => {
+        const text = err instanceof Error ? err.message : 'Bitbucket OAuth failed';
+        // If Strict Mode raced two exchanges, the first may have succeeded.
+        if (/authorization_code is invalid/i.test(text)) {
+          try {
+            const status = await bitbucketApi.getStatus();
+            if (status.connected) {
+              sessionStorage.setItem(lockKey, 'done');
+              setBbConnected(true);
+              setBbWorkspace(status.workspace || '');
+              setBbUsername(status.username || '');
+              setBitbucketExpanded(true);
+              setMessage({
+                type: 'success',
+                text: status.workspace
+                  ? `Connected to Bitbucket workspace ${status.workspace}.`
+                  : `Bitbucket connected as ${status.username || 'your account'}.`,
+              });
+              setTimeout(() => setMessage(null), 8000);
+              return;
+            }
+          } catch {
+            /* fall through */
+          }
         }
-      } finally {
-        if (!cancelled) setBbConnecting(false);
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    })();
-    return () => { cancelled = true; };
+        sessionStorage.removeItem(lockKey);
+        setBbFormError(text);
+        setBitbucketExpanded(true);
+      })
+      .finally(() => setBbConnecting(false));
   }, []);
 
   async function handleExportData() {
@@ -306,6 +338,7 @@ export default function Settings() {
   const [bitbucketExpanded, setBitbucketExpanded] = useState(false);
   const [bbConnected, setBbConnected] = useState(false);
   const [bbWorkspace, setBbWorkspace] = useState('');
+  const [bbUsername, setBbUsername] = useState('');
   const [bbConnecting, setBbConnecting] = useState(false);
   const [bbForm, setBbForm] = useState({ apiToken: '' });
   const [showBbPassword, setShowBbPassword] = useState(false);
@@ -685,7 +718,9 @@ export default function Settings() {
                   <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Bitbucket</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     {bbConnected
-                      ? t('repos.bitbucketConnectedTo', { workspace: bbWorkspace })
+                      ? bbWorkspace
+                        ? t('repos.bitbucketConnectedTo', { workspace: bbWorkspace })
+                        : `Connected as ${bbUsername || 'Bitbucket'} — no workspace yet`
                       : 'Connect with Bitbucket OAuth (recommended) or an API token'}
                   </div>
                 </div>
@@ -730,6 +765,8 @@ export default function Settings() {
                         Connected
                         {bbWorkspace ? (
                           <> to workspace <span className="font-mono text-gray-700 dark:text-gray-300">{bbWorkspace}</span></>
+                        ) : bbUsername ? (
+                          <> as <span className="font-mono text-gray-700 dark:text-gray-300">{bbUsername}</span> (no workspace yet — create one on Bitbucket, then Reconnect)</>
                         ) : null}
                         . Credentials are stored encrypted (never shown again).
                         Manage repo webhooks on the Repos page.
@@ -755,6 +792,7 @@ export default function Settings() {
                             await bitbucketApi.disconnect();
                             setBbConnected(false);
                             setBbWorkspace('');
+                            setBbUsername('');
                             setBbForm({ apiToken: '' });
                             setBitbucketExpanded(false);
                             setSysConfig((prev: any) => ({
@@ -814,7 +852,8 @@ export default function Settings() {
                     {!bbOauthConfigured && (
                       <p className="text-xs text-amber-700 dark:text-amber-400">
                         Bitbucket OAuth is not enabled on this SYNTARO instance yet.
-                        Ask your admin to register a Bitbucket OAuth consumer, or use the API token option below.
+                        Ask your admin to register a Bitbucket OAuth client
+                        (workspace Settings → OAuth clients), or use the API token option below.
                       </p>
                     )}
 

@@ -217,7 +217,31 @@ describe('Bitbucket PlatformClient', () => {
         { name: 'repo-b', fullName: 'workspace/repo-b', private: true, mainbranch: 'master' },
       ]);
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.bitbucket.org/2.0/workspaces/workspace/repositories?pagelen=100',
+        'https://api.bitbucket.org/2.0/repositories/workspace?pagelen=100',
+        expect.objectContaining({ method: 'GET' }),
+      );
+    });
+  });
+
+  describe('listWorkspaces', () => {
+    it('lists workspaces via /user/workspaces (CHANGE-2770 nested shape)', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockResponse({
+          values: [
+            { type: 'workspace_access', workspace: { slug: 'ws-a', name: 'Workspace A' } },
+            { type: 'workspace_access', workspace: { slug: 'ws-b' } },
+          ],
+        }),
+      );
+
+      const result = await client.listWorkspaces();
+
+      expect(result).toEqual([
+        { slug: 'ws-a', name: 'Workspace A' },
+        { slug: 'ws-b', name: 'ws-b' },
+      ]);
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.bitbucket.org/2.0/user/workspaces?pagelen=100',
         expect.objectContaining({ method: 'GET' }),
       );
     });

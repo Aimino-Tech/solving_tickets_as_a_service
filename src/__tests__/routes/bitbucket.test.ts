@@ -176,6 +176,7 @@ describe('bitbucket routes', () => {
       expect(res.json).toHaveBeenCalledWith({
         connected: true,
         workspace: 'ws',
+        workspacePending: false,
         username: 'user@example.com',
         authMethod: 'api_token',
       });
@@ -209,6 +210,7 @@ describe('bitbucket routes', () => {
       expect(res.json).toHaveBeenCalledWith({
         connected: true,
         workspace: 'ws',
+        workspacePending: false,
         repoCount: 1,
         workspaces: ['ws'],
         emailUsed: 'user@example.com',
@@ -296,6 +298,7 @@ describe('bitbucket routes', () => {
       expect(res.json).toHaveBeenCalledWith({
         connected: true,
         workspace: 'ws',
+        workspacePending: false,
         repos: [{ name: 'repo-a', fullName: 'ws/repo-a', private: false, mainbranch: 'main', webhookActive: true }],
       });
     });

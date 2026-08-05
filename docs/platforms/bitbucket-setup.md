@@ -16,25 +16,32 @@ Any logged-in user can connect their Bitbucket workspace with one click:
 
 1. Open **Settings → Source Control → Bitbucket** (or **Repos → Bitbucket Workspace**)
 2. Click **Connect with Bitbucket**
-3. Approve the SYNTARO OAuth consumer in Bitbucket
+3. Approve the SYNTARO OAuth client in Bitbucket
 4. You return to Settings showing **Manage** + workspace name
 5. On **Repos**, enable **SYNTARO** per repository to install the webhook
 
 No API token and no email paste — Bitbucket issues a Bearer access token.
 
-### Operator setup (one-time): OAuth consumer
+### Operator setup (one-time): OAuth client
 
-1. Bitbucket → your workspace → **Settings → OAuth consumers → Add consumer**
-2. Callback URL: `https://<your-syntaro-host>/api/v1/auth/bitbucket/callback`
-   (local: `http://localhost:3002/api/v1/auth/bitbucket/callback` if API is on 3002)
-3. Permissions: Account, Repositories (R/W), Pull requests (R/W), Issues (R/W), Webhooks
-4. Copy Key + Secret into env:
+Bitbucket UI may say **OAuth clients** (newer) or **OAuth consumers** (older docs) — same thing.
+
+1. Open workspace settings → Apps and features → **OAuth clients**  
+   Example: `https://bitbucket.org/<workspace>/workspace/settings/oauth-clients`
+2. **Add** / create a client
+3. Callback URL: `https://<your-syntaro-host>/api/v1/auth/bitbucket/callback`  
+   (local API: `http://localhost:3002/api/v1/auth/bitbucket/callback`)
+4. Permissions: Account, Repositories (R/W), Pull requests (R/W), Issues (R/W), Webhooks
+5. Save — copy **Key** + **Secret** into the SYNTARO **server** env (not end-user machines):
 
 | Variable | Purpose |
 |----------|---------|
-| `BITBUCKET_OAUTH_CLIENT_ID` | OAuth consumer key |
-| `BITBUCKET_OAUTH_CLIENT_SECRET` | OAuth consumer secret |
-| `SYNTARO_PUBLIC_URL` | Public base URL used to build the callback |
+| `BITBUCKET_OAUTH_CLIENT_ID` | OAuth client key |
+| `BITBUCKET_OAUTH_CLIENT_SECRET` | OAuth client secret |
+| `SYNTARO_PUBLIC_URL` | API public URL (OAuth **callback** host), e.g. `http://localhost:3002` |
+| `SYNTARO_FRONTEND_URL` | Dashboard SPA URL (OAuth **return**), e.g. `http://localhost:5173` |
+
+> Local tip: callback stays on the API (`:3002`); after approve, users must return to the Vite app (`:5173`) where the JWT lives. Do not point the post-login redirect at the API port.
 
 ### Fallback: API token
 

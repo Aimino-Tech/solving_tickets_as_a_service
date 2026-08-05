@@ -176,7 +176,7 @@ describe('bitbucket OAuth routes', () => {
     req.query = { code: 'abc123', state: 's1' };
     await invokeRoute(router, 'get', '/callback', req, res);
     expect(res.redirect).toHaveBeenCalledWith(
-      expect.stringContaining('/settings?bitbucket_code=abc123'),
+      expect.stringContaining('http://localhost:5173/settings?bitbucket_code=abc123'),
     );
   });
 
@@ -197,6 +197,31 @@ describe('bitbucket OAuth routes', () => {
       expect.objectContaining({
         connected: true,
         workspace: 'ws',
+        workspacePending: false,
+        authMethod: 'oauth',
+      }),
+    );
+  });
+
+  it('POST /callback connects OAuth even when Bitbucket has no workspaces yet', async () => {
+    mockListWorkspaces.mockResolvedValueOnce([]);
+    const { req, res } = mockReqRes('POST', '/callback');
+    req.body = { code: 'abc-no-ws' };
+    await invokeRoute(router, 'post', '/callback', req, res);
+    expect(mockListRepos).not.toHaveBeenCalled();
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: '1',
+        workspace: '__pending__:1',
+        authMethod: 'oauth',
+      }),
+    );
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connected: true,
+        workspace: '',
+        workspacePending: true,
+        repoCount: 0,
         authMethod: 'oauth',
       }),
     );

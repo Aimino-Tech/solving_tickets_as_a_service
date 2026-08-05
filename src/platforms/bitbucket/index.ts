@@ -158,17 +158,30 @@ export class BitbucketPlatformClient implements PlatformClient {
   // ── Repository / webhook operations ────────────────────────────────
 
   async listWorkspaces(): Promise<Array<{ slug: string; name: string }>> {
-    const data = await this.request<any>('GET', '/workspaces?role=member&pagelen=100');
-    return (data.values ?? []).map((w: { slug?: string; name?: string }) => ({
-      slug: w.slug ?? '',
-      name: w.name ?? w.slug ?? '',
-    }));
+    // CHANGE-2770 / CHANGE-3022: use /user/workspaces (nested workspace object)
+    const data = await this.request<any>('GET', '/user/workspaces?pagelen=100');
+    const values = data.values ?? [];
+    const mapped = values
+      .map((entry: { workspace?: { slug?: string; name?: string }; slug?: string; name?: string }) => {
+        const ws = entry.workspace ?? entry;
+        const slug = ws.slug ?? '';
+        return { slug, name: ws.name ?? slug };
+      })
+      .filter((w: { slug: string }) => w.slug.length > 0);
+    if (mapped.length === 0) {
+      log.warn(
+        { rawCount: values.length, sample: values[0] ?? null },
+        'Bitbucket /user/workspaces returned no usable slugs',
+      );
+    }
+    return mapped;
   }
 
   async listRepos(
     workspace: string,
   ): Promise<Array<{ name: string; fullName: string; private: boolean; mainbranch: string }>> {
-    const data = await this.request<any>('GET', `/workspaces/${workspace}/repositories?pagelen=100`);
+    // CHANGE-2770: GET /workspaces/{ws}/repositories was removed → use /repositories/{workspace}
+    const data = await this.request<any>('GET', `/repositories/${workspace}?pagelen=100`);
     return (data.values ?? []).map(
       (r: { name?: string; full_name?: string; is_private?: boolean; mainbranch?: { name?: string } }) => ({
         name: r.name ?? '',

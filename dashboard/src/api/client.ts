@@ -596,6 +596,7 @@ export interface BitbucketRepo {
 export interface BitbucketStatus {
   connected: boolean;
   workspace: string;
+  workspacePending?: boolean;
   username: string | null;
   authMethod?: 'api_token' | 'oauth' | null;
 }
@@ -609,6 +610,7 @@ export const bitbucket = {
     request<{
       connected: boolean;
       workspace: string;
+      workspacePending?: boolean;
       repoCount: number;
       workspaces?: string[];
       username?: string;

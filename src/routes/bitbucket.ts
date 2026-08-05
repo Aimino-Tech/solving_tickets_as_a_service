@@ -19,7 +19,7 @@ import { type Request, type Response, Router } from 'express';
 import { requireAuth } from '../auth/middleware.js';
 import { config } from '../config.js';
 import { bitbucketConnectionRepository } from '../db/repositories/BitbucketConnectionRepository.js';
-import { clientFromBitbucketConnection, clientFromStoredConnection } from './bitbucketOAuth.js';
+import { clientFromBitbucketConnection, clientFromStoredConnection, displayWorkspace, isPendingWorkspace, pendingWorkspaceForUser } from './bitbucketOAuth.js';
 import { encrypt } from '../utils/encryption.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -66,7 +66,8 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
     }
     res.json({
       connected: true,
-      workspace: row.workspace,
+      workspace: displayWorkspace(row.workspace),
+      workspacePending: isPendingWorkspace(row.workspace),
       username: row.username,
       authMethod: row.authMethod,
     });
@@ -126,32 +127,31 @@ router.post('/connect', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    if (workspaces.length === 0) {
-      res.status(400).json({
-        error: 'No Bitbucket workspaces found for this account',
-        emailUsed: email,
-      });
-      return;
-    }
-
-    const workspace =
+    const resolvedSlug =
       (preferredWorkspace && workspaces.some((w) => w.slug === preferredWorkspace)
         ? preferredWorkspace
         : workspaces[0]?.slug) ?? '';
+    // Account connect first; workspace optional until the user creates/joins one on Bitbucket.
+    const workspace = resolvedSlug || pendingWorkspaceForUser(uid);
+    const workspacePending = isPendingWorkspace(workspace);
 
-    const existing = await bitbucketConnectionRepository.findByWorkspace(workspace);
-    if (existing && existing.userId !== uid) {
-      res.status(409).json({ error: 'This Bitbucket workspace is already connected by another user' });
-      return;
+    if (!workspacePending) {
+      const existing = await bitbucketConnectionRepository.findByWorkspace(workspace);
+      if (existing && existing.userId !== uid) {
+        res.status(409).json({ error: 'This Bitbucket workspace is already connected by another user' });
+        return;
+      }
     }
 
-    let repos;
-    try {
-      repos = await probe.listRepos(workspace);
-    } catch (err) {
-      const detail = bitbucketErrorMessage(err);
-      res.status(400).json({ error: detail, emailUsed: email });
-      return;
+    let repos: Array<{ name: string; fullName: string; private: boolean; mainbranch: string }> = [];
+    if (!workspacePending) {
+      try {
+        repos = await probe.listRepos(workspace);
+      } catch (err) {
+        const detail = bitbucketErrorMessage(err);
+        res.status(400).json({ error: detail, emailUsed: email });
+        return;
+      }
     }
 
     try {
@@ -176,10 +176,20 @@ router.post('/connect', requireAuth, async (req: Request, res: Response) => {
       throw err;
     }
 
-    log.info({ workspace, repoCount: repos.length, userId: uid, emailUsed: email }, 'Bitbucket workspace connected');
+    log.info(
+      {
+        workspace: displayWorkspace(workspace),
+        workspacePending,
+        repoCount: repos.length,
+        userId: uid,
+        emailUsed: email,
+      },
+      'Bitbucket workspace connected',
+    );
     res.json({
       connected: true,
-      workspace,
+      workspace: displayWorkspace(workspace),
+      workspacePending,
       repoCount: repos.length,
       workspaces: workspaces.map((w) => w.slug),
       emailUsed: email,
@@ -208,6 +218,15 @@ router.get('/repos', requireAuth, async (req: Request, res: Response) => {
       res.json({ connected: false, repos: [] });
       return;
     }
+    if (isPendingWorkspace(row.workspace)) {
+      res.json({
+        connected: true,
+        workspace: '',
+        workspacePending: true,
+        repos: [],
+      });
+      return;
+    }
     const bb = await clientFromStoredConnection(row);
     const repos = await bb.listRepos(row.workspace);
     const withWebhooks = await Promise.all(
@@ -222,7 +241,7 @@ router.get('/repos', requireAuth, async (req: Request, res: Response) => {
         return { ...repo, webhookActive };
       }),
     );
-    res.json({ connected: true, workspace: row.workspace, repos: withWebhooks });
+    res.json({ connected: true, workspace: row.workspace, workspacePending: false, repos: withWebhooks });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to list Bitbucket repos');
     res.status(500).json({ error: 'Failed to list Bitbucket repos' });

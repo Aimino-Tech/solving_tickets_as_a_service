@@ -1,7 +1,7 @@
 /**
  * Bitbucket OAuth 2.0 — dashboard "Connect with Bitbucket".
  *
- * Uses a Bitbucket OAuth consumer (Workspace settings → OAuth consumers).
+ * Uses a Bitbucket OAuth client/consumer (Workspace settings → OAuth clients).
  * Access tokens are Bearer tokens — no Atlassian email required at connect time.
  *
  * Routes (mounted at /api/v1/auth/bitbucket):
@@ -43,12 +43,40 @@ const OAUTH_SCOPES = [
   'webhook',
 ].join(' ');
 
+/**
+ * Placeholder workspace when the Bitbucket account has none yet.
+ * UNIQUE(workspace) still holds — one pending row per SYNTARO user.
+ * Connection (tokens) is valid; workspace can be chosen later.
+ */
+const PENDING_WORKSPACE_PREFIX = '__pending__:';
+
+export function pendingWorkspaceForUser(userId: string): string {
+  return `${PENDING_WORKSPACE_PREFIX}${userId}`;
+}
+
+export function isPendingWorkspace(workspace: string | null | undefined): boolean {
+  return !workspace || workspace.startsWith(PENDING_WORKSPACE_PREFIX);
+}
+
+/** Value shown to the dashboard — empty string while workspace is unassigned. */
+export function displayWorkspace(workspace: string | null | undefined): string {
+  return isPendingWorkspace(workspace) ? '' : String(workspace);
+}
+
 function publicBaseUrl(): string {
+  // API / webhook / OAuth callback host (Bitbucket hits this URL)
   return process.env.SYNTARO_PUBLIC_URL || `http://localhost:${config.port}`;
 }
 
 function frontendBaseUrl(): string {
-  return process.env.SYNTARO_PUBLIC_URL || 'http://localhost:5173';
+  // Browser SPA host — must NOT reuse SYNTARO_PUBLIC_URL when that points at the API
+  // (e.g. http://localhost:3002), or OAuth return loses the JWT on :5173 and dumps to /login.
+  return (
+    process.env.SYNTARO_FRONTEND_URL ||
+    process.env.DASHBOARD_URL ||
+    process.env.VITE_DEV_SERVER_URL ||
+    'http://localhost:5173'
+  );
 }
 
 function redirectUri(): string {
@@ -94,6 +122,8 @@ async function exchangeCode(code: string): Promise<TokenResponse> {
     new URLSearchParams({
       grant_type: 'authorization_code',
       code,
+      // Must match the callback registered on the OAuth client and used at authorize time.
+      redirect_uri: redirectUri(),
     }),
   );
 }
@@ -163,7 +193,7 @@ router.post('/url', requireAuth, (_req: Request, res: Response) => {
     if (!oauthConfigured()) {
       res.status(501).json({
         error:
-          'Bitbucket OAuth not configured — set BITBUCKET_OAUTH_CLIENT_ID and BITBUCKET_OAUTH_CLIENT_SECRET (Workspace → OAuth consumers)',
+          'Bitbucket OAuth not configured — set BITBUCKET_OAUTH_CLIENT_ID and BITBUCKET_OAUTH_CLIENT_SECRET (Workspace → Settings → OAuth clients)',
       });
       return;
     }
@@ -172,7 +202,9 @@ router.post('/url', requireAuth, (_req: Request, res: Response) => {
       `https://bitbucket.org/site/oauth2/authorize` +
       `?client_id=${encodeURIComponent(config.bitbucket.oauthClientId)}` +
       `&response_type=code` +
-      `&state=${encodeURIComponent(state)}`;
+      `&state=${encodeURIComponent(state)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri())}` +
+      `&scope=${encodeURIComponent(OAUTH_SCOPES)}`;
     res.json({ url, redirectUri: redirectUri(), scopes: OAUTH_SCOPES });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to build Bitbucket OAuth URL');
@@ -235,23 +267,33 @@ router.post('/callback', requireAuth, async (req: Request, res: Response) => {
     }
 
     const workspaces = await client.listWorkspaces();
-    if (workspaces.length === 0) {
-      res.status(400).json({ error: 'No Bitbucket workspaces found for this account' });
-      return;
-    }
-
     const preferred = (parsed.data.workspace ?? '').trim();
-    const workspace =
+    const resolvedSlug =
       (preferred && workspaces.some((w) => w.slug === preferred) ? preferred : workspaces[0]?.slug) ??
       '';
+    // Connect account tokens even when the user has zero workspaces yet.
+    const workspace = resolvedSlug || pendingWorkspaceForUser(uid);
+    const workspacePending = isPendingWorkspace(workspace);
 
-    const existing = await bitbucketConnectionRepository.findByWorkspace(workspace);
-    if (existing && existing.userId !== uid) {
-      res.status(409).json({ error: 'This Bitbucket workspace is already connected by another user' });
-      return;
+    if (!workspacePending) {
+      const existing = await bitbucketConnectionRepository.findByWorkspace(workspace);
+      if (existing && existing.userId !== uid) {
+        res.status(409).json({ error: 'This Bitbucket workspace is already connected by another user' });
+        return;
+      }
+    } else {
+      log.info(
+        { userId: uid, username, bitbucketUuid },
+        'Bitbucket OAuth connected without workspace — user can create/join one on Bitbucket later',
+      );
     }
 
-    const repos = await client.listRepos(workspace);
+    let repoCount = 0;
+    if (!workspacePending) {
+      const repos = await client.listRepos(workspace);
+      repoCount = repos.length;
+    }
+
     const expiresAt =
       typeof tokens.expires_in === 'number'
         ? new Date(Date.now() + tokens.expires_in * 1000)
@@ -274,17 +316,21 @@ router.post('/callback', requireAuth, async (req: Request, res: Response) => {
       actorId: uid,
       action: 'settings.bitbucket.oauth.connect',
       resourceType: 'bitbucket_connection',
-      resourceId: workspace,
+      resourceId: displayWorkspace(workspace) || uid,
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
       correlationId: req.requestId,
     });
 
-    log.info({ workspace, userId: uid, username, repoCount: repos.length }, 'Bitbucket OAuth connected');
+    log.info(
+      { workspace: displayWorkspace(workspace), workspacePending, userId: uid, username, repoCount },
+      'Bitbucket OAuth connected',
+    );
     res.json({
       connected: true,
-      workspace,
-      repoCount: repos.length,
+      workspace: displayWorkspace(workspace),
+      workspacePending,
+      repoCount,
       workspaces: workspaces.map((w) => w.slug),
       username,
       authMethod: 'oauth' as const,
@@ -303,7 +349,8 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
     res.json({
       oauthConfigured: oauthConfigured(),
       connected: Boolean(row),
-      workspace: row?.workspace ?? '',
+      workspace: displayWorkspace(row?.workspace),
+      workspacePending: row ? isPendingWorkspace(row.workspace) : false,
       authMethod: row?.authMethod ?? null,
       username: row?.username ?? null,
     });
