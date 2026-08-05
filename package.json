@@ -21,7 +21,7 @@
   "scripts": {
     "init": "tsx scripts/init.ts",
     "dev": "tsx watch src/index.ts",
-    "dev:api": "RUN_MODE=api tsx watch src/index.ts",
+    "dev:api": "bash scripts/dev-api.sh",
     "dev:worker": "RUN_MODE=worker tsx watch src/index.ts",
     "build": "npm run build -w @syntaro/github-client && tsc",
     "start": "node dist/src/index.js",
