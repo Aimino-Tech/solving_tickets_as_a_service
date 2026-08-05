@@ -45,6 +45,7 @@
 - [ ] Backend records `auth.register` to audit log + PostHog `user_signup` event *(code path exists; audit page shows 0 entries — unverified)*
 - [x] Backend returns `201` with token → `syntaro_token` + `refreshToken` saved to `localStorage`
 - [x] Auto-redirect to dashboard (route `/`) — **Acceptance**: registration lands user in dashboard — *verified: landed on `/`, user "QA New User", plan Solo*
+  > ⚠️ **2026-08-05**: behavior changed — registration now redirects to **`/onboarding`** (not `/`). Automation `test_register_fresh_user_lands_on_dashboard` fails on this (expects `/`). With onboarding step 1 blocked by the installations 500, a fresh user lands on a stuck wizard (can still "Skip this step").
 
 > Note: backend currently requires email confirmation (`email_confirmed_at`) before login/refresh. When public, a **confirm-email** step (link in inbox) is needed.
 
@@ -76,7 +77,7 @@
 - [ ] Click magic-link option → `POST /v1/auth/magic-link` (anti-enumeration — does not reveal whether email exists) *(no magic-link UI on login page — "Forgot password?" only; untested)*
 - [ ] Receive link via email → open → `POST /v1/auth/magic-link/verify` → signed in *(untested)*
 - [ ] **Acceptance**: successful sign-in via magic link *(untested)*
-> ❌ **2026-08-04**: `/forgot-password` submit → **500 "Internal server error"** (`POST /api/v1/auth/forgot-password`). Broken.
+> ✅ **2026-08-05**: **FIXED & VERIFIED** — `/forgot-password` submit → `200` `{"ok":true,"message":"If an account exists for this email, a password reset link has been sent."}` (anti-enumeration). 0 console errors. Evidence: `manual-qa/08-forgot-password.png`.
 
 ---
 
@@ -95,7 +96,7 @@
 - [ ] Click **"Install SYNTARO App"** → `https://github.com/apps/syntaro-bot/installations/new` → select repo → Install *(wizard broken)*
 - [ ] Complete → `onboarding.completeStep('github-install')` *(wizard broken)*
 - [ ] **Acceptance**: step marked done, wizard advances *(wizard broken)*
-> ❌ **2026-08-04**: Wizard renders ONLY the 4-step header — the step card is empty. **Root cause**: backend `src/onboarding/wizard.ts` emits `currentStep` in snake_case (`"github_install"`) but frontend `WizardContainer.tsx` matches kebab-case (`'github-install'`) → no step component matches → empty card. Also `config.enabled=false` and `githubAppUrl` = `https://github.com/apps/123456/installations/new` (placeholder). No auto-redirect to `/onboarding` after register either (App.tsx has no guard).
+> 🟡 **2026-08-05**: Wizard step 1 **now renders** (snake/kebab mismatch fixed — "Connect Your GitHub Account" + Sign in with GitHub + Install SYNTARO App buttons visible). "Skip this step" → "Onboarding Skipped" → Go to Dashboard **works**. **Remaining bug**: "Continue" → `GET /api/v1/github/installations` → **500 `{"error":"Failed to list installations"}`** → wizard **cannot advance past step 1**. Also after register, user **auto-redirects to `/onboarding`** (guard now exists) → new users land on the stuck wizard. Evidence: `manual-qa/09-onboarding-step1.png`.
 
 ### US-6: Onboarding step 2 — Select repository
 
@@ -149,7 +150,14 @@
 - [x] **Billing**: view plan, upgrade — *verified: Current Plan, Stripe Portal button, LiteLLM budget, cost chart render*
 - [x] **Audit** (`/audit`): view activity audit log — *verified: page renders ("0 total entries")*
 - [ ] **Settings** (`/settings`): update profile, create API keys, manage integrations *(untested)*
-> ❌ **2026-08-04**: `/settings` page does NOT render — vite/babel transform error `Settings.tsx: Unexpected token, expected "," (821:19)`. tsc/biome/esbuild all parse the file fine; only babel fails → ErrorBoundary shows "Something went wrong". Also every dashboard page logs `GET /api/v1/admin/steering/health → 503`.
+> ✅ **2026-08-05**: **FIXED & VERIFIED** — `/settings` renders fully (Source Control incl. GitHub "Connected as xdnaimino", GitLab, Azure DevOps, Bitbucket, Integrations: Slack/Teams/Linear/Jira/Sentry, MCP API Keys "0 active", Data & Privacy: Export/Deletion/Data Residency EU/"never train on your code", Notifications). 0 console errors; all API calls 200. Evidence: `manual-qa/10-settings.png`. **Also no longer observed**: `GET /api/v1/admin/steering/health → 503` on dashboard pages (steering health calls gone).
+>
+> 🟡 **New (2026-08-05, QA sweep)**:
+> - **Referral** (`/referral`): `GET /api/v1/referral/code` + `/rewards` → **500** (deterministic, curl+UI) → page data fails.
+> - **Billing** (`/billing`) & `/credits`: `GET /api/v1/credits/billing-settings` → **500** (deterministic) → billing-settings section fails (plan/invoices OK).
+> - **Members** (`/members`): `GET /api/teams/me` → **500 "Failed to resolve my team"** for users without a team.
+> - **Status** (`/status`): calls `/api/health/verbose` → **404** — backend serves `/health/verbose` at root; FE path missing `/v1` and not proxied.
+> - **LiveView** (`/liveview`): React hydration warning — `<tr>` nested in `<div>` (invalid HTML) → 2 console errors.
 
 ---
 
@@ -336,9 +344,9 @@
 | US-1 | Visit syntaro.io first time | ✅ Live (`website/`) | 1 |
 | US-2 | Register account | ✅ Verified (browser 2026-08-04) | 1 |
 | US-3 | Sign in | ✅ Verified (browser 2026-08-04) | 1 |
-| US-4 | Magic link / forgot password | ❌ Broken — forgot-password 500 | 1 |
-| US-5–9 | Onboarding (5 steps) | ❌ Broken — empty wizard (snake/kebab mismatch) | 2 |
-| US-10–12 | Core features (label→PR, runs, repo/credit/billing/audit) | 🟡 Runs/Repos/Billing/Audit ✅; **Settings page broken** | 3 |
+| US-4 | Magic link / forgot password | ✅ Fixed & verified 2026-08-05 (was 500; now 200 anti-enumeration) | 1 |
+| US-5–9 | Onboarding (5 steps) | 🟡 Wizard renders + skip works; **Continue blocked** — `GET /api/v1/github/installations` 500 | 2 |
+| US-10–12 | Core features (label→PR, runs, repo/credit/billing/audit) | 🟡 Settings fixed ✅; **Referral/Billing-settings/Members 500s, Status 404** | 3 |
 | US-13 | GitHub | ✅ Live | 4 |
 | US-14 | GitLab / Bitbucket | 🟡 Beta | 4 |
 | US-15 | Jira (tracker + write-back) | 🟡 Tracker surface | 4 |
@@ -358,3 +366,23 @@
 | US-29 | n8n / SAML / Enterprise / Proxy | 🟡 By plan | 4 |
 | US-30 | Upgrade plan | ✅ Live | 5 |
 | US-31 | Security/Privacy trust | ✅ Live | 6 |
+
+---
+
+## QA RUN LOG (2026-08-05)
+
+**Baseline** — automation suite (`tests/automation`, python3 pytest): **36 passed, 3 failed, 2 skipped, 4 xfailed, 5 xpassed** in 135s.
+- FAIL `test_be_health_reachable` — **test-config issue**: `OSY_URL` defaults to `:4096` (OpenCode serve, returns HTML) — not an app bug.
+- FAIL `test_sign_in_form_submission_shows_error` — **stale test data**: `test@example.com/password123` is a pre-existing (seeded) account → login legitimately succeeds. App correctly 401s garbage creds (probed).
+- FAIL `test_register_fresh_user_lands_on_dashboard` — **behavior change**: register now redirects to `/onboarding` (test expects `/`). See US-2 note.
+- XPASS (previously-expected failures now passing): analytics chart/export/page, register 201, login 200 — **analytics feature works now**.
+
+**Manual sweep** — 19 dashboard pages (Playwright, token auth): clean pages `/`, `/runs`, `/repos`, `/audit`, `/security`, `/privacy`, `/dpa`, `/benchmarks`, `/pricing`, `/vs`, `/enterprise`. Findings: see US-5-9 / US-12 notes. `/admin` → 403 expected (non-admin).
+
+**Known-P0 re-verification**:
+- P0-1 forgot-password 500 → ✅ FIXED
+- P0-2 onboarding empty wizard → 🟡 PARTIAL (renders; Continue 500)
+- P0-3 settings babel error → ✅ FIXED
+- steering/health 503 spam → ✅ GONE
+
+**Lighthouse** (standing rule — every website/webapp run): sweep results in `/tmp/opencode/lighthouse/scores.csv`; see report. Target ≥ 90 per page.

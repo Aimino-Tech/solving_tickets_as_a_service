@@ -6,7 +6,7 @@ SYNTARO supports multiple Git hosting platforms. Below is the current status.
 |------------|-------------|---------|---------------|----------------|------|
 | GitHub     | ✅ Live     | ✅      | ✅             | ✅             | ✅   |
 | GitLab     | 🚧 Beta     | ✅      | ✅ W8-T2      | ✅ W8-T3       | ✅   |
-| Bitbucket  | 🚧 Beta     | ✅      | ✅ W9-T1      | ✅ W9-T2       | ✅   |
+| Bitbucket  | ✅ Live     | ✅      | ✅ W9-T1      | ✅ W9-T2       | ✅   |
 
 ## Common Sense Gate (AIM-3182)
 

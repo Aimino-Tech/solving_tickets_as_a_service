@@ -55,7 +55,7 @@ A: Yes. SYNTARO supports Python, TypeScript/JavaScript, Go, Rust, Ruby, Java, PH
 A: Yes, with some caveats. SYNTARO detects monorepo tools (Turborepo, Nx) and uses the appropriate test command. For best results, ensure your test suite can be run from the repo root.
 
 **Q: Does SYNTARO work with non-GitHub repos?**
-A: SYNTARO primarily supports GitHub. GitLab and Bitbucket are in beta — see [Platforms documentation](platforms/README.md).
+A: SYNTARO primarily supports GitHub, with Bitbucket also live and GitLab in beta — see [Platforms documentation](platforms/README.md).
 
 ## Troubleshooting
 

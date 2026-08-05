@@ -653,7 +653,7 @@ SYNTARO now supports multiple Git hosting platforms. See the [Platforms document
 
 - **GitHub** — Live, fully supported
 - **GitLab** — Beta (self-hosted and GitLab.com)
-- **Bitbucket** — Beta (Bitbucket Cloud)
+- **Bitbucket** — Live (Bitbucket Cloud)
 
 Each platform has its own webhook integration, agent pipeline, CI configuration, and eval test strategy. Platform-specific setup guides are in [`docs/platforms/`](docs/platforms/README.md).
 

@@ -179,7 +179,7 @@ SYNTARO supports multiple Git hosting platforms. See the following guides:
 |---|---|---|
 | GitHub | ✅ Live | This guide |
 | GitLab | 🧪 Beta | [`docs/platforms/gitlab.md`](../platforms/gitlab.md) |
-| Bitbucket | 🧪 Beta | [`docs/platforms/bitbucket.md`](../platforms/bitbucket.md) |
+| Bitbucket | ✅ Live | [`docs/platforms/bitbucket.md`](../platforms/bitbucket.md) |
 | Linear | 🧪 Beta | [`docs/platforms/linear.md`](../platforms/linear.md) |
 | Jira | 🧪 Beta | [`docs/platforms/jira.md`](../platforms/jira.md) |
 
