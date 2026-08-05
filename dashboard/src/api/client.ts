@@ -1,6 +1,7 @@
 import type {
   Run, DashboardStats, AuditEntry, PaginatedResponse, BenchmarkEntry, BenchmarkPrice,
   KpiResponse, PricingData, CostCalculation, VsComparisonData, McpApiKey,
+  Incident, IncidentListResponse, IncidentStats, ServiceCatalogEntry,
 } from '@/api/types';
 
 export type { DashboardStats };
@@ -454,6 +455,45 @@ export const runs = {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
+};
+
+export const incidents = {
+  list: (params?: {
+    page?: number;
+    perPage?: number;
+    status?: string;
+    severity?: string;
+    source?: string;
+    q?: string;
+  }, opts?: { signal?: AbortSignal }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.perPage) qs.set('perPage', String(params.perPage));
+    if (params?.status) qs.set('status', params.status);
+    if (params?.severity) qs.set('severity', params.severity);
+    if (params?.source) qs.set('source', params.source);
+    if (params?.q) qs.set('q', params.q);
+    const query = qs.toString();
+    return request<IncidentListResponse>(`/v1/incidents${query ? `?${query}` : ''}`, opts);
+  },
+  get: (fingerprint: string, opts?: { signal?: AbortSignal }) =>
+    request<{ incident: Incident; stats: IncidentStats }>(`/v1/incidents/${encodeURIComponent(fingerprint)}`, opts),
+  serviceCatalog: {
+    list: (opts?: { signal?: AbortSignal }) =>
+      request<{ data: ServiceCatalogEntry[] }>('/v1/incidents/service-catalog', opts),
+    create: (body: { name: string; repos?: string[]; purpose?: string | null; runbook?: string | null; providers?: string[] }) =>
+      request<ServiceCatalogEntry>('/v1/incidents/service-catalog', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    update: (id: number, body: Partial<{ name: string; repos: string[]; purpose: string | null; runbook: string | null; providers: string[] }>) =>
+      request<ServiceCatalogEntry>(`/v1/incidents/service-catalog/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      }),
+    remove: (id: number) =>
+      request<void>(`/v1/incidents/service-catalog/${id}`, { method: 'DELETE' }),
+  },
 };
 
 export interface GitHubInstallation {
