@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  GTM | Niche Discovery — Shadow Launch Page Template (AIM-4686, 2026-08-06)
+  ===========================================================================
+  One-page landing page that validates a niche pre-build. Purpose: measure
+  COLD-traffic → waitlist conversion with the customer's own pain statement.
+
+  FILL BEFORE LAUNCH (playbook.md Part 7):
+    {{PAIN_STATEMENT}}     → verbatim pain quote from the Part 3 evidence log /
+                             Part 4 verbatim review quote (highest-Tier signal).
+                             <100 chars for the H1; the truth is in the quote.
+    {{AUDIENCE}}           → who has the pain (e.g. "freelance designers").
+    {{WAITLIST_ENDPOINT}}  → POST JSON {email, source, niche} endpoint (set in
+                             window.SYNTARO_WAITLIST_ENDPOINT below).
+    {{NICHE_SLUG}}         → machine-safe niche id used in analytics + form.
+    {{SOURCE_WORD}}        → first concrete complaint verbatim ("sync breaks",
+                             "reviews scattered across 3 tools").
+    {{BENEFIT}}            → the <10%-of-value promise, no features.
+
+  OPERATING RULES (playbook Part 7):
+    - Spend exactly $50 on hyper-targeted Reddit/Facebook ads at the Type B/C
+      communities. UTM-tag every ad so cold traffic is measurable separately.
+    - Only judge the number at >= 1,000 unique cold visits (or >= 100 conversions).
+      If 72h elapses below the floor: extend ads by <= $40 (cap $90 total) and
+      <= 48h; if still below floor -> result is INDETERMINATE: no green-light,
+      no kill - re-target or park. Never cite a sub-floor rate as evidence.
+    - >= 15% cold->waitlist = green light. < 3% = kill the idea. No rationalizing.
+    - Email every signup within 48h; book 5 calls before building.
+
+  No backend required to preview; the form POSTs to {{WAITLIST_ENDPOINT}} when
+  configured and surfaces success/error states.
+-->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Early access — {{PAIN_STATEMENT}}</title>
+<meta name="description" content="{{PAIN_STATEMENT}} — join the waitlist.">
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-light: #818cf8;
+    --primary-dark: #3730a3;
+    --ink: #111827;
+    --muted: #6b7280;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --danger: #dc2626;
+    --ok: #16a34a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+  }
+  .container { max-width: 720px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  .eyebrow {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--primary-dark);
+    background: #eef2ff;
+    border-radius: 999px;
+    padding: 0.3rem 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; margin-bottom: 1rem; }
+  .sub { font-size: 1.125rem; color: var(--muted); margin-bottom: 2rem; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .form-row { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+  input[type="email"] {
+    flex: 1 1 220px;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  input[type="email"]:focus { outline: 2px solid var(--primary-light); border-color: var(--primary); }
+  button {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  button:hover { background: var(--primary-dark); }
+  button:disabled { background: var(--muted); cursor: not-allowed; }
+  .note { font-size: 0.875rem; color: var(--muted); margin-top: 0.75rem; }
+  .msg { font-size: 0.9rem; margin-top: 0.75rem; min-height: 1.2em; }
+  .msg.ok { color: var(--ok); }
+  .msg.err { color: var(--danger); }
+  .proof { margin: 2.5rem 0; }
+  .proof h2 { font-size: 1.25rem; margin-bottom: 0.75rem; }
+  .proof blockquote {
+    border-left: 3px solid var(--primary-light);
+    padding-left: 1rem;
+    color: var(--muted);
+    font-style: italic;
+    margin: 0.75rem 0;
+  }
+  .proof cite { font-style: normal; font-size: 0.8rem; color: var(--muted); }
+  .faq { margin-top: 2.5rem; }
+  .faq details { border-top: 1px solid var(--border); padding: 0.75rem 0; }
+  .faq summary { font-weight: 600; cursor: pointer; }
+  .faq p { color: var(--muted); margin-top: 0.4rem; }
+  footer { margin-top: 3rem; font-size: 0.8rem; color: var(--muted); text-align: center; }
+  @media (max-width: 480px) {
+    h1 { font-size: 1.6rem; }
+    .form-row { flex-direction: column; }
+    button { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <span class="eyebrow">Early access — {{NICHE_SLUG}}</span>
+  <h1>{{PAIN_STATEMENT}}</h1>
+  <p class="sub">You told us — in your own words. If this sounds like your {{AUDIENCE}} problem, join the waitlist and we'll build it with you.</p>
+
+  <div class="card">
+    <p><strong>{{PAIN_STATEMENT}}</strong> We're building the fix for that. No features, no price, no promises — just a question: does this match your week?</p>
+    <form id="waitlist-form" novalidate>
+      <div class="form-row">
+        <input type="email" id="email" name="email" placeholder="you@company.com" autocomplete="email" required>
+        <button type="submit" id="submit-btn">Join the waitlist</button>
+      </div>
+      <input type="hidden" id="source" name="source" value="">
+      <input type="hidden" id="niche" name="niche" value="{{NICHE_SLUG}}">
+      <p class="msg" id="form-msg" role="status"></p>
+      <p class="note">We reply to every signup within 48 hours. No spam, unsubscribe anytime.</p>
+    </form>
+  </div>
+
+  <section class="proof">
+    <h2>Why {{AUDIENCE}} care</h2>
+    <blockquote>"{{SOURCE_WORD}} — it's the part of my week I can't get back." <cite>— {{AUDIENCE}} (verbatim from the Part 3 evidence log)</cite></blockquote>
+    <blockquote>"I've been doing this manually because nothing else handles it." <cite>— {{AUDIENCE}} (verbatim from the Part 3 evidence log)</cite></blockquote>
+  </section>
+
+  <section class="faq">
+    <h2>Questions</h2>
+    <details>
+      <summary>What do you mean by "build it with you"?</summary>
+      <p>You join the waitlist, we interview 5 of you in the first week, and the product ships against the exact complaints you already described. The {{SOURCE_WORD}} problem — fixed.</p>
+    </details>
+    <details>
+      <summary>When does it launch?</summary>
+      <p>We launch only when the waitlist confirms real demand. If the interest isn't there, we tell you honestly instead of taking your email into a dead end.</p>
+    </details>
+    <details>
+      <summary>Is this {{BENEFIT}} for real?</summary>
+      <p>That's the whole point of the waitlist — we prove it before we charge anything. Early members get launch pricing locked in.</p>
+    </details>
+  </section>
+
+  <footer>Built by {{AUDIENCE}} for {{AUDIENCE}}. Privacy: your email is used only for the waitlist.</footer>
+</div>
+
+<script>
+  // --- CONFIG (fill before launch) ---
+  // POST target for {email, source, niche}. Leave null to preview locally (form
+  // will surface a friendly "not configured" error instead of a dead click).
+  window.SYNTARO_WAITLIST_ENDPOINT = null; // e.g. "https://api.example.com/api/v1/waitlist"
+
+  // Analytics: push a page view; wire your tracker (GA/Plausible/etc.) on top.
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({ event: "page_view", niche: "{{NICHE_SLUG}}" });
+
+  // Capture UTM source for cold-traffic attribution (UTM-tag every ad).
+  (function captureUtm() {
+    var params = new URLSearchParams(window.location.search);
+    var source = params.get("utm_source") || params.get("source") || "direct";
+    document.getElementById("source").value = source;
+    window.dataLayer.push({ event: "waitlist_view", source: source, niche: "{{NICHE_SLUG}}" });
+  })();
+
+  document.getElementById("waitlist-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var emailInput = document.getElementById("email");
+    var msg = document.getElementById("form-msg");
+    var btn = document.getElementById("submit-btn");
+    var email = emailInput.value.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      msg.className = "msg err";
+      msg.textContent = "Please enter a valid email address.";
+      return;
+    }
+    var endpoint = window.SYNTARO_WAITLIST_ENDPOINT;
+    if (!endpoint) {
+      msg.className = "msg err";
+      msg.textContent = "Waitlist endpoint not configured yet — set window.SYNTARO_WAITLIST_ENDPOINT before launch.";
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = "Joining…";
+    try {
+      var res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email,
+          source: document.getElementById("source").value,
+          niche: document.getElementById("niche").value
+        })
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      msg.className = "msg ok";
+      msg.textContent = "You're on the list — we'll be in touch within 48 hours.";
+      emailInput.value = "";
+      window.dataLayer.push({ event: "waitlist_signup", source: document.getElementById("source").value, niche: "{{NICHE_SLUG}}" });
+    } catch (err) {
+      msg.className = "msg err";
+      msg.textContent = "Something went wrong. Please try again or email us directly.";
+      window.dataLayer.push({ event: "waitlist_error", error: err.message, niche: "{{NICHE_SLUG}}" });
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Join the waitlist";
+    }
+  });
+</script>
+</body>
+</html>

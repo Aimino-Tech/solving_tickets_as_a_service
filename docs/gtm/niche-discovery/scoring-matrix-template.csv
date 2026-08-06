@@ -1,0 +1,38 @@
+# GTM Niche Discovery - Scoring Matrix Template (AIM-4686, 2026-08-06)
+# Reusable spreadsheet. Methodology: docs/gtm/niche-discovery/playbook.md Part 6.
+#
+# HOW TO USE
+# 1. One row per niche candidate that passed the 48h validation pass (playbook Part 5).
+# 2. Columns C-G record evidence from the Part 3/4 evidence log.
+# 3. Hard gate (column I): PASS requires G1>=2 (with a B+C present) OR >=4 via Method B,
+#    AND G2>=2 AND G3>=3 AND G4=Y AND G5=PASS AND G6=PASS AND G7=PASS.
+#    Any single gate FAIL -> candidate is DISCARDED (do not score).
+# 4. K1..K6 use the 0/5/10 rubric below. Weighted score (0-100) =
+#    (K1*0.25 + K2*0.20 + K3*0.20 + K4*0.15 + K5*0.10 + K6*0.10) * 10.
+#    The *10 rescales the 0-10 parenthesized sum to the 0-100 bands.
+# 5. Decision bands: >=70 BUILD CANDIDATE | 55-69 WATCHLIST | <55 DISCARD.
+#
+# K-RUBRIC
+# K1 Signal strength: 10=Tier1 in log, 5=Tier2, 0=Tier3 only.
+# K2 Convergence breadth: 10=5+ communities, 5=3-4, 0=2.
+# K3 Complaint density (Part 4): 10=4-5 competitors (or all mined), 5=3, 0=<3.
+# K4 Gap buildability in 48h: 10=1 OAuth/CRUD, 5=1 integration+UI, 0=3+ integrations.
+#    (integration = dependency on one external service/API)
+# K5 Buyer concentration: 10=concentrated (>=20 named accounts), 5=50-200 reachable, 0=fragmented.
+# K6 Price anchor gap: 10=30-50% below incumbent, 5=10-30% below, 0=parity.
+#
+# EXAMPLE (documentation only - replace with real candidates)
+# ExampleCorp Tool;Quantify pain;3;2;4;Y;PASS;PASS;PASS;PASS;10;5;5;10;5;10;75;BUILD CANDIDATE
+Candidate;Hypothesis (one sentence);G1 communities (n);G2 paid tools (n);G3 quantified comments (n);G4 unserved gap (Y/N);G5 n8n-test (PASS/FAIL);G6 10% rule (PASS/FAIL);G7 B2B (PASS/FAIL);HARD GATE (PASS/FAIL);K1 signal (0/5/10);K2 convergence (0/5/10);K3 density (0/5/10);K4 buildability (0/5/10);K5 concentration (0/5/10);K6 price gap (0/5/10);Weighted score (0-100);Decision
+;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;
