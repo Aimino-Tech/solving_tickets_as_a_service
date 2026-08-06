@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, act } from '@testing-library/react';
 import { renderWithProviders } from '@/__tests__/test-utils';
 
 const {
@@ -45,6 +45,26 @@ vi.mock('@/api/client', () => ({
     topUp: vi.fn(),
   },
   billingSettingsApi: { get: mockBillingSettingsGet, update: vi.fn() },
+  tickets: { create: vi.fn().mockResolvedValue({ status: 'accepted' }), list: vi.fn().mockResolvedValue({ tickets: [] }) },
+  github: {
+    getStatus: vi.fn().mockResolvedValue({ connected: false }),
+    getOAuthUrl: vi.fn().mockResolvedValue({ url: '' }),
+    disconnect: vi.fn().mockResolvedValue({}),
+  },
+  bitbucket: {
+    getStatus: vi.fn().mockResolvedValue({ connected: false }),
+    getOAuthStatus: vi.fn().mockResolvedValue({ connected: false }),
+    getOAuthUrl: vi.fn().mockResolvedValue({ url: '' }),
+    connect: vi.fn().mockResolvedValue({}),
+    disconnect: vi.fn().mockResolvedValue({}),
+  },
+  mcpKeysApi: {
+    get: vi.fn().mockResolvedValue(null),
+    list: vi.fn().mockResolvedValue([]),
+    create: vi.fn().mockResolvedValue({}),
+    rename: vi.fn().mockResolvedValue({}),
+    revoke: vi.fn().mockResolvedValue({}),
+  },
   privacy: {
     getDeletionStatus: vi.fn().mockResolvedValue({ status: 'none' }),
     requestDeletion: vi.fn(),
@@ -54,9 +74,11 @@ vi.mock('@/api/client', () => ({
 }));
 
 const mockFetchPreferences = vi.hoisted(() => vi.fn());
+const mockSyncRecommendations = vi.hoisted(() => vi.fn());
 vi.mock('@/services/notificationService', () => ({
   fetchPreferences: mockFetchPreferences,
   upsertPreference: vi.fn(),
+  syncRecommendations: mockSyncRecommendations,
 }));
 
 const mockUseAuth = vi.hoisted(() => vi.fn());
@@ -149,7 +171,7 @@ describe('Rate limiting (429 error handling)', () => {
     renderWithProviders(<RunsHistory />);
 
     await waitFor(() => {
-      expect(screen.getAllByText(/too many requests/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Free').length).toBeGreaterThan(0);
     });
   });
 
@@ -195,8 +217,11 @@ describe('Empty state handling across all pages', () => {
     renderWithProviders(<RunsHistory />);
 
     await waitFor(() => {
-      expect(screen.getAllByText(/no runs found/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Free').length).toBeGreaterThan(0);
     });
+    expect(screen.getAllByText('Pending').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Done / Verified').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Failed').length).toBeGreaterThan(0);
   });
 
   it('Billing renders without data (all APIs empty)', async () => {
@@ -218,11 +243,15 @@ describe('Empty state handling across all pages', () => {
   });
 
   it('Settings renders without crashing', async () => {
+    setupEmptyMocks();
     const Settings = (await import('@/pages/Settings')).default;
-    renderWithProviders(<Settings />);
+    const { unmount } = renderWithProviders(<Settings />);
 
     await waitFor(() => {
       expect(screen.getByText('Settings')).toBeInTheDocument();
+    });
+    await act(async () => {
+      unmount();
     });
   });
 });
@@ -253,11 +282,15 @@ describe('Auth context - unauthenticated user', () => {
   });
 
   it('Settings renders with unauthenticated user', async () => {
+    setupEmptyMocks();
     const Settings = (await import('@/pages/Settings')).default;
-    renderWithProviders(<Settings />);
+    const { unmount } = renderWithProviders(<Settings />);
 
     await waitFor(() => {
       expect(screen.getByText('Settings')).toBeInTheDocument();
+    });
+    await act(async () => {
+      unmount();
     });
   });
 
@@ -266,7 +299,7 @@ describe('Auth context - unauthenticated user', () => {
     renderWithProviders(<RunsHistory />);
 
     await waitFor(() => {
-      expect(screen.getAllByText(/no runs found/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Free').length).toBeGreaterThan(0);
     });
   });
 

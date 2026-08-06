@@ -1,0 +1,6 @@
+- generic [ref=f1e6]:
+  - heading "Something went wrong" [level=1] [ref=f1e10]
+  - paragraph [ref=f1e11]: The dashboard encountered an unexpected error. You can try again or check the details below.
+  - button "Try again" [ref=f1e12] [cursor=pointer]
+  - group [ref=f1e15]:
+    - generic "Error details" [ref=f1e16] [cursor=pointer]

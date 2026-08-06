@@ -452,6 +452,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
             repoName: jobData.repoName,
             issueNumber: jobData.issueNumber,
             status: 'pending',
+            summary: jobData.issueTitle,
           });
         }
       } catch (storageErr) {
@@ -481,6 +482,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
         repoName: jobData.repoName,
         issueNumber: jobData.issueNumber,
         status: 'pending',
+        summary: jobData.issueTitle,
       });
     } catch (storageErr) {
       log.warn({ err: String(storageErr) }, 'Failed to save pending RunRecord');

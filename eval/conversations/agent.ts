@@ -60,16 +60,27 @@ export class ConversationAgent {
   private async gh(path: string, init?: RequestInit): Promise<unknown> {
     const isListIssues = !init?.method && path.includes('/issues?state=all');
     for (let attempt = 1; attempt <= 4; attempt++) {
-      const res = await this.fetchImpl(`https://api.github.com${path}`, {
-        ...init,
-        headers: {
-          Authorization: `Bearer ${this.cfg.githubToken}`,
-          Accept: 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-          'User-Agent': 'syntaro-conversation-eval',
-          ...(init?.headers ?? {}),
-        },
-      });
+      let res: Response;
+      try {
+        res = await this.fetchImpl(`https://api.github.com${path}`, {
+          ...init,
+          headers: {
+            Authorization: `Bearer ${this.cfg.githubToken}`,
+            Accept: 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+            'User-Agent': 'syntaro-conversation-eval',
+            ...(init?.headers ?? {}),
+          },
+        });
+      } catch (fetchErr) {
+        // Network-level failures (DNS, TLS, connection reset) are transient:
+        // retry with backoff before giving up.
+        if (attempt < 4) {
+          await new Promise((r) => setTimeout(r, 500 * attempt));
+          continue;
+        }
+        throw new Error(`GitHub ${init?.method ?? 'GET'} ${path} -> fetch failed: ${String(fetchErr).slice(0, 200)}`);
+      }
       if (!res.ok) {
         const body = await res.text().catch(() => '');
         throw new Error(`GitHub ${init?.method ?? 'GET'} ${path} -> ${res.status}: ${body.slice(0, 300)}`);
@@ -144,14 +155,25 @@ export class ConversationAgent {
     this.lastMcpCallAt = Date.now();
 
     for (let attempt = 1; attempt <= this.maxRateLimitRetries + 1; attempt++) {
-      const res = await this.fetchImpl(`${this.cfg.syntaroUrl}${path}`, {
-        ...init,
-        headers: {
-          Authorization: `Bearer ${this.cfg.syntaroApiKey}`,
-          'Content-Type': 'application/json',
-          ...(init?.headers ?? {}),
-        },
-      });
+      let res: Response;
+      try {
+        res = await this.fetchImpl(`${this.cfg.syntaroUrl}${path}`, {
+          ...init,
+          headers: {
+            Authorization: `Bearer ${this.cfg.syntaroApiKey}`,
+            'Content-Type': 'application/json',
+            ...(init?.headers ?? {}),
+          },
+        });
+      } catch (fetchErr) {
+        // Network-level failures (DNS, TLS, connection reset) are transient:
+        // retry with backoff before giving up.
+        if (attempt <= this.maxRateLimitRetries) {
+          await new Promise((r) => setTimeout(r, 500 * attempt));
+          continue;
+        }
+        throw new Error(`SYNTARO ${init?.method ?? 'GET'} ${path} -> fetch failed: ${String(fetchErr).slice(0, 200)}`);
+      }
       if (res.status === 429 && attempt <= this.maxRateLimitRetries) {
         const body = await res.json().catch(() => ({})) as { error?: { retryAfter?: number } };
         const retryAfter = body.error?.retryAfter ?? (Number(res.headers.get('Retry-After')) || 5);

@@ -24,6 +24,24 @@ export class AccountsRepository {
    * Create a new account.
    */
   async create(data: NewAccount): Promise<Account> {
+    if (data.email) {
+      const existing = await queryWithRetry<Account>(
+        `SELECT id, github_installation_id AS "githubInstallationId", email FROM accounts WHERE email = $1 LIMIT 1`,
+        [data.email],
+      );
+      if (existing.rows[0]) {
+        const row = existing.rows[0];
+        if (data.githubInstallationId && (row.githubInstallationId ?? 0) <= 0) {
+          const updated = await queryWithRetry<Account>(
+            `UPDATE accounts SET github_installation_id = $1, updated_at = NOW()
+             WHERE id = $2 RETURNING *`,
+            [data.githubInstallationId, row.id],
+          );
+          return updated.rows[0];
+        }
+        return row;
+      }
+    }
     const result = await queryWithRetry<Account>(
       `INSERT INTO accounts (github_installation_id, email, name, tier)
        VALUES ($1, $2, $3, $4)

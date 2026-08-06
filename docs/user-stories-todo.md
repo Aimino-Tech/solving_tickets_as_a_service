@@ -96,7 +96,8 @@
 - [ ] Click **"Install SYNTARO App"** → `https://github.com/apps/syntaro-bot/installations/new` → select repo → Install *(wizard broken)*
 - [ ] Complete → `onboarding.completeStep('github-install')` *(wizard broken)*
 - [ ] **Acceptance**: step marked done, wizard advances *(wizard broken)*
-> 🟡 **2026-08-05**: Wizard step 1 **now renders** (snake/kebab mismatch fixed — "Connect Your GitHub Account" + Sign in with GitHub + Install SYNTARO App buttons visible). "Skip this step" → "Onboarding Skipped" → Go to Dashboard **works**. **Remaining bug**: "Continue" → `GET /api/v1/github/installations` → **500 `{"error":"Failed to list installations"}`** → wizard **cannot advance past step 1**. Also after register, user **auto-redirects to `/onboarding`** (guard now exists) → new users land on the stuck wizard. Evidence: `manual-qa/09-onboarding-step1.png`.
+> 🟡 **2026-08-05**: Wizard step 1 **now renders** (snake/kebab mismatch fixed — "Connect Your GitHub Account" + Sign in with GitHub + Install SYNTARO App buttons visible). "Skip this step" → "Onboarding Skipped" → Go to Dashboard **works**. Also after register, user **auto-redirects to `/onboarding`** (guard now exists).
+> ✅ **2026-08-05 (re-verify)**: `GET /api/v1/github/installations` **500 FIXED** — live-tested → **200** `{installations: [...]}` (DB table `github_installations` now exists after `015_github_oauth` applied; earlier 500 was the catch-block DB fallback also throwing on a missing table). "Continue" now returns the list; if no app installed yet, the wizard shows the hint *"Install the SYNTARO GitHub App first, then click Continue again"* — correct UX, advances once an installation exists. Evidence: live curl on `:3001` (fresh user).
 
 ### US-6: Onboarding step 2 — Select repository
 
@@ -152,12 +153,12 @@
 - [ ] **Settings** (`/settings`): update profile, create API keys, manage integrations *(untested)*
 > ✅ **2026-08-05**: **FIXED & VERIFIED** — `/settings` renders fully (Source Control incl. GitHub "Connected as xdnaimino", GitLab, Azure DevOps, Bitbucket, Integrations: Slack/Teams/Linear/Jira/Sentry, MCP API Keys "0 active", Data & Privacy: Export/Deletion/Data Residency EU/"never train on your code", Notifications). 0 console errors; all API calls 200. Evidence: `manual-qa/10-settings.png`. **Also no longer observed**: `GET /api/v1/admin/steering/health → 503` on dashboard pages (steering health calls gone).
 >
-> 🟡 **New (2026-08-05, QA sweep)**:
-> - **Referral** (`/referral`): `GET /api/v1/referral/code` + `/rewards` → **500** (deterministic, curl+UI) → page data fails.
-> - **Billing** (`/billing`) & `/credits`: `GET /api/v1/credits/billing-settings` → **500** (deterministic) → billing-settings section fails (plan/invoices OK).
-> - **Members** (`/members`): `GET /api/teams/me` → **500 "Failed to resolve my team"** for users without a team.
-> - **Status** (`/status`): calls `/api/health/verbose` → **404** — backend serves `/health/verbose` at root; FE path missing `/v1` and not proxied.
-> - **LiveView** (`/liveview`): React hydration warning — `<tr>` nested in `<div>` (invalid HTML) → 2 console errors.
+> 🟡 **New (2026-08-05, QA sweep)** — **all re-verified 2026-08-05; 4 of 5 fixed**:
+> - **Referral** (`/referral`): `GET /api/v1/referral/code` + `/rewards` — ✅ **FIXED** (live-tested → **200**; tables `referral_codes`/`referral_rewards`/`accounts` now exist; earlier 500 was missing-table drift).
+> - **Billing** (`/billing`) & `/credits`: `GET /api/v1/credits/billing-settings` — ✅ **FIXED** (live-tested → **200**; settings are read from `accounts.*` columns, present).
+> - **Members** (`/members`): `GET /api/teams/me` — ✅ **FIXED** (live-tested → **404** "not a member of any team" = intended behavior for teamless users; earlier 500 was missing `team_members` table).
+> - **Status** (`/status`): FE called `/api/health/verbose` → backend only served `/health/verbose` at root. ✅ **FIXED 2026-08-05** — `src/server.ts` now also mounts `healthRouter` under `/api` (`app.use('/api', healthRouter)`) → live-tested **200**.
+> - **LiveView** (`/liveview`): React hydration warning — `<tr>` nested in `<div>` (invalid HTML) → 2 console errors. *(unchanged)*
 
 ---
 
@@ -345,8 +346,8 @@
 | US-2 | Register account | ✅ Verified (browser 2026-08-04) | 1 |
 | US-3 | Sign in | ✅ Verified (browser 2026-08-04) | 1 |
 | US-4 | Magic link / forgot password | ✅ Fixed & verified 2026-08-05 (was 500; now 200 anti-enumeration) | 1 |
-| US-5–9 | Onboarding (5 steps) | 🟡 Wizard renders + skip works; **Continue blocked** — `GET /api/v1/github/installations` 500 | 2 |
-| US-10–12 | Core features (label→PR, runs, repo/credit/billing/audit) | 🟡 Settings fixed ✅; **Referral/Billing-settings/Members 500s, Status 404** | 3 |
+| US-5–9 | Onboarding (5 steps) | 🟡 Wizard renders + skip works; Continue works (installations **200** since `015_github_oauth` applied); steps 2–5 still need a real GitHub App install to test | 2 |
+| US-10–12 | Core features (label→PR, runs, repo/credit/billing/audit) | 🟡 Settings fixed ✅; Referral/Billing-settings/Members/Status **all fixed 2026-08-05** (live-verified); LiveView hydration warning open | 3 |
 | US-13 | GitHub | ✅ Live | 4 |
 | US-14 | GitLab / Bitbucket | 🟡 Beta | 4 |
 | US-15 | Jira (tracker + write-back) | 🟡 Tracker surface | 4 |
@@ -363,7 +364,7 @@
 | US-26 | Smithery / MCP Registry | ✅ Live | 4 |
 | US-27 | GitHub Marketplace (syntaro-eval) | ⏳ Pending | 4 |
 | US-28 | RapidAPI | ✅ Live | 4 |
-| US-29 | n8n / SAML / Enterprise / Proxy | 🟡 By plan | 4 |
+| US-29 | n8n / SAML / Enterprise / Proxy | 🟡 By plan — Enterprise routes **mounted 2026-08-05** (named `enterpriseRouter` export; was `Router.use() got a Module`) | 4 |
 | US-30 | Upgrade plan | ✅ Live | 5 |
 | US-31 | Security/Privacy trust | ✅ Live | 6 |
 
@@ -381,8 +382,130 @@
 
 **Known-P0 re-verification**:
 - P0-1 forgot-password 500 → ✅ FIXED
-- P0-2 onboarding empty wizard → 🟡 PARTIAL (renders; Continue 500)
+- P0-2 onboarding empty wizard → ✅ FIXED (renders; Continue → installations **200** — live-verified 2026-08-05; earlier 500 was missing `github_installations` table)
 - P0-3 settings babel error → ✅ FIXED
 - steering/health 503 spam → ✅ GONE
 
+**2026-08-05 afternoon fixes (live-verified on `:3001`)**:
+- `/api/health/verbose` 404 → ✅ FIXED (`src/server.ts` mounts `healthRouter` under `/api` too) → **200**
+- Enterprise routes unmounted (`Router.use() requires a middleware function but got a Module`) → ✅ FIXED (`server.ts` now imports named `enterpriseRouter`) → `/api/v1/enterprise/plans` **401** (auth gate) instead of 404
+- SLO latency spam `column "duration_ms" does not exist` (querying a column no migration ever created on `webhook_events`) → ✅ FIXED (`src/monitoring/slos.ts` computes p99 from `EXTRACT(EPOCH FROM (processed_at - created_at)) * 1000`); no DB-query retries at startup SLO check
+- **Latent finding (not fixed, monitoring loop disabled in dev)**: `src/monitoring/capacityMetrics.ts` writes to a `slo_metrics` table that no migration creates — will fail once the monitoring loop is enabled. Needs a migration (e.g. `026_slo_metrics.sql`).
+
 **Lighthouse** (standing rule — every website/webapp run): sweep results in `/tmp/opencode/lighthouse/scores.csv`; see report. Target ≥ 90 per page.
+
+---
+
+## PART 7 — REAL DATA & EVALUATION (2026-08-05, live-verified)
+
+> Các US này được verify với **tài khoản thật** `xdn.aimino@gmail.com` (plan free), **data thật** từ webhook signed HMAC + MCP API calls + Supabase — **không mockup**.
+
+### US-32: User sees REAL runs on /runs
+
+> **As a** user with a connected account,
+> **I want** `/runs` (và `/runs/:id`) hiển thị các fix run thật của mình,
+> **so that** tôi theo dõi được tiến độ fix mà không cần tin vào mockup.
+
+- [x] Webhook GitHub signed (X-Hub-Signature-256, GITHUB_WEBHOOK_SECRET) → `POST /webhook/github` → **202 accepted**
+- [x] Handler `issues.labeled` match label `stas:fix` (cần `SYNTARO_LABEL` — xem fix F-1) → `storage.saveRun` ghi **pending** vào bảng `run_history` (Supabase)
+- [x] Dispatch tới OpenSymphony `POST :4000/api/v1/dispatch` → accept `dispatch_<uuid>` → consumer cập nhật status `running`
+- [x] `GET /api/v1/runs` đọc `run_history` JOIN accounts (github_installation_id) → **4 runs thật** hiển thị trên `/runs`
+- [x] `GET /api/v1/runs/:id` → detail: repo, issue #, summary, status, created
+- [x] MCP `submit_issue` cũng tạo run (test "MCP test 3: remove deprecated API call" — running)
+- **Bằng chứng**: `usage-limits-real-1-of-10.png`, `runs-evidence-real-data.png`, raw Supabase rows, GitHub issue #30 thật.
+
+### US-33: User nói "fix these tickets" → agent kiểm tra/tạo ticket
+
+> **As a** user (qua MCP hoặc Slack),
+> **I want** nhắn yêu cầu tự nhiên "fix these tickets, do this do that",
+> **so that** agent trả lời ticket tồn tại hay chưa, và tự tạo ticket để fix.
+
+- [x] **Eval 10×10 (10 conversations × 10 turns): 100/100 PASS (100%)** — scenario thật: `first-fix-lifecycle`, `multi-ticket-batch`, `do-this-do-that`, `check-then-fix`, `status-watcher`, `creator-then-fixer`, `everything-mixed`, `check-loops`, `polite-requests`, `full-lifecycle-regression`
+- [x] Agent reply mẫu thật: *"[xdnaimino/syntaro-eval-sandbox] Ticket ... doesn't exist yet — I'll create it and fix it for you. Created #85. Fix submitted."*
+- [x] Capability accuracy 100%: `ticket_checked` 64, `fix_submitted` 41, `ticket_created` 25, `status_checked` 24, `tickets_listed` 12
+- [x] MCP surface: REST `/mcp/*` + JSON-RPC `/mcp/jsonrpc` + `syntaro_fix_issue`/`check_status`/`list_runs`/`get_run`
+- [ ] Slack bot DM/channel test thật (bot `syntaro2` Socket Mode connected — cần user nhắn bot trong workspace Aimino)
+- **Fix liên quan**: F-8 common-sense gate bỏ qua `issue_number` check cho nguồn conversational (freeform không có GitHub issue).
+
+### US-34: Evaluation System 4 trụ cột
+
+> **As a** maintainer,
+> **I want** hệ thống đánh giá có Criteria + Data & Evidence + Metrics/Rubrics + Feedback Loop,
+> **so that** đo được chất lượng agent và cải tiến liên tục.
+
+- [x] **Criteria**: `eval/conversations/types.ts` — TurnExpectation per action (fix/check/create/status/list) + replyIncludes/Excludes
+- [x] **Data & Evidence**: report JSON (`eval/results/conversations/<tag>.json` — user turn, reply, actions, verdict, errors) + tickets thật trên GitHub + run_history + MCP states
+- [x] **Metrics/Rubrics**: `npm run eval:scorecard` (`eval/scorecard.ts`) — pass rate tổng, per-scenario, capability accuracy, trend + regression detection. Kết quả: 26 reports, latest 100%, 1 run 96% (evmsg2tr34)
+- [x] **Feedback Loop**: fail → bugfix (xem F-1..F-10) → re-run → scorecard trend so sánh
+- [x] Doc: `docs/evaluation-system.md`
+
+### US-35: Usage limits phản ánh consumption THẬT (free plan)
+
+> **As a** free-plan user,
+> **I want** `/usage-limits` hiển thị đúng số fix đã dùng trong free limit,
+> **so that** tôi biết khi nào hết quota (10 fixes).
+
+- [x] `usage_records` (Supabase ledger) ghi **1 credit mỗi fix dispatch** (`src/dispatch/osDispatch.ts` → `recordFixUsage`, action `fix_dispatch`) — mọi path (webhook/MCP/queue)
+- [x] `GET /api/v1/usage-limits` đọc `usage_records` (trước đọc bảng `runs` legacy rỗng — fix F-9)
+- [x] `getAccountId` ưu tiên account có `github_installation_id` thật (dương) — tránh nhầm 2 rows cùng email (fix F-10)
+- [x] **Kết quả thật**: `/usage-limits` hiển thị **1 / 10 (10%)** cho Continuous/Weekly/Monthly sau 1 dispatch thật
+
+### US-36: Source Code integration buttons trên run detail
+
+> **As a** user xem chi tiết một run,
+> **I want** nút dẫn tới PR/issue trên GitHub/Bitbucket (nơi integration source code),
+> **so that** tôi mở được fix thật trong repository — không phải card "share".
+
+- [x] Thay card "Share this run" (Copy link + Share on X) bằng card **"Source Code"** (`dashboard/src/components/RunDetailContent.tsx`)
+- [x] **View Issue** → `https://github.com/{owner}/{repo}/issues/{n}` (khi issueNumber > 0) — mở tab GitHub thật
+- [x] **View Pull Request** → `run.prUrl` (khi có — sẽ trỏ tới PR GitHub/Bitbucket bất kỳ platform)
+- [x] Fallback: "No PR yet — run {status}" khi chưa có cả hai
+
+### US-37: Project status overview trên /runs (kanban + warnings → tickets + evaluation)
+
+> **As a** user muốn biết SYNTARO đang hoạt động thế nào trên project/repo của mình,
+> **I want** một overview compact trên trang `/runs`: plan tier + usage limits, pipeline kanban (Pending / Done-Verified / Failed) tự cập nhật, warning/alert click được, và hệ thống đánh giá sức khỏe project,
+> **so that** tôi nhìn vào là biết hệ thống đang chạy, biết cái gì hỏng, và tạo ticket fix từ chính warning đó — theo đúng gói của tôi (Team auto, Free/Solo có review usage limits).
+
+- [x] **Plan strip**: badge tier (Free/Solo/Team/Enterprise), usage `used/limit` + progress bar, cảnh báo vàng khi ≥ 80%, "Unlimited" cho Team/Enterprise/self-hosted (`dashboard/src/components/ProjectOverview.tsx`)
+- [x] **Metric cards** (5): Bugs detected, Issues created, Pending, Done/Verified, Health score (severity badge theo verdict)
+- [x] **Metric card click → mở detail aside (list mode)**: KHÔNG popup — nhất quán với kanban; aside hiển thị danh sách nhóm (distinct issues / failed runs / pending / done), click item → aside chuyển sang run detail full; footer "Click to view details"
+- [x] **Kanban compact** 3 cột (Pending / Done-Verified / Failed) — **chiều cao ~1/2, scroll nội bộ column** (UX: không kéo dài trang), count badge mỗi cột
+- [x] **Auto-move**: poll 20s → run tự chuyển cột khi trạng thái đổi
+- [x] **Click card kanban → mở run detail aside** (`onSelectRun` → RunsHistory.openDetail); mobile (<768px) điều hướng sang `/runs/{id}`
+- [x] **Gỡ run history table + filters + pagination**: redundant với kanban + aside (status/issue/date đều trên card; cost/duration/feedback trong aside detail). `/runs` giờ là overview-first; history full >100 runs có thể quay lại sau dưới dạng view riêng
+- [x] **Warning click được**: click warning row → mở detail (error message, PR link, "View run")
+- [x] **Create ticket — theo gói**:
+  - Team → **auto-create** khi phát hiện failed run MỚI (dedup theo runId, 1 lần/run/session, không gate usage)
+  - Free/Solo → nút **"Create ticket"** thủ công → modal **usage review** (used/limit + remaining); khi hết limit → **blocked** + CTA Upgrade `/billing`
+- [x] **Usage warning**: hiện trong warnings list khi `used/limit ≥ 80%` (kèm detail số liệu)
+- [x] **Evaluation panel (4 trụ cột)**: rubric table — Criteria (ngưỡng) + Value + Evidence (số liệu thật) + Verdict per item; weighted score 0–100; **feedback loop** (delta improved/regressed vs snapshot trước, lưu localStorage); suggested actions (create tickets / review failed / check usage)
+- [x] **Backend**: `POST /api/v1/tickets` — JWT (`requireAuth`), resolve account + plan tier **server-side** (không tin client), gate usage (402 `usage_limit_reached` khi free/solo hết limit), enqueue RabbitMQ `issuesFix` (mirror `mcp.ts`), trả `{ runId, status }` (`src/routes/tickets.ts`, mount `src/server.ts`)
+- [x] **i18n đầy đủ**: 55 keys `overview.*` ở en/de/fr/es
+- [x] **Tests**: 11 test mới cho `evaluateProject`/`computeFeedbackLoop`; component tests `ProjectOverview.test.tsx` (kanban grouping, warning detail, tier gating, usage block, team auto-submit); mock mở rộng trong `RunsHistory.test.tsx`
+
+---
+
+## FIX LOG (2026-08-05 — real-data pipeline, all live-verified)
+
+| # | Fix | File |
+|---|---|---|
+| F-1 | `RABBITMQ_URL` sai port 5673 → 5672 + creds `symphony` + tạo vhost `/syntaro` | `.env`, rabbit container |
+| F-2 | `STAS_LABEL` là dead var — config đọc `SYNTARO_LABEL`; thêm `SYNTARO_LABEL=stas:fix` | `.env` |
+| F-3 | `/api/v1/runs` đọc bảng `runs` legacy (rỗng) → chuyển sang `run_history` JOIN accounts | `src/routes/runsApi.ts` |
+| F-4 | Pending run thiếu title → saveRun thêm `summary: jobData.issueTitle` | `src/webhooks/github.ts` |
+| F-5 | `/api/repos` 401/[] → resolveToken async + DB OAuth lookup; `/installations` 403 → fallback user repos | `src/routes/repos.ts`, `src/routes/github.ts` |
+| F-6 | RunsHistory crash `formatDuration` → `formatDurationShort` | `dashboard/src/pages/RunsHistory.tsx` |
+| F-7 | `audit_logs` thiếu cột `ip_address` (code ghi nhưng table thiếu) | Supabase ALTER TABLE |
+| F-8 | common-sense gate chặn freeform conversational fix (issueNumber=0) → bỏ qua check issue_number | `src/guardrails/commonSenseGate.ts` |
+| F-9 | MCP `submit_issue` installationId=0 → resolve từ user → accounts.github_installation_id | `src/routes/mcp.ts` |
+| F-10 | `updateRunStatus` sau dispatch (running/failed) + usage credit ghi tại choke point dispatch | `src/server.ts`, `src/dispatch/osDispatch.ts` |
+| F-11 | usage-limits đọc `usage_records` thay `runs`; `getAccountId` ưu tiên install thật | `src/usage-limits/routes.ts` |
+| F-12 | Run detail: "Share this run" → "Source Code" (View Issue/PR) | `dashboard/src/components/RunDetailContent.tsx` |
+
+## CÒN LẠI (chưa xong)
+
+- [ ] **Real fix tạo PR**: OpenSymphony worker chưa chạy fix thật (dispatch "completed" 3s, không PR). Cần OS config: GITHUB_TOKEN/OPENCODE_URL + worker.
+- [ ] **Slack thật**: bot connected (Socket Mode, workspace Aimino) — chưa test DM/mention thật (cần user nhắn bot).
+- [ ] **Credit balance**: `credit_balances` chưa được ghi (chỉ `usage_records`) — khi có billing sẽ nạp.
+- [ ] Jira OAuth rebuild (Full OAuth) — TẠM HOÃN.

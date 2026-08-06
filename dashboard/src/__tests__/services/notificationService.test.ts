@@ -86,6 +86,68 @@ describe('notificationService', () => {
     });
   });
 
+  describe('syncRecommendations', () => {
+    it('adds new recommendation notifications as unread', async () => {
+      notificationService.syncRecommendations([
+        { recId: 'pass-rate-critical', title: 'Low pass rate', body: 'Review failed runs.', type: 'alert', to: '/runs?status=failed' },
+      ]);
+
+      const notif = notificationService.getNotifications()[0];
+      expect(notif).toMatchObject({
+        title: 'Low pass rate',
+        body: 'Review failed runs.',
+        type: 'alert',
+        read: false,
+      });
+      expect(notif.data).toMatchObject({ recId: 'pass-rate-critical', to: '/runs?status=failed' });
+      expect(notif.id).toMatch(/^notif_/);
+    });
+
+    it('upserts existing recommendation preserving read state and timestamp', async () => {
+      notificationService.syncRecommendations([
+        { recId: 'no-repos', title: 'Old title', body: 'Old body', type: 'system', to: '/repos' },
+      ]);
+      const first = notificationService.getNotifications()[0];
+      await notificationService.markAsRead(first.id);
+
+      notificationService.syncRecommendations([
+        { recId: 'no-repos', title: 'New title', body: 'New body', type: 'alert', to: '/repos' },
+      ]);
+
+      const notifs = notificationService.getNotifications();
+      expect(notifs).toHaveLength(1);
+      expect(notifs[0]).toMatchObject({ title: 'New title', body: 'New body', type: 'alert', read: true });
+      expect(notifs[0].timestamp).toEqual(first.timestamp);
+    });
+
+    it('removes stale recommendations no longer applicable', async () => {
+      notificationService.syncRecommendations([
+        { recId: 'usage-warning', title: 'A', body: 'B', type: 'alert', to: '/billing' },
+        { recId: 'no-repos', title: 'C', body: 'D', type: 'system', to: '/repos' },
+      ]);
+
+      notificationService.syncRecommendations([
+        { recId: 'no-repos', title: 'C', body: 'D', type: 'system', to: '/repos' },
+      ]);
+
+      const notifs = notificationService.getNotifications();
+      expect(notifs).toHaveLength(1);
+      expect(notifs[0].data?.recId).toBe('no-repos');
+    });
+
+    it('notifies subscribers', async () => {
+      const listener = vi.fn();
+      sub(listener);
+
+      notificationService.syncRecommendations([
+        { recId: 'no-repos', title: 'T', body: 'B', type: 'system', to: '/repos' },
+      ]);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener.mock.calls[0][0]).toHaveLength(1);
+    });
+  });
+
   describe('addNotification', () => {
     it('adds a notification with generated id and timestamp', async () => {
       const result = await notificationService.addNotification({ title: 'New', body: 'Body', type: 'alert' });

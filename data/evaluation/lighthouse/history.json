@@ -1,0 +1,55 @@
+[
+  {
+    "timestamp": "2026-08-06T12:47:17.759Z",
+    "evaluation": {
+      "timestamp": "2026-08-06T12:47:17.759Z",
+      "score": 60,
+      "verdict": "warning",
+      "rubric": [
+        {
+          "id": "route:/",
+          "route": "/",
+          "value": 80,
+          "criteria": "≥ 90 good · 50–89 warning · < 50 critical",
+          "severity": "warning",
+          "evidence": "performance 56 · accessibility 98 · best-practices 100 · seo 82",
+          "weight": 0.25,
+          "higherIsBetter": true
+        },
+        {
+          "id": "route:/runs",
+          "route": "/runs",
+          "value": 80,
+          "criteria": "≥ 90 good · 50–89 warning · < 50 critical",
+          "severity": "warning",
+          "evidence": "performance 55 · accessibility 98 · best-practices 100 · seo 82",
+          "weight": 0.25,
+          "higherIsBetter": true
+        },
+        {
+          "id": "route:/settings",
+          "route": "/settings",
+          "value": 79,
+          "criteria": "≥ 90 good · 50–89 warning · < 50 critical",
+          "severity": "warning",
+          "evidence": "performance 53 · accessibility 98 · best-practices 100 · seo 82",
+          "weight": 0.25,
+          "higherIsBetter": true
+        },
+        {
+          "id": "route:/liveview",
+          "route": "/liveview",
+          "value": 80,
+          "criteria": "≥ 90 good · 50–89 warning · < 50 critical",
+          "severity": "warning",
+          "evidence": "performance 56 · accessibility 98 · best-practices 100 · seo 82",
+          "weight": 0.25,
+          "higherIsBetter": true
+        }
+      ],
+      "actions": [
+        "lighthouse.actions.regression"
+      ]
+    }
+  }
+]

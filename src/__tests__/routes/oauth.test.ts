@@ -211,7 +211,7 @@ describe('oauth routes', () => {
 
     expect(mockExchangeCodeForSession).toHaveBeenCalledWith('auth-code-123');
     expect(mockQueryWithRetry).toHaveBeenCalled();
-    expect(mockGenerateTokens).toHaveBeenCalledWith('user-1', 'person@example.com', 'Person');
+    expect(mockGenerateTokens).toHaveBeenCalledWith('user-1', 'person@example.com', 'Person', 'user');
     expect(res._getRedirectUrl()).toContain(
       'http://localhost:5173/login?token=jwt-access-token&refreshToken=jwt-refresh-token',
     );

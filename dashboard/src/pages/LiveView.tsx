@@ -58,12 +58,12 @@ export default function LiveView() {
   useEffect(() => { const i = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(i); }, []);
 
   // AIM-3612: Fix queue badge - only count queued, not running
-  const queueDepth = recentRuns.filter(r => r.status === 'queued').length;
+  const queueDepth = recentRuns.filter(r => r.status === 'queued' || r.status === 'pending').length;
   const activeFixes = recentRuns.filter(r => r.status === 'running').length;
 
   // AIM-3606: Exclude in-progress from success rate
-  const completedRuns = recentRuns.filter(r => r.status !== 'running' && r.status !== 'queued');
-  const successCount = completedRuns.filter(r => r.status === 'success').length;
+  const completedRuns = recentRuns.filter(r => r.status !== 'running' && r.status !== 'queued' && r.status !== 'pending');
+  const successCount = completedRuns.filter(r => r.status === 'success' || r.status === 'completed').length;
   const successRate = completedRuns.length > 0 ? Math.round((successCount / completedRuns.length) * 100) : 0;
 
   // AIM-3607: Exclude in-progress from avg fix time
@@ -79,7 +79,7 @@ export default function LiveView() {
     return m;
   });
 
-  if (loading) return <div className="p-6"><SkeletonCardGrid count={4} /><div className="mt-6"><SkeletonTable rows={5} columns={5} /></div></div>;
+  if (loading) return <div className="p-6"><SkeletonCardGrid count={4} /><div className="mt-6"><table className="w-full"><tbody><SkeletonTable rows={5} columns={5} /></tbody></table></div></div>;
 
   return (
     <div>
@@ -125,7 +125,7 @@ export default function LiveView() {
           ) : recentRuns.slice(0, 10).map((run) => (
             <div key={run.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap">
               <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                run.status === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                run.status === 'success' || run.status === 'completed' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                 run.status === 'failed' ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                 run.status === 'running' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
                 'bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400'

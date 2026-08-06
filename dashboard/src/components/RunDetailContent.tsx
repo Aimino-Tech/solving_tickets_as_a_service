@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Run } from '@/api/types';
 import { CheckCircle, AlertTriangle, XCircle, ArrowUp, ArrowDown } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
+import RunFeedback from '@/components/RunFeedback';
 import { formatCost, formatDurationShort } from '@/utils/format';
 
 interface RunDetailContentProps {
@@ -22,8 +23,6 @@ export default function RunDetailContent({ run }: RunDetailContentProps) {
   const diffPreview = showFullDiff ? diff : diff.slice(0, 2000);
   const hasMoreDiff = diff.length > 2000;
 
-  const shareUrl = `${window.location.origin}/runs/${run.id}`;
-
   return (
     <div className="space-y-5">
       {/* Header card */}
@@ -38,6 +37,10 @@ export default function RunDetailContent({ run }: RunDetailContentProps) {
             </p>
           </div>
           <StatusBadge status={run.status} />
+        </div>
+        <div className="mt-3 flex items-center gap-2 border-t border-gray-100 dark:border-gray-700 pt-3">
+          <span className="text-xs text-gray-500 dark:text-gray-400">Was this fix helpful?</span>
+          <RunFeedback runId={run.id} />
         </div>
       </div>
 
@@ -139,32 +142,47 @@ export default function RunDetailContent({ run }: RunDetailContentProps) {
         </div>
       )}
 
-      {/* Share section */}
+      {/* Source code integration links (GitHub / Bitbucket PR + issue) */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-brand-50 dark:bg-brand-900/30 p-4">
         <div className="flex flex-col gap-3 text-center sm:flex-row sm:text-left">
           <div className="flex-1">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Share this run</h3>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Source Code</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Share the public link to show the fix result, test output, and confidence score.
+              {run.prUrl ? 'View the fix on the pull request in your repository.' : 'Open the issue in your repository to track the fix.'}
             </p>
           </div>
           <div className="flex shrink-0 gap-2 justify-center">
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(shareUrl).catch(() => {});
-              }}
-              className="rounded-lg bg-white dark:bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-            >
-              Copy link
-            </button>
-            <a
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`SYNTARO fix for ${run.repoOwner}/${run.repoName} (${run.status}): ${shareUrl}`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-lg bg-white dark:bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-            >
-              Share on X
-            </a>
+            {run.issueNumber > 0 && (
+              <a
+                href={`https://github.com/${run.repoOwner}/${run.repoName}/issues/${run.issueNumber}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                </svg>
+                View Issue
+              </a>
+            )}
+            {run.prUrl && (
+              <a
+                href={run.prUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                </svg>
+                View Pull Request
+              </a>
+            )}
+            {!run.prUrl && run.issueNumber <= 0 && (
+              <span className="rounded-lg bg-gray-100 dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-600">
+                No PR yet — run {run.status}
+              </span>
+            )}
           </div>
         </div>
       </div>

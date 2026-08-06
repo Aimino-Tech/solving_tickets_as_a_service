@@ -53,11 +53,11 @@ SYNTARO has been fully configured with real GitHub App credentials and tested en
 
 | Variable | Value | Source |
 |----------|-------|--------|
-| `GITHUB_APP_ID` | `4020038` | User provided |
-| `GITHUB_APP_PRIVATE_KEY` | (RSA private key) | User provided |
-| `GITHUB_WEBHOOK_SECRET` | `e4b2ca0ad9782d3371a9be835db593d728f0dbb9` | User provided |
-| `OPENCODE_API_KEY` | `sk-cJTawtmaw3DGYJTeb7WP2HDtLKj4c9Cd877rFwbKzgafS1IgTfRotmT9w7aKrkU8` | User provided |
-| `LINEAR_API_KEY` | `lin_api_fbhkK1yZaFpUSG8KknAT7N4vrP9ALmQ9tKxSo9UW` | User provided |
+| `GITHUB_APP_ID` | `<redacted — rotate if leaked>` | User provided |
+| `GITHUB_APP_PRIVATE_KEY` | (RSA private key — redacted) | User provided |
+| `GITHUB_WEBHOOK_SECRET` | `<redacted — rotate if leaked>` | User provided |
+| `OPENCODE_API_KEY` | `<redacted — rotate if leaked>` | User provided |
+| `LINEAR_API_KEY` | `<redacted — rotate if leaked>` | User provided |
 | `DATABASE_URL` | `postgres://syntaro:syntaro@localhost:5432/syntaro` | Docker PostgreSQL |
 | `REDIS_URL` | `redis://localhost:6379` | Local Redis |
 | `ADMIN_API_KEY` | `dev-admin-key` | Development |

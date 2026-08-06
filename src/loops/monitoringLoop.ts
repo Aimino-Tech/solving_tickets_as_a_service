@@ -2,7 +2,6 @@ import { existsSync, openSync, readSync, statSync } from 'node:fs';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import { webhookEventsRepository } from '../db/repositories/WebhookEventsRepository.js';
-import { runHistoryRepository } from '../db/repositories/RunHistoryRepository.js';
 import { getTracker } from '../trackers/index.js';
 import { buildTicketDescription } from './issueTemplate.js';
 import type { CreateTicketParams } from '../trackers/base.js';
@@ -138,8 +137,8 @@ export class MonitoringLoop {
       log.info('Monitoring loop disabled — skipping');
       return;
     }
-    if (!this.teamId) {
-      log.warn('MONITORING_LOOP_TEAM_ID not configured — monitoring loop disabled');
+    if (!this.teamId && !this.defaultAccountId) {
+      log.warn('MONITORING_LOOP_TEAM_ID and MONITORING_LOOP_DEFAULT_ACCOUNT_ID not configured — monitoring loop disabled');
       return;
     }
     if (this.timer) {
@@ -232,31 +231,68 @@ export class MonitoringLoop {
             continue;
           }
 
-          const params: CreateTicketParams = {
-            teamId: this.teamId,
-            projectId: this.projectId,
-            title: err.title,
-            description: err.description,
-            priority: 2,
-          };
-
-          const ticket = await tracker.createTicket(params);
-          created++;
-
-          await this.redisSet(`monitoring:dup:${err.key}`, ticket.url, 86400);
-
-          log.info({ key: err.key, ticketUrl: ticket.url }, 'MonitoringLoop: created ticket');
-        } catch (createErr) {
-          this.stats.lastError = String(createErr).slice(0, 500);
-          this.consecutiveCreateFailures++;
-          if (this.consecutiveCreateFailures >= CIRCUIT_BREAKER_THRESHOLD) {
-            this.circuitBreakerOpenUntil = Date.now() + CIRCUIT_BREAKER_COOLDOWN_MS;
-            log.warn(
-              { consecutiveFailures: this.consecutiveCreateFailures, cooldownMs: CIRCUIT_BREAKER_COOLDOWN_MS },
-              'Ticket creation circuit breaker opened — pausing for 5 minutes',
-            );
+          // DB-first: persist the detected warning into the internal tickets
+          // store so it stays queryable without external platform dependency.
+          let persisted = false;
+          if (this.defaultAccountId) {
+            try {
+              const { ticketsRepository } = await import('../db/repositories/index.js');
+              await ticketsRepository.create({
+                accountId: this.defaultAccountId,
+                repoOwner: 'syntaro',
+                repoName: 'monitoring',
+                title: err.title,
+                body: err.description,
+                source: 'monitoring',
+                kind: 'warning',
+                severity: 'critical',
+              });
+              persisted = true;
+            } catch (persistErr) {
+              log.warn({ err: String(persistErr), key: err.key }, 'MonitoringLoop: failed to persist warning ticket');
+            }
           }
-          log.error({ err: String(createErr), key: err.key }, 'MonitoringLoop: failed to create ticket');
+
+          // Optional external sync (Linear) when the tracker is configured.
+          let externalCreated = false;
+          if (this.teamId) {
+            const tracker = getTracker('linear');
+            if (tracker) {
+              const params: CreateTicketParams = {
+                teamId: this.teamId,
+                projectId: this.projectId,
+                title: err.title,
+                description: err.description,
+                priority: 2,
+              };
+              try {
+                const ticket = await tracker.createTicket(params);
+                externalCreated = true;
+                await this.redisSet(`monitoring:dup:${err.key}`, ticket.url, 86400);
+                log.info({ key: err.key, ticketUrl: ticket.url }, 'MonitoringLoop: created ticket');
+              } catch (createErr) {
+                this.stats.lastError = String(createErr).slice(0, 500);
+                this.consecutiveCreateFailures++;
+                if (this.consecutiveCreateFailures >= CIRCUIT_BREAKER_THRESHOLD) {
+                  this.circuitBreakerOpenUntil = Date.now() + CIRCUIT_BREAKER_COOLDOWN_MS;
+                  log.warn(
+                    { consecutiveFailures: this.consecutiveCreateFailures, cooldownMs: CIRCUIT_BREAKER_COOLDOWN_MS },
+                    'Ticket creation circuit breaker opened — pausing for 5 minutes',
+                  );
+                }
+                log.error({ err: String(createErr), key: err.key }, 'MonitoringLoop: failed to create ticket');
+              }
+            }
+          }
+
+          if (persisted && !externalCreated) {
+            created++;
+            await this.redisSet(`monitoring:dup:${err.key}`, `internal:${err.key}`, 86400);
+            log.info({ key: err.key }, 'MonitoringLoop: persisted warning ticket');
+          }
+        } catch (err) {
+          this.stats.lastError = String(err).slice(0, 500);
+          log.error({ err: String(err) }, 'MonitoringLoop: ticket creation loop error');
         }
       }
       this.stats.totalTicketsCreated += created;
@@ -375,29 +411,38 @@ export class MonitoringLoop {
     if (!this.defaultAccountId) return errors;
 
     try {
-      const runs = await runHistoryRepository.listByAccount(this.defaultAccountId, 50, 0);
-      const failedRuns = runs.filter((r) => r.status === 'failed');
+      // run_history keys on installation_id (no account_id column in the live
+      // schema) — resolve the account's installation first.
+      const { queryWithRetry } = await import('../db/connection.js');
+      const acct = await queryWithRetry<{ github_installation_id: number | null }>(
+        'SELECT github_installation_id FROM accounts WHERE id = $1',
+        [this.defaultAccountId],
+      );
+      const installationId = Number(acct.rows[0]?.github_installation_id ?? 0);
+      if (!installationId) return errors;
 
-      for (const run of failedRuns) {
+      const runs = await queryWithRetry<{
+        id: number;
+        repo_owner: string;
+        repo_name: string;
+        issue_number: number;
+        summary: string | null;
+        error: string | null;
+        created_at: Date;
+      }>(
+        `SELECT id, repo_owner, repo_name, issue_number, summary, error, created_at
+         FROM run_history
+         WHERE status = 'failed' AND installation_id = $1
+         ORDER BY created_at DESC LIMIT 50`,
+        [installationId],
+      );
+
+      for (const run of runs.rows) {
         errors.push({
           key: `run:${run.id}`,
           title: `[Monitoring] Failed fix run #${run.id}`,
-          description: buildTicketDescription({
-            input: `Fix run #${run.id} for ${run.repo ?? 'unknown repo'} failed`,
-            output: run.result || 'No error details available from run history',
-            context: {
-              what: 'Fix run execution failure',
-              how: 'Agent pipeline returned failed status',
-              where: `repo=${run.repo ?? 'N/A'}, runId=${run.id}, accountId=${run.accountId}`,
-              when: run.completedAt?.toISOString?.() ?? new Date().toISOString(),
-              result: 'Run completed with failed status',
-            },
-            acceptanceCriteria: [
-              'Fix runs complete without failure',
-              'Success rate for fix runs meets SLO targets',
-            ],
-          }),
-          timestamp: run.completedAt?.toISOString?.() ?? new Date().toISOString(),
+          description: `Fix run #${run.id} for ${run.repo_owner}/${run.repo_name} failed: ${run.error || 'No error details available from run history'}`,
+          timestamp: run.created_at?.toISOString?.() ?? new Date().toISOString(),
         });
       }
     } catch (err) {

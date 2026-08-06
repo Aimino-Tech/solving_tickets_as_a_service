@@ -2258,6 +2258,31 @@ components:
         - newBalance
         - amount
         - type
+
+    UsageForecast:
+      type: object
+      properties:
+        forecastDate:
+          type: string
+          format: date-time
+        month:
+          type: string
+        daysElapsed:
+          type: integer
+        daysRemaining:
+          type: integer
+        daysInMonth:
+          type: integer
+        currentUsage:
+          type: object
+          properties:
+            credits:
+              type: number
+            runs:
+              type: number
+        dailyAverage:
+          type: object
+          properties:
             credits:
               type: number
             runs:

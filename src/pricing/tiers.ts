@@ -66,7 +66,7 @@ export const TIER_FEATURES: Record<Tier, FeatureGate> = {
   },
   pro: {
     concurrentFixes: 3,
-    monthlyFixQuota: 100,
+    monthlyFixQuota: 500,
     premiumModels: true,
     maxRetries: 4,
     sandboxTimeoutMs: 600_000,
@@ -75,7 +75,7 @@ export const TIER_FEATURES: Record<Tier, FeatureGate> = {
   },
   team: {
     concurrentFixes: 10,
-    monthlyFixQuota: 500,
+    monthlyFixQuota: 999_999,
     premiumModels: true,
     maxRetries: 10,
     sandboxTimeoutMs: 900_000,

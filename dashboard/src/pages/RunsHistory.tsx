@@ -1,212 +1,149 @@
-import { useState, useEffect, useCallback } from 'react';
-import { runs } from '@/api/client';
+import { X } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Run } from '@/api/types';
-import { Link, useSearchParams } from 'react-router-dom';
-import { formatCost, formatDurationShort } from '@/utils/format';
-import { SkeletonTable, SkeletonCard } from '@/components/LoadingSkeleton';
-import SlideOver from '@/components/SlideOver';
+import ProjectOverview from '@/components/ProjectOverview';
 import RunDetailContent from '@/components/RunDetailContent';
-import EmptyState from '@/components/EmptyState';
-import ErrorState from '@/components/ErrorState';
-import Pagination from '@/components/Pagination';
 import StatusBadge from '@/components/StatusBadge';
+import { useI18n } from '@/i18n/I18nProvider';
 
-const STATUS_FILTERS = ['all', 'running', 'success', 'failed', 'queued', 'cancelled'] as const;
+type AsideState =
+  | { mode: 'run'; run: Run }
+  | { mode: 'list'; runs: Run[]; titleKey: string; descKey: string };
 
 export default function RunsHistory() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [data, setData] = useState<{ data: Run[]; total: number; page: number; totalPages: number } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedRun, setSelectedRun] = useState<Run | null>(null);
+  const { t } = useI18n();
+  const navigate = useNavigate();
+  const [aside, setAside] = useState<AsideState | null>(null);
 
-  const openSlideOver = useCallback((run: Run) => {
-    setSelectedRun(run);
+  const openDetail = useCallback((run: Run) => {
+    setAside({ mode: 'run', run });
     window.location.hash = `detail-${run.id}`;
   }, []);
 
-  const closeSlideOver = useCallback(() => {
-    setSelectedRun(null);
+  const openBrowse = useCallback((runs: Run[], titleKey: string, descKey: string) => {
+    setAside({ mode: 'list', runs, titleKey, descKey });
+    window.location.hash = 'browse';
+  }, []);
+
+  const closeDetail = useCallback(() => {
+    setAside(null);
     window.location.hash = '';
   }, []);
 
-  const page = Number(searchParams.get('page')) || 1;
-  const statusFilter = searchParams.get('status') || '';
-  const repoFilter = searchParams.get('repo') || '';
+  const handleSelectRun = useCallback(
+    (run: Run) => {
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        navigate(`/runs/${run.id}`);
+        return;
+      }
+      openDetail(run);
+    },
+    [navigate, openDetail],
+  );
+
+  const handleBrowseRuns = useCallback(
+    (runs: Run[], titleKey: string, descKey: string) => {
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        if (runs[0]) navigate(`/runs/${runs[0].id}`);
+        return;
+      }
+      openBrowse(runs, titleKey, descKey);
+    },
+    [navigate, openBrowse],
+  );
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-    runs
-      .list({ page, perPage: 20, status: statusFilter || undefined, repo: repoFilter || undefined })
-      .then(setData)
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [page, statusFilter, repoFilter]);
+    if (!aside) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeDetail();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [aside, closeDetail]);
 
-  function updateFilter(key: string, value: string) {
-    const params = new URLSearchParams(searchParams);
-    if (value) {
-      params.set(key, value);
-    } else {
-      params.delete(key);
-    }
-    if (key !== 'page') {
-      params.delete('page');
-    }
-    setSearchParams(params);
-  }
-
-  function handlePageChange(newPage: number) {
-    const params = new URLSearchParams(searchParams);
-    params.set('page', String(newPage));
-    setSearchParams(params);
-  }
+  const headerTitle =
+    aside?.mode === 'run' ? `Run ${String(aside.run.id).slice(0, 8)}` : aside ? t(aside.titleKey) : '';
 
   return (
-    <div className="space-y-6">
-      {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500 dark:text-gray-400">Status:</label>
-          <select
-            value={statusFilter || 'all'}
-            onChange={(e) => updateFilter('status', e.target.value === 'all' ? '' : e.target.value)}
-            className="input-field min-h-[44px] w-full sm:w-32"
-          >
-            {STATUS_FILTERS.map((s) => (
-              <option key={s} value={s}>
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500 dark:text-gray-400">Repo:</label>
-          <input
-            type="text"
-            placeholder="owner/repo"
-            value={repoFilter}
-            onChange={(e) => updateFilter('repo', e.target.value)}
-            className="input-field min-h-[44px] w-full sm:w-48"
-          />
-        </div>
-        {(statusFilter || repoFilter) && (
-          <button onClick={() => setSearchParams({})} className="min-h-[44px] min-w-[44px] text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-            Clear filters
-          </button>
-        )}
+    <div className="flex items-start gap-6">
+      {/* Project status overview — kanban pipeline + warnings + evaluation */}
+      <div className="min-w-0 flex-1 space-y-6">
+        <ProjectOverview
+          onSelectRun={handleSelectRun}
+          onBrowseRuns={(runs, titleKey, descKey) => handleBrowseRuns(runs, titleKey, descKey)}
+        />
       </div>
 
-      {/* Desktop Table */}
-      <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-700/50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">ID</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Issue</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Duration</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Cost</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Date</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-            {loading ? (
-              <SkeletonTable rows={5} columns={6} />
-            ) : error ? (
-              <tr>
-                <td colSpan={6} className="px-4">
-                  <ErrorState message={error} />
-                </td>
-              </tr>
-            ) : data?.data.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4">
-                  <EmptyState title="No runs found." />
-                </td>
-              </tr>
-            ) : (
-              data?.data.map((run) => (
-                <tr key={run.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer" onClick={() => openSlideOver(run)}>
-                  <td className="px-4 py-3">
-                    <span className="font-mono text-xs text-brand-600 dark:text-brand-400">
-                      {String(run.id).slice(0, 8)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {run.repoOwner}/{run.repoName}#{run.issueNumber}
-                    </span>
-                    <p className="truncate max-w-xs text-xs text-gray-500 dark:text-gray-400">{run.issueTitle}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={run.status} />
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                    {formatDuration(run.durationSeconds)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                    {formatCost(run.costCents)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                    {new Date(run.createdAt).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile Card List */}
-      <div className="md:hidden space-y-3">
-        {loading ? (
-          [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
-        ) : error ? (
-          <ErrorState message={error} />
-        ) : data?.data.length === 0 ? (
-          <EmptyState title="No runs found." />
-        ) : (
-          data?.data.map((run) => (
-            <Link
-              key={run.id}
-              to={`/runs/${run.id}`}
-              className="card block hover:border-brand-200 hover:shadow-md transition-all"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-brand-600">{String(run.id).slice(0, 8)}</span>
-                  <StatusBadge status={run.status} />
-                </div>
-                <span className="text-xs text-gray-400 dark:text-gray-500">{formatDuration(run.durationSeconds)}</span>
-              </div>
-              <p className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                {run.repoOwner}/{run.repoName}#{run.issueNumber}
-              </p>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">{run.issueTitle}</p>
-              <div className="mt-2 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
-                <span>{formatCost(run.costCents)}</span>
-                <span>{new Date(run.createdAt).toLocaleDateString()}</span>
-              </div>
-            </Link>
-          ))
-        )}
-      </div>
-
-      {/* Pagination */}
-      {data && (
-        <Pagination page={data.page} totalPages={data.totalPages} total={data.total} onPageChange={handlePageChange} />
-      )}
-
-      {/* Slide-over for run details */}
-      <SlideOver
-        isOpen={selectedRun !== null}
-        onClose={closeSlideOver}
-        title={selectedRun ? `Run ${String(selectedRun.id).slice(0, 8)}` : ''}
+      {/* Detail panel — pushes the main column instead of overlaying it */}
+      <aside
+        className={`hidden md:block shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out ${
+          aside ? 'w-full max-w-lg' : 'w-0'
+        }`}
+        aria-hidden={!aside}
       >
-        {selectedRun && <RunDetailContent run={selectedRun} />}
-      </SlideOver>
+        <div className="sticky top-0 flex h-[calc(100vh-4rem)] w-[32rem] flex-col border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-4">
+            <h2 className="truncate text-lg font-semibold text-gray-900 dark:text-gray-100">{headerTitle}</h2>
+            <button
+              type="button"
+              onClick={closeDetail}
+              className="rounded-lg p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            {aside?.mode === 'run' ? (
+              <RunDetailContent run={aside.run} />
+            ) : aside?.mode === 'list' ? (
+              <BrowseList runs={aside.runs} descKey={aside.descKey} onSelect={openDetail} />
+            ) : null}
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function BrowseList({
+  runs,
+  descKey,
+  onSelect,
+}: {
+  runs: Run[];
+  descKey: string;
+  onSelect: (run: Run) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-500 dark:text-gray-400">{t(descKey)}</p>
+      {runs.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-gray-200 px-2 py-3 text-center text-xs text-gray-400 dark:border-gray-700 dark:text-gray-500">
+          {t('overview.column.empty')}
+        </p>
+      ) : (
+        <div className="space-y-1.5">
+          {runs.map((run) => (
+            <button
+              key={run.id}
+              type="button"
+              onClick={() => onSelect(run)}
+              className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2 text-left transition-colors hover:border-brand-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/40"
+            >
+              <span className="min-w-0">
+                <span className="block truncate font-mono text-xs text-brand-600 dark:text-brand-400">
+                  {run.repoOwner}/{run.repoName}#{run.issueNumber}
+                </span>
+                <span className="block truncate text-sm text-gray-700 dark:text-gray-300">{run.issueTitle}</span>
+              </span>
+              <StatusBadge status={run.status} />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -205,9 +205,10 @@ export function runCommonSenseGate(input: CommonSenseInput): CommonSenseGateResu
 export function guardIssueJobData(data: IssueJobData): CommonSenseGateResult {
   const source = data.source;
   const platform = source !== undefined && isValidPlatform(source) ? source : undefined;
+  const conversational = source !== undefined && !isValidPlatform(source);
   return runCommonSenseGate({
     platform,
-    issueNumber: data.issueNumber,
+    issueNumber: conversational && data.issueNumber <= 0 ? undefined : data.issueNumber,
     repoOwner: data.repoOwner,
     repoName: data.repoName,
     body: data.issueBody ?? undefined,

@@ -222,7 +222,7 @@ export default function UsageLimitsPage() {
       {limits ? (
         <>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <UsageBar title="Continuous Usage" window={limits.continuous} now={now} />
+            <UsageBar title="Daily Usage" window={limits.continuous} now={now} />
             <UsageBar title="Weekly Usage" window={limits.weekly} now={now} />
             <UsageBar title="Monthly Usage" window={limits.monthly} now={now} />
           </div>

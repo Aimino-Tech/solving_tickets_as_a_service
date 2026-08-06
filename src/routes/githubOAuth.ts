@@ -42,7 +42,13 @@ router.get('/callback', async (req: Request, res: Response) => {
   const code = req.query.code as string;
   const state = req.query.state as string;
   if (code) {
-    const frontendUrl = process.env.SYNTARO_PUBLIC_URL || 'http://localhost:5173';
+    // Browser SPA host — must NOT reuse SYNTARO_PUBLIC_URL when that points at the API
+    // (e.g. http://localhost:3002), or OAuth return loses the JWT on :5173 and dumps to /login.
+    const frontendUrl =
+      process.env.SYNTARO_FRONTEND_URL ||
+      process.env.DASHBOARD_URL ||
+      process.env.VITE_DEV_SERVER_URL ||
+      'http://localhost:5173';
     res.redirect(`${frontendUrl}/repos?code=${encodeURIComponent(code)}${state ? `&state=${encodeURIComponent(state)}` : ''}`);
   } else {
     res.status(400).json({ error: 'Missing authorization code' });

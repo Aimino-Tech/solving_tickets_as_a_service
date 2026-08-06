@@ -77,6 +77,54 @@ export function stopPolling(): void {
   }
 }
 
+export interface RecommendationSync {
+  recId: string;
+  title: string;
+  body: string;
+  type: Notification['type'];
+  to?: string;
+}
+
+/**
+ * Upsert recommendation-driven notifications into the local store.
+ * - New recId → added as an unread notification
+ * - Existing recId → title/body/type/to refreshed, read state + timestamp preserved
+ * - recIds no longer in the incoming set → removed (stale)
+ */
+export function syncRecommendations(recs: RecommendationSync[]): void {
+  const incoming = new Set(recs.map((r) => r.recId));
+
+  for (let i = localNotifications.length - 1; i >= 0; i--) {
+    const n = localNotifications[i];
+    const recId = n.data?.recId;
+    if (typeof recId === 'string' && !incoming.has(recId)) {
+      localNotifications.splice(i, 1);
+    }
+  }
+
+  for (const rec of recs) {
+    const existing = localNotifications.find((n) => n.data?.recId === rec.recId);
+    if (existing) {
+      existing.title = rec.title;
+      existing.body = rec.body;
+      existing.type = rec.type;
+      existing.data = { ...existing.data, to: rec.to };
+    } else {
+      localNotifications.unshift({
+        id: generateId(),
+        title: rec.title,
+        body: rec.body,
+        type: rec.type,
+        timestamp: new Date(),
+        read: false,
+        data: { recId: rec.recId, to: rec.to },
+      });
+    }
+  }
+
+  notifyListeners();
+}
+
 export async function addNotification(
   notification: Omit<Notification, 'id' | 'timestamp' | 'read'>,
 ): Promise<Notification> {

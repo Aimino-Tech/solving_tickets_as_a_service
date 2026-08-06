@@ -16,6 +16,8 @@ interface RunRow {
   repo_owner: string;
   repo_name: string;
   issue_number: number;
+  installation_id: number | null;
+  summary: string | null;
 }
 
 interface FeedbackRow {
@@ -29,11 +31,42 @@ interface FeedbackRow {
 }
 
 async function getRun(runId: number): Promise<RunRow | undefined> {
-  const result = await queryWithRetry<RunRow>(
-    'SELECT id, status, pr_url, repo_owner, repo_name, issue_number FROM runs WHERE id = $1',
+  const rh = await queryWithRetry<RunRow>(
+    `SELECT id, status, pr_url, repo_owner, repo_name, issue_number, installation_id, summary
+     FROM run_history WHERE id = $1`,
     [runId],
   );
-  return result.rows[0];
+  if (rh.rows[0]) return rh.rows[0];
+  const legacy = await queryWithRetry<RunRow>(
+    'SELECT id, status, pr_url, repo_owner, repo_name, issue_number, installation_id, summary FROM runs WHERE id = $1',
+    [runId],
+  );
+  return legacy.rows[0];
+}
+
+async function requeueFix(run: RunRow): Promise<void> {
+  try {
+    if (!run.installation_id) return;
+    const { dispatchToOpenSymphony } = await import('../dispatch/osDispatch.js');
+    const result = await dispatchToOpenSymphony({
+      installationId: run.installation_id,
+      repoOwner: run.repo_owner,
+      repoName: run.repo_name,
+      repoPrivate: false,
+      issueNumber: run.issue_number,
+      issueTitle: run.summary || `Re-fix ${run.repo_owner}/${run.repo_name}#${run.issue_number}`,
+      issueBody: null,
+      labels: [],
+      source: 'github',
+    });
+    if (result.success) {
+      log.info({ runId: run.id, osRunId: result.runId }, 'Re-analysis fix re-dispatched to OpenSymphony');
+    } else {
+      log.warn({ runId: run.id, errors: result.errors }, 'Re-analysis re-dispatch failed');
+    }
+  } catch (err) {
+    log.warn({ err: String(err), runId: run.id }, 'Re-analysis re-dispatch error');
+  }
 }
 
 async function getGitHubToken(): Promise<string | null> {
@@ -98,6 +131,7 @@ router.post('/:id/feedback', async (req: Request, res: Response) => {
     if (verdict === 'bad_fix' || verdict === 'not_working') {
       const reanalysisComment = `## SYNTARO Re-analysis Triggered\n\nYou reported this fix as **"${verdict === 'bad_fix' ? 'Bad Fix' : 'Not Working'}"**. SYNTARO will re-analyze the issue with an adjusted approach.\n\n${comment ? `> ${comment}\n\n` : ''}*Re-analysis in progress — a new PR will be created.*`;
       await postIssueComment(run.repo_owner, run.repo_name, run.issue_number, reanalysisComment);
+      await requeueFix(run);
     }
     res.status(201).json(result.rows[0]);
   } catch (err) {

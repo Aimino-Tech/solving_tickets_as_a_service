@@ -71,8 +71,8 @@ describe('TIER_FEATURES', () => {
       expect(pro.concurrentFixes).toBe(3);
     });
 
-    it('has monthly quota of 100 fixes', () => {
-      expect(pro.monthlyFixQuota).toBe(100);
+    it('has monthly quota of 500 fixes', () => {
+      expect(pro.monthlyFixQuota).toBe(500);
     });
 
     it('has premium models', () => {
@@ -106,8 +106,8 @@ describe('TIER_FEATURES', () => {
       expect(team.concurrentFixes).toBe(10);
     });
 
-    it('has monthly quota of 500 fixes', () => {
-      expect(team.monthlyFixQuota).toBe(500);
+    it('has monthly quota of 999999 fixes', () => {
+      expect(team.monthlyFixQuota).toBe(999_999);
     });
 
     it('has premium models', () => {
@@ -211,12 +211,12 @@ describe('getMonthlyQuota', () => {
     expect(getMonthlyQuota('free')).toBe(10);
   });
 
-  it('returns 100 for pro tier', () => {
-    expect(getMonthlyQuota('pro')).toBe(100);
+  it('returns 500 for pro tier', () => {
+    expect(getMonthlyQuota('pro')).toBe(500);
   });
 
-  it('returns 500 for team tier', () => {
-    expect(getMonthlyQuota('team')).toBe(500);
+  it('returns 999999 for team tier', () => {
+    expect(getMonthlyQuota('team')).toBe(999_999);
   });
 
   it('returns 999_999+ for enterprise tier', () => {

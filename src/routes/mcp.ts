@@ -88,6 +88,24 @@ router.post('/mcp/submit_issue', async (req: Request, res: Response) => {
     const runId = randomUUID();
     const now = new Date().toISOString();
 
+    let installationId = 0;
+    if (req.mcpKeyUserId) {
+      try {
+        const { queryWithRetry } = await import('../db/connection.js');
+        const acct = await queryWithRetry<{ github_installation_id: number }>(
+          `SELECT a.github_installation_id
+           FROM accounts a JOIN users u ON u.email = a.email
+           WHERE u.id = $1 ORDER BY a.id ASC LIMIT 1`,
+          [req.mcpKeyUserId],
+        );
+        if (acct.rows[0]?.github_installation_id != null) {
+          installationId = Number(acct.rows[0].github_installation_id) || 0;
+        }
+      } catch (resolveErr) {
+        log.warn({ err: String(resolveErr) }, 'Failed to resolve MCP key owner installation');
+      }
+    }
+
     const jobData: McpJobStatus = {
       runId,
       status: 'queued',
@@ -111,9 +129,9 @@ router.post('/mcp/submit_issue', async (req: Request, res: Response) => {
     try {
       const { QUEUES, publishMessage, connect: rmqConnect, isConnected } = await import('../queue/rabbitmq.js');
       if (!isConnected()) await rmqConnect();
-      const messageId = `0:${repoOwner}/${repoName}#0-${Date.now()}`;
+      const messageId = `${installationId}:${repoOwner}/${repoName}#0-${Date.now()}`;
       await publishMessage(QUEUES.issuesFix.exchange, QUEUES.issuesFix.routingKey, {
-        installationId: 0,
+        installationId,
         repoOwner,
         repoName,
         repoPrivate: false,

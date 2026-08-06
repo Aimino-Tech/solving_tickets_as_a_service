@@ -27,7 +27,15 @@ const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest, mockMcpKeysApiLis
 }));
 
 vi.mock('@/api/client', () => ({
-  configApi: { get: mockConfigApiGet, updateEnv: mockConfigApiUpdateEnv },
+  configApi: {
+    get: mockConfigApiGet,
+    updateEnv: mockConfigApiUpdateEnv,
+    verifyService: (service: string, apiKey: string, extra?: { url?: string; email?: string }) =>
+      mockRequest('/v1/config/verify', {
+        method: 'POST',
+        body: JSON.stringify({ service, apiKey, ...extra }),
+      }),
+  },
   request: mockRequest,
   mcpKeysApi: {
     list: mockMcpKeysApiList,
@@ -114,7 +122,7 @@ describe('Settings', () => {
     });
   });
 
-  it('shows disabled Connect for GitLab, Azure and Jira; Bitbucket Connect is clickable', async () => {
+  it('shows disabled Connect for GitLab and Azure; Bitbucket and Jira Connect are clickable', async () => {
     renderWithProviders(<Settings />);
 
     await waitFor(() => {
@@ -124,7 +132,7 @@ describe('Settings', () => {
     expect(screen.queryAllByRole('link', { name: 'Connect' }).length).toBe(0);
 
     const disabledConnects = screen.getAllByTitle('Setup guide coming soon');
-    expect(disabledConnects.length).toBe(3);
+    expect(disabledConnects.length).toBe(2);
 
     const bbDescription = screen.getByText(
       'Connect with Bitbucket OAuth (recommended) or an API token',
@@ -137,6 +145,59 @@ describe('Settings', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Connect with Bitbucket' })).toBeInTheDocument();
+    });
+  });
+
+  it('connects Jira: expands, saves env, verifies, shows Manage', async () => {
+    mockRequest.mockResolvedValue({ connected: true, name: 'Test User' });
+    mockConfigApiGet.mockResolvedValue({
+      env: {},
+      rateLimits: [],
+      tokens: [],
+      integrations: [{ id: 'jira', name: 'Jira', icon: 'jira', connected: false }],
+      infrastructure: {},
+      symphonies: [],
+      subscriptions: [],
+      warnings: [],
+    });
+    renderWithProviders(<Settings />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Jira')).toBeInTheDocument();
+    });
+
+    const description = screen.getByText('Connect a Jira site to delegate issues to Cloud Agents');
+    const card = description.closest('div.p-4') as HTMLElement;
+    await userEvent.click(within(card).getByRole('button', { name: 'Connect' }));
+
+    await userEvent.type(screen.getByPlaceholderText('https://your-domain.atlassian.net'), 'https://aimino.atlassian.net');
+    await userEvent.type(screen.getByPlaceholderText('you@company.com'), 'test@test.com');
+    await userEvent.type(screen.getByPlaceholderText('ATATT3xFfGF0...'), 'ATATT3xFfGF0-fake-token');
+
+    await userEvent.click(within(card).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(mockConfigApiUpdateEnv).toHaveBeenCalledWith({
+        JIRA_URL: 'https://aimino.atlassian.net',
+        JIRA_EMAIL: 'test@test.com',
+        JIRA_API_TOKEN: 'ATATT3xFfGF0-fake-token',
+      });
+    });
+    expect(mockRequest).toHaveBeenCalledWith(
+      '/v1/config/verify',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          service: 'jira',
+          apiKey: 'ATATT3xFfGF0-fake-token',
+          url: 'https://aimino.atlassian.net',
+          email: 'test@test.com',
+        }),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Manage/i })).toBeInTheDocument();
     });
   });
 

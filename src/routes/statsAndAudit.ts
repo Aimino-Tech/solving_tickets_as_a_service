@@ -20,7 +20,7 @@ statsRouter.get('/', async (req: Request, res: Response) => {
     if (email) {
       try {
         const result = await queryWithRetry<{ id: number }>(
-          'SELECT id FROM accounts WHERE email = $1 LIMIT 1',
+          'SELECT id FROM accounts WHERE email = $1 ORDER BY github_installation_id > 0 DESC, id ASC LIMIT 1',
           [email],
         );
         if (result.rows.length > 0) accountId = result.rows[0].id;
@@ -51,21 +51,32 @@ statsRouter.get('/', async (req: Request, res: Response) => {
     }>(
       `SELECT
         COUNT(*) as total,
-        COUNT(*) FILTER (WHERE status = 'success') as passed,
-        AVG(runs.duration_ms::float / 1000) as avg_duration,
-        COUNT(DISTINCT runs.repo_id) as active_repos
-      FROM runs WHERE runs.account_id = $1`,
+        COUNT(*) FILTER (WHERE rh.status IN ('completed', 'success')) as passed,
+        AVG(rh.duration_ms::float / 1000) as avg_duration,
+        COUNT(DISTINCT (rh.repo_owner, rh.repo_name)) as active_repos
+      FROM run_history rh
+      JOIN accounts a ON rh.installation_id = a.github_installation_id
+      WHERE a.id = $1`,
       [accountId],
     );
     const row = runsResult.rows[0];
 
     const runsByDayResult = await queryWithRetry<{ date: string; count: number; passed: number }>(
       `SELECT
-        DATE(runs.created_at) as date,
+        DATE(rh.created_at) as date,
         COUNT(*) as count,
-        COUNT(*) FILTER (WHERE runs.status = 'success') as passed
-      FROM runs WHERE runs.account_id = $1 AND runs.created_at >= NOW() - INTERVAL '30 days'
-      GROUP BY DATE(runs.created_at) ORDER BY date`,
+        COUNT(*) FILTER (WHERE rh.status = 'success') as passed
+      FROM run_history rh
+      JOIN accounts a ON rh.installation_id = a.github_installation_id
+      WHERE a.id = $1 AND rh.created_at >= NOW() - INTERVAL '30 days'
+      GROUP BY DATE(rh.created_at) ORDER BY date`,
+      [accountId],
+    );
+
+    const usageResult = await queryWithRetry<{ used: number | null }>(
+      `SELECT COALESCE(SUM(credits_used), 0) AS used
+       FROM usage_records
+       WHERE account_id = $1 AND timestamp >= date_trunc('month', NOW())`,
       [accountId],
     );
 
@@ -77,6 +88,7 @@ statsRouter.get('/', async (req: Request, res: Response) => {
       runsByDay: runsByDayResult.rows.map((r) => ({ date: String(r.date), count: Number(r.count), passed: Number(r.passed) })),
       costByDay: [],
       fixRateByWeek: [],
+      fixesUsedThisMonth: Number(usageResult.rows[0]?.used ?? 0),
     });
   } catch (err) {
     log.error({ err: String(err) }, 'Failed to get stats');
@@ -88,6 +100,7 @@ statsRouter.get('/', async (req: Request, res: Response) => {
       runsByDay: [],
       costByDay: [],
       fixRateByWeek: [],
+      fixesUsedThisMonth: 0,
     });
   }
 });
@@ -104,7 +117,7 @@ auditRouter.get('/', async (req: Request, res: Response) => {
     if (email) {
       try {
         const result = await queryWithRetry<{ id: number }>(
-          'SELECT id FROM accounts WHERE email = $1 LIMIT 1',
+          'SELECT id FROM accounts WHERE email = $1 ORDER BY github_installation_id > 0 DESC, id ASC LIMIT 1',
           [email],
         );
         if (result.rows.length > 0) accountId = result.rows[0].id;

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 function formatTime(date: Date): string {
@@ -16,6 +17,7 @@ function formatTime(date: Date): string {
 export default function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll, permission, requestPermission } =
     usePushNotifications();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -46,6 +48,13 @@ export default function NotificationBell() {
 
   const handleNotificationClick = (id: string) => {
     markAsRead(id);
+    const notif = notifications.find((n) => n.id === id);
+    const to = notif?.data?.to;
+    if (typeof to === 'string' && to) {
+      setIsOpen(false);
+      navigate(to);
+      return;
+    }
     setExpandedId((prev) => (prev === id ? null : id));
   };
 

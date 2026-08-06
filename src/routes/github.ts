@@ -77,7 +77,50 @@ router.get('/installations', async (req: Request, res: Response) => {
 
     if (!r.ok) {
       const errBody = await r.text().catch(() => '');
-      log.warn({ status: r.status, body: errBody }, 'GitHub API error fetching installations — falling back to DB');
+      log.warn({ status: r.status, body: errBody }, 'GitHub API error fetching installations — falling back to user repos');
+      try {
+        const reposRes = await fetch('https://api.github.com/user/repos?per_page=100&sort=full_name', {
+          headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'syntaro-bot' },
+        });
+        if (reposRes.ok) {
+          const repos = (await reposRes.json()) as Record<string, any>[];
+          const userRes = await fetch('https://api.github.com/user', {
+            headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'syntaro-bot' },
+          });
+          const user = userRes.ok ? ((await userRes.json()) as Record<string, any>) : { login: 'user' };
+          res.json({
+            installations: [
+              ...storedRows,
+              {
+                installationId: 0,
+                accountLogin: (user as any).login ?? 'user',
+                accountType: 'User',
+                avatarUrl: (user as any).avatar_url ?? null,
+                repoScope: 'all',
+                repos: repos.map((repo: any) => ({
+                  id: repo.id,
+                  owner: repo.owner?.login ?? '',
+                  name: repo.name,
+                  fullName: repo.full_name,
+                  private: repo.private,
+                  description: repo.description ?? null,
+                  defaultBranch: repo.default_branch ?? null,
+                  language: repo.language ?? null,
+                  updatedAt: repo.updated_at ?? null,
+                })),
+                stored: false,
+                storedId: null,
+                fromFallback: true,
+              },
+            ],
+            error: null,
+            fallback: true,
+          });
+          return;
+        }
+      } catch (fallbackErr) {
+        log.warn({ err: String(fallbackErr) }, 'User-repos fallback failed');
+      }
       res.json({ installations: storedRows, error: `GitHub API returned ${r.status} — showing saved installations only` });
       return;
     }
@@ -189,9 +232,13 @@ router.post('/installations/:id/repos/:owner/:repo/webhook', async (req: Request
     if (isNaN(iid)) { res.status(400).json({ error: 'Invalid installation ID' }); return; }
     const { owner, repo } = req.params;
     const inst = await gitHubInstallationRepository.findById(iid);
-    if (!inst) { res.status(404).json({ error: 'Installation not found' }); return; }
-    const instUserId = (inst as any).user_id ?? inst.userId;
-    if (instUserId !== req.user!.id) { res.status(403).json({ error: 'Forbidden' }); return; }
+    // Synthetic OAuth fallback installation (id 0) has no DB row — webhook
+    // creation still works via the user's OAuth token.
+    if (!inst && iid !== 0) { res.status(404).json({ error: 'Installation not found' }); return; }
+    if (inst) {
+      const instUserId = (inst as any).user_id ?? inst.userId;
+      if (instUserId !== req.user!.id) { res.status(403).json({ error: 'Forbidden' }); return; }
+    }
 
     let webhookId: number | null = null;
     let warning: string | undefined;
@@ -211,29 +258,32 @@ router.post('/installations/:id/repos/:owner/:repo/webhook', async (req: Request
       } else {
         const errBody = await whResp.text().catch(() => '');
         log.warn({ status: whResp.status, body: errBody, owner, repo }, 'GitHub API webhook creation failed — connecting repo without webhook');
-        warning = 'Repo connected without webhook (GitHub API ' + whResp.status + ').';
+        warning = 'Repo connected without webhook (GitHub API ' + whResp.status + '). ' + (errBody.includes('public Internet') ? 'SYNTARO_PUBLIC_URL must be a public HTTPS URL for GitHub to deliver webhooks.' : '');
       }
     } else {
       warning = 'Repo connected. No GitHub OAuth token available for webhook creation.';
     }
 
     const fullName = owner + '/' + repo;
-    const existingRepos: Array<any> = Array.isArray((inst as any).repos_json) ? (inst as any).repos_json : [];
-    const updatedRepos = existingRepos.map((r: any) =>
-      r.fullName === fullName ? { ...r, syntaroInstalled: true } : r
-    );
-    if (!updatedRepos.find((r: any) => r.fullName === fullName)) {
-      updatedRepos.push({ name: repo, owner, fullName, private: false, syntaroInstalled: true });
+    let updatedRepos: Array<any> = [];
+    if (inst) {
+      const existingRepos: Array<any> = Array.isArray((inst as any).repos_json) ? (inst as any).repos_json : [];
+      updatedRepos = existingRepos.map((r: any) =>
+        r.fullName === fullName ? { ...r, syntaroInstalled: true } : r
+      );
+      if (!updatedRepos.find((r: any) => r.fullName === fullName)) {
+        updatedRepos.push({ name: repo, owner, fullName, private: false, syntaroInstalled: true });
+      }
+      const actualInstallationId = (inst as any).installation_id ?? inst.installationId;
+      await gitHubInstallationRepository.create({
+        userId: req.user!.id,
+        installationId: Number(actualInstallationId),
+        accountLogin: (inst as any).account_login ?? inst.accountLogin,
+        accountType: (inst as any).account_type ?? inst.accountType,
+        repoScope: (inst as any).repo_scope ?? inst.repoScope,
+        reposJson: updatedRepos,
+      });
     }
-    const actualInstallationId = (inst as any).installation_id ?? inst.installationId;
-    await gitHubInstallationRepository.create({
-      userId: req.user!.id,
-      installationId: Number(actualInstallationId),
-      accountLogin: (inst as any).account_login ?? inst.accountLogin,
-      accountType: (inst as any).account_type ?? inst.accountType,
-      repoScope: (inst as any).repo_scope ?? inst.repoScope,
-      reposJson: updatedRepos,
-    });
 
     res.status(201).json({ success: true, webhookId, warning });
   } catch (err) { log.error({ err: String(err) }, 'Failed to create webhook'); res.status(500).json({ error: 'Failed to create webhook' }); }

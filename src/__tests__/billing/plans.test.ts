@@ -35,18 +35,18 @@ describe('billing/plans', () => {
       expect(free.premiumModels).toBe(false);
     });
 
-    it('solo plan costs $49 (4900 cents) with 100 fixes/mo', () => {
+    it('solo plan costs $49 (4900 cents) with 500 fixes/mo', () => {
       const solo = plans.PLANS.solo;
       expect(solo.amountCents).toBe(4900);
-      expect(solo.monthlyFixLimit).toBe(100);
+      expect(solo.monthlyFixLimit).toBe(500);
       expect(solo.premiumModels).toBe(true);
       expect(solo.concurrentFixes).toBe(3);
     });
 
-    it('team plan costs $149 (14900 cents) with 500 fixes/mo', () => {
+    it('team plan costs $149 (14900 cents) with unlimited fixes', () => {
       const team = plans.PLANS.team;
       expect(team.amountCents).toBe(14900);
-      expect(team.monthlyFixLimit).toBe(500);
+      expect(team.monthlyFixLimit).toBe(999_999);
       expect(team.premiumModels).toBe(true);
       expect(team.concurrentFixes).toBe(10);
     });
@@ -93,8 +93,8 @@ describe('billing/plans', () => {
   describe('getMonthlyFixLimit', () => {
     it('returns the correct monthly fix limit', () => {
       expect(plans.getMonthlyFixLimit('free')).toBe(10);
-      expect(plans.getMonthlyFixLimit('solo')).toBe(100);
-      expect(plans.getMonthlyFixLimit('team')).toBe(500);
+      expect(plans.getMonthlyFixLimit('solo')).toBe(500);
+      expect(plans.getMonthlyFixLimit('team')).toBe(999_999);
       expect(plans.getMonthlyFixLimit('enterprise')).toBe(999_999);
     });
   });

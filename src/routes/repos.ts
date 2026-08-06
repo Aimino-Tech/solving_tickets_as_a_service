@@ -13,6 +13,9 @@ import { Router, type Request, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
+import { requireAuth } from '../auth/middleware.js';
+import { gitHubOAuthRepository } from '../db/repositories/GitHubOAuthRepository.js';
+import { decrypt } from '../utils/encryption.js';
 const log = rootLogger.child({ module: 'repos-routes' });
 
 // ---------------------------------------------------------------------------
@@ -30,6 +33,7 @@ const reposLimiter = (rateLimit as any)({
 const router: Router = Router();
 
 router.use(reposLimiter);
+router.use(requireAuth);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -88,7 +92,7 @@ interface GitHubInstallation {
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const token = resolveToken(req);
+    const token = await resolveToken(req);
     if (!token) {
       res.json([]);
       return;
@@ -204,7 +208,7 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.get('/:owner/:repo', async (req: Request, res: Response) => {
   try {
-    const token = resolveToken(req);
+    const token = await resolveToken(req);
     if (!token) {
       res.status(401).json({ error: 'GitHub access token not available' });
       return;
@@ -305,7 +309,7 @@ router.get('/:owner/:repo', async (req: Request, res: Response) => {
  * The token is stored in the user's auth session — for this we fall back
  * to the GitHub App installation token or the configured app.
  */
-function resolveToken(req: Request): string | null {
+async function resolveToken(req: Request): Promise<string | null> {
   // First try Authorization header (GitHub OAuth token)
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith('Bearer ')) {
@@ -330,6 +334,25 @@ function resolveToken(req: Request): string | null {
 
   // Dev mode: use configured DEV_GITHUB_TOKEN
   if (config.github.devToken) return config.github.devToken;
+
+  // DB-stored GitHub OAuth token (persisted by the OAuth callback)
+  if (req.user) {
+    try {
+      const s = await gitHubOAuthRepository.findByUserId(req.user.id);
+      if (s) {
+        const encToken = (s as any).access_token_encrypted ?? (s as any).accessTokenEncrypted;
+        if (encToken) {
+          try {
+            return decrypt(encToken);
+          } catch (err) {
+            log.warn({ err: String(err) }, 'Failed to decrypt GitHub OAuth token');
+          }
+        }
+      }
+    } catch (err) {
+      log.warn({ err: String(err) }, 'Failed to look up GitHub OAuth token');
+    }
+  }
 
   return null;
 }

@@ -42,15 +42,15 @@ export default function Layout() {
     sessionStorage.removeItem('syntaro:onboarding_pending');
   }, []);
 
-  const NAV_ITEMS: { to: string; label: string; icon: LucideIcon }[] = [
+  const NAV_ITEMS: { to: string; label: string; icon: LucideIcon; disabled?: boolean }[] = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
     { to: '/runs', label: t('nav.runs'), icon: RotateCw },
     { to: '/usage-limits', label: 'Usage Limits', icon: Gauge }, // AIM-4645 + AIM-4641
     { to: '/repos', label: t('nav.repos'), icon: GitFork },
     // AIM-4642
-    { to: '/members', label: 'Members', icon: Users },
+    { to: '/members', label: 'Members', icon: Users, disabled: true },
     { to: '/billing', label: 'Billing', icon: CreditCard },
-    { to: '/audit', label: t('nav.audit'), icon: ScrollText },
+    { to: '/audit', label: t('nav.audit'), icon: ScrollText, disabled: true },
     // AIM-4643
     { to: '/referral', label: 'Referral', icon: Gift },
     { to: '/settings', label: t('nav.settings'), icon: SettingsIcon },
@@ -102,6 +102,18 @@ export default function Layout() {
         <nav className="flex-1 space-y-1 px-3 py-4">
           {NAV_ITEMS.map((item) => {
             const isActive = isNavActive(item.to);
+            if (item.disabled) {
+              return (
+                <span
+                  key={item.to}
+                  aria-disabled="true"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors min-h-[44px] text-gray-400 dark:text-gray-600 opacity-50 cursor-not-allowed select-none"
+                >
+                  <item.icon size={20} />
+                  {item.label}
+                </span>
+              );
+            }
             return (
               <NavLink
                 key={item.to}

@@ -114,7 +114,7 @@ async function sendToN8n(
   event: NotificationEvent,
   data: NotificationData,
 ): Promise<boolean> {
-  const n8nUrl = config.n8n.webhookUrl;
+  const n8nUrl = config.alerting?.n8nWebhookUrl;
   if (!n8nUrl) return false;
 
   try {

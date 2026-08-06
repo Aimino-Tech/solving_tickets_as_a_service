@@ -28,7 +28,9 @@ export interface IssueDispatchPayload {
 }
 
 function getDispatchUrl(): string | undefined {
-  const base = config.osy?.dispatchUrl ?? process.env.OS_DISPATCH_URL;
+  const base = config.osy?.dispatchUrl || process.env.OS_DISPATCH_URL;
+  // Empty-string config values (e.g. OSY_DISPATCH_URL=) must not shadow the
+  // real OS_DISPATCH_URL fallback — `||` treats '' as unset.
   return base || undefined;
 }
 
@@ -81,9 +83,11 @@ export async function dispatchIssueToOsy(payload: IssueDispatchPayload): Promise
       return { success: false, error: `HTTP ${response.status}: ${text}` };
     }
 
-    const result = (await response.json()) as { run_id?: string };
-    log.info({ runId: result.run_id }, 'OS dispatch succeeded');
-    return { success: true, runId: result.run_id };
+    // OpenSymphony dispatch responses use dispatch_id (older backends: run_id)
+    const result = (await response.json()) as { run_id?: string; dispatch_id?: string };
+    const runId = result.run_id ?? result.dispatch_id;
+    log.info({ runId }, 'OS dispatch succeeded');
+    return { success: true, runId };
   } catch (err) {
     log.error({ err: String(err) }, 'OS dispatch request failed');
     return { success: false, error: String(err) };
@@ -96,13 +100,23 @@ export async function getRunStatus(runId: string): Promise<{ status: string; prU
 
   try {
     const baseUrl = new URL(url);
-    const statusUrl = `${baseUrl.origin}/api/v1/runs/${runId}`;
+    // OpenSymphony exposes run state at /api/v1/dispatch/{id}/status, not /api/v1/runs/{id}
+    const statusUrl = `${baseUrl.origin}/api/v1/dispatch/${runId}/status`;
     const response = await fetch(statusUrl, {
       headers: { 'X-API-Key': config.osy?.apiKey ?? '' },
     });
 
     if (!response.ok) return null;
-    return (await response.json()) as { status: string; prUrl?: string };
+    const body = (await response.json()) as {
+      state?: string;
+      result?: { pr_url?: string; prUrl?: string; status?: string };
+    };
+    const status = body.state ?? body.result?.status;
+    if (!status) return null;
+    const out: { status: string; prUrl?: string } = { status };
+    if (body.result?.pr_url) out.prUrl = body.result.pr_url;
+    else if (body.result?.prUrl) out.prUrl = body.result.prUrl;
+    return out;
   } catch {
     return null;
   }

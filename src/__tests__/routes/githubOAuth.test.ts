@@ -260,6 +260,53 @@ describe('githubOAuth routes', () => {
   });
 
   // -----------------------------------------------------------------------
+  // GET /callback
+  // -----------------------------------------------------------------------
+
+  describe('GET /callback', () => {
+    it('redirects to the frontend (SYNTARO_FRONTEND_URL), not the API host', async () => {
+      process.env.SYNTARO_FRONTEND_URL = 'http://localhost:5173';
+
+      await ensureModuleLoaded();
+      const handler = findHandler('get', '/callback')!;
+      const { req, res } = mockReqRes('GET', '/callback');
+      req.query = { code: 'abc123', state: 'state-1' };
+
+      await handler(req, res);
+
+      expect(res.redirect).toHaveBeenCalledWith(
+        'http://localhost:5173/repos?code=abc123&state=state-1',
+      );
+    });
+
+    it('redirects to the default frontend when no frontend env is set', async () => {
+      delete process.env.SYNTARO_FRONTEND_URL;
+      delete process.env.DASHBOARD_URL;
+      delete process.env.VITE_DEV_SERVER_URL;
+
+      await ensureModuleLoaded();
+      const handler = findHandler('get', '/callback')!;
+      const { req, res } = mockReqRes('GET', '/callback');
+      req.query = { code: 'abc123' };
+
+      await handler(req, res);
+
+      expect(res.redirect).toHaveBeenCalledWith('http://localhost:5173/repos?code=abc123');
+    });
+
+    it('returns 400 when code is missing', async () => {
+      await ensureModuleLoaded();
+      const handler = findHandler('get', '/callback')!;
+      const { req, res } = mockReqRes('GET', '/callback');
+
+      await handler(req, res);
+
+      expect(res._getStatusCode()).toBe(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Missing authorization code' });
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // DELETE /disconnect
   // -----------------------------------------------------------------------
 

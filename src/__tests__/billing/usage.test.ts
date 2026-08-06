@@ -45,7 +45,7 @@ describe('billing/usage', () => {
   describe('getRemainingBillingUsage', () => {
     it('returns remaining for a plan', async () => {
       mockRedisClient.zcount.mockResolvedValue(30);
-      expect(await usage.getRemainingBillingUsage(42, 'solo')).toBe(70);
+      expect(await usage.getRemainingBillingUsage(42, 'solo')).toBe(470);
     });
     it('returns limit for enterprise', async () => {
       expect(await usage.getRemainingBillingUsage(42, 'enterprise')).toBe(999_999);
@@ -92,10 +92,10 @@ describe('billing/usage', () => {
       mockRedisClient.zcount.mockResolvedValue(5);
       const r = await usage.checkUsageBeforeFix(42, 'solo');
       expect(r.allowed).toBe(true);
-      expect(r.remaining).toBe(95);
+      expect(r.remaining).toBe(495);
     });
     it('blocks when over limit', async () => {
-      mockRedisClient.zcount.mockResolvedValue(100);
+      mockRedisClient.zcount.mockResolvedValue(600);
       const r = await usage.checkUsageBeforeFix(42, 'solo');
       expect(r.allowed).toBe(false);
     });

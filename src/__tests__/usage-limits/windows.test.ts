@@ -8,18 +8,25 @@ import {
 describe('usage-limits window helpers', () => {
   const now = Date.UTC(2026, 7, 15, 12, 0, 0); // 2026-08-15T12:00:00Z
 
-  it('continuous window spans 24h before and after now', () => {
+  it('daily window is today 00:00 UTC to tomorrow 00:00 UTC', () => {
     const w = computeContinuousWindow(now);
-    expect(w.endMs - w.startMs).toBe(48 * 3_600_000);
-    expect(w.startMs).toBe(now - 24 * 3_600_000);
-    expect(w.endMs).toBe(now + 24 * 3_600_000);
+    expect(w.startMs).toBe(Date.UTC(2026, 7, 15, 0, 0, 0, 0));
+    expect(w.endMs).toBe(Date.UTC(2026, 7, 16, 0, 0, 0, 0));
+    expect(w.endMs - w.startMs).toBe(24 * 3_600_000);
   });
 
-  it('weekly window spans 7d before and after now', () => {
+  it('weekly window is the ISO week from Monday 00:00 UTC', () => {
     const w = computeWeeklyWindow(now);
-    expect(w.endMs - w.startMs).toBe(14 * 24 * 3_600_000);
-    expect(w.startMs).toBe(now - 7 * 24 * 3_600_000);
-    expect(w.endMs).toBe(now + 7 * 24 * 3_600_000);
+    expect(w.startMs).toBe(Date.UTC(2026, 7, 10, 0, 0, 0, 0));
+    expect(w.endMs).toBe(Date.UTC(2026, 7, 17, 0, 0, 0, 0));
+    expect(w.endMs - w.startMs).toBe(7 * 24 * 3_600_000);
+  });
+
+  it('weekly window handles Sunday by rewinding to the previous Monday', () => {
+    const sunday = Date.UTC(2026, 7, 16, 8, 0, 0); // 2026-08-16 is Sunday
+    const w = computeWeeklyWindow(sunday);
+    expect(w.startMs).toBe(Date.UTC(2026, 7, 10, 0, 0, 0, 0));
+    expect(w.endMs).toBe(Date.UTC(2026, 7, 17, 0, 0, 0, 0));
   });
 
   it('monthly window is the calendar month with reset at next month start', () => {

@@ -4,15 +4,6 @@ import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
 import { useI18n } from '@/i18n/I18nProvider';
 
-type ConnectedRepo = {
-  key: string;
-  installationId: number;
-  owner: string;
-  name: string;
-  fullName: string;
-  private: boolean;
-};
-
 export default function Repos() {
   const { t } = useI18n();
   const [installations, setInstallations] = useState<GitHubInstallation[]>([]);
@@ -20,7 +11,6 @@ export default function Repos() {
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; githubLogin?: string }>({ connected: false });
-  const [showInstallations, setShowInstallations] = useState(true);
   const [togglingRepo, setTogglingRepo] = useState<string | null>(null);
   const [bbStatus, setBbStatus] = useState<{ connected: boolean; workspace: string }>({ connected: false, workspace: '' });
   const [bbRepos, setBbRepos] = useState<BitbucketRepo[]>([]);
@@ -29,19 +19,6 @@ export default function Repos() {
   const [bbConnecting, setBbConnecting] = useState(false);
   const [bbError, setBbError] = useState<string | null>(null);
   const [togglingBbRepo, setTogglingBbRepo] = useState<string | null>(null);
-
-  const connectedRepos: ConnectedRepo[] = installations.flatMap((inst) =>
-    (inst.repos ?? [])
-      .filter((repo) => repo.syntaroInstalled)
-      .map((repo) => ({
-        key: `${inst.installationId}:${repo.fullName}`,
-        installationId: inst.installationId,
-        owner: repo.owner,
-        name: repo.name,
-        fullName: repo.fullName,
-        private: repo.private,
-      })),
-  );
 
   async function loadBitbucket(signal?: AbortSignal) {
     setBbLoading(true);
@@ -204,20 +181,6 @@ export default function Repos() {
     }
   }
 
-  async function handleDisconnectConnectedRepo(repo: ConnectedRepo) {
-    if (!confirm(`Disconnect ${repo.fullName}? SYNTARO will stop receiving events from this repository.`)) return;
-    setTogglingRepo(repo.fullName);
-    try {
-      await github.removeWebhook(repo.installationId, repo.owner, repo.name);
-      const instData = await github.listInstallations();
-      setInstallations(instData.installations ?? []);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to disconnect repository');
-    } finally {
-      setTogglingRepo(null);
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -260,17 +223,9 @@ export default function Repos() {
         </div>
       ) : connectionStatus.connected ? (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              GitHub Installations & Repos
-            </h3>
-            <button
-              onClick={() => setShowInstallations(!showInstallations)}
-              className="text-sm text-brand-600 dark:text-brand-400 min-h-[44px] min-w-[44px]"
-            >
-              {showInstallations ? 'Hide repos' : 'Show all repos'}
-            </button>
-          </div>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            GitHub Installations & Repos
+          </h3>
 
           {installations.length === 0 ? (
             <EmptyState
@@ -300,89 +255,45 @@ export default function Repos() {
                       Installation #{inst.installationId} &middot; {inst.repoScope} repos
                     </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      github.removeInstallation(inst.installationId)
-                        .then(() => loadAll())
-                        .catch((err) => setError(err instanceof Error ? err.message : 'Failed to remove installation'));
-                    }}
-                    className="btn-danger text-xs"
-                  >
-                    Remove
-                  </button>
                 </div>
 
-                {showInstallations && (
-                  <div className="space-y-2">
-                    {(inst.repos ?? []).length === 0 ? (
-                      <p className="text-xs text-gray-400 px-3 py-2">No repositories in this installation.</p>
-                    ) : (
-                      (inst.repos ?? []).map((repo) => (
-                        <div
-                          key={repo.fullName}
-                          className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className={`inline-block h-2 w-2 rounded-full ${repo.syntaroInstalled ? 'bg-green-500' : 'bg-gray-300'}`} />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{repo.fullName}</span>
-                            {repo.private && (
-                              <span className="text-xs text-gray-400">Private</span>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => handleToggleRepo(inst.installationId, repo.owner, repo.name, repo.syntaroInstalled)}
-                            disabled={togglingRepo === repo.fullName}
-                            className={`text-xs px-3 py-1 rounded-full min-h-[44px] ${
-                              repo.syntaroInstalled
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                            }`}
-                          >
-                            {togglingRepo === repo.fullName
-                              ? '...'
-                              : repo.syntaroInstalled
-                                ? 'SYNTARO Active'
-                                : 'Enable SYNTARO'}
-                          </button>
+                <div className="space-y-2">
+                  {(inst.repos ?? []).length === 0 ? (
+                    <p className="text-xs text-gray-400 px-3 py-2">No repositories in this installation.</p>
+                  ) : (
+                    (inst.repos ?? []).map((repo) => (
+                      <div
+                        key={repo.fullName}
+                        className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-block h-2 w-2 rounded-full ${repo.syntaroInstalled ? 'bg-green-500' : 'bg-gray-300'}`} />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{repo.fullName}</span>
+                          {repo.private && (
+                            <span className="text-xs text-gray-400">Private</span>
+                          )}
                         </div>
-                      ))
-                    )}
-                  </div>
-                )}
+                        <button
+                          onClick={() => handleToggleRepo(inst.installationId, repo.owner, repo.name, repo.syntaroInstalled)}
+                          disabled={togglingRepo === repo.fullName}
+                          className={`text-xs px-3 py-1 rounded-full min-h-[44px] ${
+                            repo.syntaroInstalled
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                              : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                          }`}
+                        >
+                          {togglingRepo === repo.fullName
+                            ? '...'
+                            : repo.syntaroInstalled
+                              ? 'SYNTARO Active'
+                              : 'Enable SYNTARO'}
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             ))
-          )}
-
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 pt-4">
-            Connected Repositories ({connectedRepos.length})
-          </h3>
-          {connectedRepos.length === 0 ? (
-            <EmptyState title="No repositories connected." hint="Enable SYNTARO on repos above." />
-          ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {connectedRepos.map((repo) => (
-                <div key={repo.key} className="card flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        {repo.fullName}
-                      </h3>
-                    </div>
-                    {repo.private && (
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Private</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => handleDisconnectConnectedRepo(repo)}
-                    disabled={togglingRepo === repo.fullName}
-                    className="btn-danger text-xs mt-3 self-start"
-                  >
-                    {togglingRepo === repo.fullName ? '...' : t('repos.disconnect')}
-                  </button>
-                </div>
-              ))}
-            </div>
           )}
         </div>
       ) : (

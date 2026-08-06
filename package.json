@@ -28,6 +28,7 @@
     "start:api": "RUN_MODE=api node dist/src/index.js",
     "start:worker": "RUN_MODE=worker node dist/src/index.js",
     "typecheck": "tsc --noEmit",
+    "lighthouse:sweep": "bash scripts/lighthouse-sweep.sh",
     "lint": "biome check src/",
     "lint:eslint": "eslint src/__tests__/ --max-warnings=0",
     "test:architecture": "vitest run src/__tests__/architecture.test.ts --reporter=verbose",
@@ -104,7 +105,8 @@
     "test:automation:python:login": "cd tests/automation && python -m pytest test_login.py -v",
     "test:automation:python:api": "cd tests/automation && python -m pytest test_auth_api.py -v",
     "eval:conversations": "tsx eval/conversations/run.ts",
-    "syntaro:quickstart": "tsx src/template/cli.ts quickstart"
+    "syntaro:quickstart": "tsx src/template/cli.ts quickstart",
+    "eval:scorecard": "tsx eval/scorecard.ts"
   },
   "dependencies": {
     "@linear/sdk": "^87.0.0",

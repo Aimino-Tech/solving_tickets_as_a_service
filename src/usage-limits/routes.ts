@@ -22,7 +22,7 @@ import { z } from 'zod';
 import { requireAuth } from '../auth/middleware.js';
 import { queryWithRetry, isTableNotFoundError } from '../db/connection.js';
 import { creditsRepository } from '../db/repositories/CreditsRepository.js';
-import { PLANS, getMonthlyFixLimit } from '../billing/plans.js';
+import { PLANS } from '../billing/plans.js';
 import type { PlanId } from '../billing/plans.js';
 import { rootLogger } from '../utils/logger.js';
 
@@ -74,17 +74,24 @@ export interface UsageLimitsResponse {
 // ---------------------------------------------------------------------------
 
 /**
- * Rolling 24h window: usage over the last 24h, reset 24h from now.
+ * Daily calendar window: usage since 00:00 UTC today, reset at 00:00 UTC tomorrow.
  */
 export function computeContinuousWindow(nowMs: number = Date.now()): { startMs: number; endMs: number } {
-  return { startMs: nowMs - DAY_MS, endMs: nowMs + DAY_MS };
+  const now = new Date(nowMs);
+  const startMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0);
+  const endMs = startMs + DAY_MS;
+  return { startMs, endMs };
 }
 
 /**
- * Rolling 7d window: usage over the last 7 days, reset 7 days from now.
+ * Weekly calendar window: usage since 00:00 UTC Monday, reset at 00:00 UTC next Monday.
  */
 export function computeWeeklyWindow(nowMs: number = Date.now()): { startMs: number; endMs: number } {
-  return { startMs: nowMs - WEEK_MS, endMs: nowMs + WEEK_MS };
+  const now = new Date(nowMs);
+  const daysSinceMonday = (now.getUTCDay() + 6) % 7;
+  const startMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0) - daysSinceMonday * DAY_MS;
+  const endMs = startMs + WEEK_MS;
+  return { startMs, endMs };
 }
 
 /**
@@ -121,7 +128,7 @@ async function getAccountId(req: Request): Promise<number | undefined> {
   if (req.user) {
     try {
       const result = await queryWithRetry<{ id: number }>(
-        'SELECT id FROM accounts WHERE email = $1 LIMIT 1',
+        'SELECT id FROM accounts WHERE email = $1 ORDER BY github_installation_id > 0 DESC, id ASC LIMIT 1',
         [req.user.email],
       );
       if (result.rows.length > 0) return result.rows[0].id;
@@ -188,21 +195,22 @@ async function getAccountPrefs(accountId: number): Promise<{ useBalanceAfterLimi
 // ---------------------------------------------------------------------------
 
 /**
- * Sum credits_used across the account's runs created at or after `sinceMs`.
- * Returns 0 when the runs table does not exist or on read failure.
+ * Sum credits_used across the account's usage records created at or after `sinceMs`.
+ * Reads from the `usage_records` credits ledger (Supabase). Returns 0 when the
+ * table does not exist or on read failure.
  */
 export async function sumCreditsSince(accountId: number, sinceMs: number): Promise<number> {
   try {
     const result = await queryWithRetry<{ total: number | null }>(
       `SELECT COALESCE(SUM(credits_used), 0) AS total
-       FROM runs
-       WHERE account_id = $1 AND created_at >= to_timestamp($2 / 1000.0)`,
+       FROM usage_records
+       WHERE account_id = $1 AND timestamp >= to_timestamp($2 / 1000.0)`,
       [accountId, sinceMs],
     );
     return Number(result.rows[0]?.total ?? 0);
   } catch (err) {
     if (isTableNotFoundError(err)) return 0;
-    log.error({ err: String(err), accountId }, 'Failed to sum run credits — returning 0');
+    log.error({ err: String(err), accountId }, 'Failed to sum usage credits — returning 0');
     return 0;
   }
 }
@@ -210,14 +218,20 @@ export async function sumCreditsSince(accountId: number, sinceMs: number): Promi
 async function buildWindow(
   accountId: number,
   planId: PlanId,
+  windowType: 'continuous' | 'weekly' | 'monthly',
   window: { startMs: number; endMs: number },
 ): Promise<UsageWindow> {
   const [usedCredits] = await Promise.all([
     sumCreditsSince(accountId, window.startMs),
   ]);
+  const plan = PLANS[planId];
+  const limitCredits =
+    windowType === 'continuous' ? plan.dailyFixLimit
+    : windowType === 'weekly' ? plan.weeklyFixLimit
+    : plan.monthlyFixLimit;
   return {
     usedCredits,
-    limitCredits: getMonthlyFixLimit(planId),
+    limitCredits,
     resetAt: new Date(window.endMs).toISOString(),
   };
 }
@@ -248,9 +262,9 @@ usageLimitsRouter.get('/', async (req: Request, res: Response) => {
 
     const now = Date.now();
     const [continuous, weekly, monthly] = await Promise.all([
-      buildWindow(accountId, planId, computeContinuousWindow(now)),
-      buildWindow(accountId, planId, computeWeeklyWindow(now)),
-      buildWindow(accountId, planId, computeMonthlyWindow(now)),
+      buildWindow(accountId, planId, 'continuous', computeContinuousWindow(now)),
+      buildWindow(accountId, planId, 'weekly', computeWeeklyWindow(now)),
+      buildWindow(accountId, planId, 'monthly', computeMonthlyWindow(now)),
     ]);
 
     const response: UsageLimitsResponse = {

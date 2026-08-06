@@ -23,7 +23,7 @@ async function resolveAccountId(req: Request): Promise<number | null> {
   if (req.user!.email) {
     try {
       const result = await queryWithRetry<{ id: number }>(
-        'SELECT id FROM accounts WHERE email = $1 LIMIT 1',
+        'SELECT id FROM accounts WHERE email = $1 ORDER BY github_installation_id > 0 DESC, id ASC LIMIT 1',
         [req.user!.email],
       );
       if (result.rows.length > 0) return result.rows[0].id;
@@ -48,22 +48,53 @@ router.get('/', requireAuth, auditMiddleware({ action: 'runs.list', actorType: '
     limit = Math.min(Math.max(1, Number(req.query.perPage) || 20), 100);
     const offset = (page - 1) * limit;
     status = req.query.status as string | undefined;
+    const repo = (req.query.repo as string | undefined)?.trim();
+    const from = req.query.from as string | undefined;
+    const to = req.query.to as string | undefined;
 
-    const runs = await runsRepository.list({
-      accountId,
-      status,
-      limit,
-      offset,
-    });
+    // Build WHERE clauses dynamically; accountId is always $1.
+    const whereParts = ['a.id = $1'];
+    const listParams: unknown[] = [accountId];
+    if (status) {
+      whereParts.push(`rh.status = $${listParams.length + 1}`);
+      listParams.push(status);
+    }
+    if (repo) {
+      whereParts.push(`(rh.repo_name ILIKE $${listParams.length + 1} OR rh.repo_owner ILIKE $${listParams.length + 1})`);
+      listParams.push(`%${repo}%`);
+    }
+    if (from && !Number.isNaN(Date.parse(from))) {
+      whereParts.push(`rh.created_at >= $${listParams.length + 1}`);
+      listParams.push(new Date(from).toISOString());
+    }
+    if (to && !Number.isNaN(Date.parse(to))) {
+      whereParts.push(`rh.created_at <= $${listParams.length + 1}`);
+      listParams.push(new Date(to).toISOString());
+    }
+    const whereClause = whereParts.join(' AND ');
+
+    // run_history is the live run table (runs is legacy/unwritten).
+    const runs = await queryWithRetry<any>(
+      `SELECT rh.*
+       FROM run_history rh
+       JOIN accounts a ON rh.installation_id = a.github_installation_id
+       WHERE ${whereClause}
+       ORDER BY rh.created_at DESC
+       LIMIT $${listParams.length + 1} OFFSET $${listParams.length + 2}`,
+      [...listParams, limit, offset],
+    );
 
     const countResult = await queryWithRetry<{ total: number }>(
-      'SELECT COUNT(*) as total FROM runs WHERE account_id = $1',
-      [accountId],
+      `SELECT COUNT(*) as total
+       FROM run_history rh
+       JOIN accounts a ON rh.installation_id = a.github_installation_id
+       WHERE ${whereClause}`,
+      listParams,
     );
     const total = Number(countResult.rows[0]?.total ?? 0);
 
     const runsWithCredits = await Promise.all(
-      runs.map(async (run: any) => {
+      runs.rows.map(async (run: any) => {
         try {
           const txResult = await queryWithRetry<any>(
             `SELECT COALESCE(ABS(amount), 0) as credits_used
@@ -87,13 +118,15 @@ router.get('/', requireAuth, auditMiddleware({ action: 'runs.list', actorType: '
       repoOwner: (r as any).repo_owner || '',
       repoName: (r as any).repo_name || '',
       durationSeconds: r.duration_ms ? Math.round(r.duration_ms / 1000) : null,
-      costCents: r.cost_cents ?? 0,
+      costCents: r.cost_cents ?? null,
       creditsUsed: r.creditsUsed ?? 0,
       confidence: r.confidence,
       prUrl: r.pr_url,
       branchName: r.branch_name,
-      error: r.error,
+      errorMessage: r.error,
+      modelUsed: r.model_used,
       createdAt: r.created_at,
+      updatedAt: r.updated_at,
     }));
 
     res.json({
@@ -130,11 +163,20 @@ router.get('/:id', requireAuth, auditMiddleware({ action: 'runs.view', actorType
       return;
     }
 
-    const run = await runsRepository.findById(runId);
-    if (!run) {
-      res.status(404).json({ error: 'Run not found' });
+    const run = await queryWithRetry<any>(
+      'SELECT * FROM run_history WHERE id = $1',
+      [runId],
+    );
+    if (run.rows.length === 0) {
+      const legacy = await runsRepository.findById(runId);
+      if (!legacy) {
+        res.status(404).json({ error: 'Run not found' });
+        return;
+      }
+      res.json({ ...legacy, creditsUsed: 0 });
       return;
     }
+    const runRow = run.rows[0];
 
     let creditsUsed = 0;
     try {
@@ -143,14 +185,31 @@ router.get('/:id', requireAuth, auditMiddleware({ action: 'runs.view', actorType
          FROM credit_transactions
          WHERE description LIKE $1 AND type = 'usage'
          ORDER BY created_at DESC LIMIT 1`,
-        [`%${run.id}%`],
+        [`%${runRow.id}%`],
       );
       creditsUsed = Number(txResult.rows[0]?.credits_used ?? 0);
     } catch {
       // Non-fatal
     }
 
-    res.json({ ...run, creditsUsed });
+    res.json({
+      id: runRow.id,
+      status: runRow.status,
+      issueNumber: runRow.issue_number,
+      issueTitle: runRow.summary || '',
+      repoOwner: runRow.repo_owner || '',
+      repoName: runRow.repo_name || '',
+      durationSeconds: runRow.duration_ms ? Math.round(runRow.duration_ms / 1000) : null,
+      costCents: runRow.cost_cents ?? null,
+      creditsUsed,
+      confidence: runRow.confidence,
+      prUrl: runRow.pr_url,
+      branchName: runRow.branch_name,
+      errorMessage: runRow.error,
+      modelUsed: runRow.model_used,
+      createdAt: runRow.created_at,
+      updatedAt: runRow.updated_at,
+    });
   } catch (err) {
     log.error({ err: String(err), runId: req.params.id }, 'Failed to fetch run');
     res.status(500).json({ error: 'Failed to fetch run' });

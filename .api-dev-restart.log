@@ -1,0 +1,303 @@
+
+> solving-tickets-as-a-service@0.1.0 dev:api
+> RUN_MODE=api tsx watch src/index.ts
+
+[14:40:10.894] [32mINFO[39m (374540): [36mSENTRY_DSN not configured — Sentry monitoring disabled[39m
+    [35mmodule[39m: "sentry"
+[14:40:11.294] [32mINFO[39m (374540): [36mStarting SYNTARO[39m
+    [35mmodule[39m: "entry"
+    [35mrunMode[39m: "api"
+    [35mnodeEnv[39m: "development"
+[14:40:11.294] [32mINFO[39m (374540): [36mStarting agent health client[39m
+    [35mmodule[39m: "opencode-health"
+    [35mpollIntervalMs[39m: 30000
+    [35mcacheTtlMs[39m: 30000
+    [35mcircuitBreakerThreshold[39m: 3
+    [35mopencodeUrl[39m: "http://localhost:4096"
+[14:40:11.320] [32mINFO[39m (374540): [36mInitializing Postgres storage[39m
+    [35mmodule[39m: "storage:factory"
+[14:40:11.320] [32mINFO[39m (374540): [36mStorage backend initialized[39m
+    [35mmodule[39m: "entry"
+[14:40:11.325] [32mINFO[39m (374540): [36mJob template registered[39m
+    [35mmodule[39m: "template-registry"
+    [35mtemplateId[39m: "issue-fix"
+    [35mqueueName[39m: "syntaro.issues.fix"
+[14:40:11.325] [32mINFO[39m (374540): [36mJob template registered[39m
+    [35mmodule[39m: "template-registry"
+    [35mtemplateId[39m: "issue-feature"
+    [35mqueueName[39m: "syntaro.issues.feature"
+[14:40:11.325] [32mINFO[39m (374540): [36mJob template registered[39m
+    [35mmodule[39m: "template-registry"
+    [35mtemplateId[39m: "issue-research"
+    [35mqueueName[39m: "syntaro.issues.research"
+[14:40:11.325] [32mINFO[39m (374540): [36mJob template registered[39m
+    [35mmodule[39m: "template-registry"
+    [35mtemplateId[39m: "webhook-notification"
+    [35mqueueName[39m: "syntaro.webhooks.notifications"
+[14:40:11.325] [32mINFO[39m (374540): [36mJob template registered[39m
+    [35mmodule[39m: "template-registry"
+    [35mtemplateId[39m: "analytics-ingestion"
+    [35mqueueName[39m: "syntaro.analytics.ingestion"
+[14:40:11.325] [32mINFO[39m (374540): [36mJob template registered[39m
+    [35mmodule[39m: "template-registry"
+    [35mtemplateId[39m: "pipeline-event"
+    [35mqueueName[39m: "syntaro.pipeline.events"
+[14:40:11.325] [32mINFO[39m (374540): [36mJob template registered[39m
+    [35mmodule[39m: "template-registry"
+    [35mtemplateId[39m: "pipeline"
+    [35mqueueName[39m: "syntaro.pipeline.train"
+[14:40:11.325] [32mINFO[39m (374540): [36mDefault templates registered[39m
+    [35mmodule[39m: "entry"
+[14:40:11.342] [32mINFO[39m (374540): [36mConnecting to RabbitMQ[39m
+    [35mmodule[39m: "rabbitmq"
+    [35murl[39m: "amqp://***@localhost:5672/syntaro"
+[14:40:11.440] [34mDEBUG[39m (374540): [36mAgent health check succeeded[39m
+    [35mmodule[39m: "opencode-health"
+[14:40:11.499] [32mINFO[39m (374540): [36mRabbitMQ connected successfully[39m
+    [35mmodule[39m: "rabbitmq"
+[14:40:11.570] [32mINFO[39m (374540): [36mRabbitMQ topology declared successfully[39m
+    [35mmodule[39m: "rabbitmq"
+[14:40:11.570] [32mINFO[39m (374540): [36mRabbitMQ initialized with topology[39m
+    [35mmodule[39m: "entry"
+[14:40:11.570] [32mINFO[39m (374540): [36mStarting API server...[39m
+    [35mmodule[39m: "entry"
+[14:40:12.682] [32mINFO[39m (374540): [36mDatabase connection pool created[39m
+    [35mmodule[39m: "db"
+    [35mmin[39m: 2
+    [35mmax[39m: 10
+    [35mssl[39m: false
+    [35msupabaseHosted[39m: true
+[14:40:12.699] [32mINFO[39m (374540): [36mSYNTARO Proxy module initializing[39m
+    [35mmodule[39m: "syntaro-proxy"
+    [35mmodelRouterEnabled[39m: true
+    [35mgithubActionsDispatchEnabled[39m: false
+    [35mhasPat[39m: false
+[14:40:12.699] [33mWARN[39m (374540): [36mGitHub Actions dispatch is DISABLED — dispatch calls will be rejected[39m
+    [35mmodule[39m: "syntaro-proxy"
+[14:40:12.777] [34mDEBUG[39m (374540): [36minitialized[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.777] [34mDEBUG[39m (374540): [36mInitializing SocketModeReceiver[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.782] [34mDEBUG[39m (374540): [36mThe logLevel given to Socket Mode was ignored as you also gave logger[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.788] [34mDEBUG[39m (374540): [36mThe logLevel given to WebClient was ignored as you also gave logger[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.792] [34mDEBUG[39m (374540): [36minitialized[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.792] [34mDEBUG[39m (374540): [36mThe Socket Mode client has successfully initialized[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.794] [34mDEBUG[39m (374540): [36mapiCall('auth.test') start[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.808] [34mDEBUG[39m (374540): [36mhttp request url: https://slack.com/api/auth.test[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.809] [34mDEBUG[39m (374540): [36mhttp request body: {"token":"[[REDACTED]]"}[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.819] [34mDEBUG[39m (374540): [36mhttp request headers: {"Accept":"application/json, text/plain, */*","query":"{}","User-Agent":"@slack:socket-mode/2.0.7 @slack:bolt/4.7.3 @slack:web-api/7.17.0 node/24.15.0 linux/7.0.0-28-generic","Authorization":"[[REDACTED]]"}[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.825] [32mINFO[39m (374540): [36mSlack Bolt app initialized in Socket Mode[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.826] [33mWARN[39m (374540): [36mBolt receiver not available — skipping mount[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.827] [32mINFO[39m (374540): [36mSlack @syntaro mention handler registered[39m
+    [35mmodule[39m: "slack-handler"
+[14:40:12.827] [34mDEBUG[39m (374540): [36mStarting Socket Mode session ...[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.827] [34mDEBUG[39m (374540): [36mGoing to retrieve a new WSS URL ...[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.827] [34mDEBUG[39m (374540): [36mapiCall('apps.connections.open') start[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.829] [34mDEBUG[39m (374540): [36mhttp request url: https://slack.com/api/apps.connections.open[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.829] [34mDEBUG[39m (374540): [36mhttp request body: {}[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.829] [34mDEBUG[39m (374540): [36mhttp request headers: {"Accept":"application/json, text/plain, */*","query":"{}","User-Agent":"@slack:socket-mode/2.0.7 @slack:bolt/4.7.3 @slack:web-api/7.17.0 node/24.15.0 linux/7.0.0-28-generic","Authorization":"[[REDACTED]]"}[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:12.830] [32mINFO[39m (374540): [36mLinear tracker initialized[39m
+    [35mmodule[39m: "trackers"
+[14:40:12.830] [32mINFO[39m (374540): [36mJira tracker not configured (JIRA_URL/EMAIL/API_TOKEN missing)[39m
+    [35mmodule[39m: "trackers"
+[14:40:12.830] [32mINFO[39m (374540): [36mUsage metering initialized[39m
+    [35mmodule[39m: "metering"
+    [35mtriage[39m: 1
+    [35mopencodePrimary[39m: 10
+    [35mopencodeFallback[39m: 5
+    [35mprCreation[39m: 2
+    [35mretryPenalty[39m: 3
+    [35mfreeMonthlyCredits[39m: 100
+[14:40:12.830] [33mWARN[39m (374540): [36mPOSTHOG_API_KEY not set — analytics disabled[39m
+    [35mmodule[39m: "analytics"
+[14:40:12.830] [32mINFO[39m (374540): [36mOnboarding wizard using in-memory store[39m
+    [35mmodule[39m: "onboarding-wizard"
+[14:40:12.831] [32mINFO[39m (374540): [36mStarting webhook retry worker[39m
+    [35mmodule[39m: "webhook-retry-worker"
+    [35mpollIntervalMs[39m: 15000
+    [35mbatchSize[39m: 10
+[14:40:12.833] [32mINFO[39m (374540): [36mWebhook retry worker started[39m
+    [35mmodule[39m: "webhook-retry-worker"
+[14:40:13.153] [32mINFO[39m (374540): [36mApproval gate configured[39m
+    [35mmodule[39m: "approval-gate"
+    [35menabled[39m: false
+    [35mrequiredOrgs[39m: 0
+    [35mrequiredRepos[39m: 0
+    [35mtriggerLabels[39m: [
+      "production",
+      "syntaro:fix:approval"
+    ]
+[14:40:13.160] [32mINFO[39m (374540): [36mSYNTARO server listening on :3030[39m
+    [35mmodule[39m: "server"
+    [35mport[39m: 3030
+    [35mlabel[39m: "stas:fix"
+    [35menv[39m: "development"
+[14:40:13.174] [32mINFO[39m (374540): [36mStarted consuming queue[39m
+    [35mmodule[39m: "rabbitmq"
+    [35mqueue[39m: "syntaro.issues.fix"
+    [35mconsumerTag[39m: "amq.ctag-enSVDoREoWQ4cQiVWZfu0w"
+[14:40:13.174] [32mINFO[39m (374540): [36mRabbitMQ issue consumer started — dispatching to OpenSymphony[39m
+    [35mmodule[39m: "server"
+[14:40:13.174] [32mINFO[39m (374540): [36mAPI server started[39m
+    [35mmodule[39m: "entry"
+[14:40:13.174] [32mINFO[39m (374540): [36mStarting scheduled maintenance tasks[39m
+    [35mmodule[39m: "scheduled"
+    [35mqueueDepthCheckMs[39m: 300000
+    [35mworkerHeartbeatCheckMs[39m: 60000
+    [35msloComplianceCheckMs[39m: 300000
+    [35mdlqCleanupMs[39m: 86400000
+    [35mmetricsRefreshMs[39m: 60000
+[14:40:13.174] [32mINFO[39m (374540): [36mMonitoring loop disabled — skipping[39m
+    [35mmodule[39m: "monitoring-loop"
+[14:40:13.179] [34mDEBUG[39m (374540): [36mWorker heartbeat check complete[39m
+    [35mmodule[39m: "scheduled"
+[14:40:13.197] [32mINFO[39m (374540): [36mScheduled maintenance tasks started[39m
+    [35mmodule[39m: "scheduled"
+[14:40:13.623] [33mWARN[39m (374540): [36mPython package "mcp" not found — MCP server auto-start skipped. Install with: pip install "mcp>=1.0.0"[39m
+    [35mmodule[39m: "mcp-autostart"
+[14:40:13.623] [34mDEBUG[39m (374540): [36mOpenSymphony adapter disabled — set OPENSYMPHONY_ENABLED=true to enable[39m
+    [35mmodule[39m: "entry"
+[14:40:13.628] [32mINFO[39m (374540): [36mAll startup health checks passed[39m
+    [35mmodule[39m: "entry"
+    [35mchecks[39m: [
+      "redis",
+      "opencode"
+    ]
+[14:40:13.655] [33mWARN[39m (374540): [36mThroughput drop detected[39m
+    [35mmodule[39m: "scheduled"
+    [35mscore[39m: 1
+    [35mmessage[39m: "Throughput drop: 0 jobs/5min (1h avg 50.0, ratio 0.0% < 50%)"
+[14:40:13.655] [34mDEBUG[39m (374540): [36mAnomaly detection check complete — all 6 detectors run[39m
+    [35mmodule[39m: "scheduled"
+[14:40:13.659] [32mINFO[39m (374540): [36mDLQ cleanup check complete[39m
+    [35mmodule[39m: "scheduled"
+    [35mtotalDlqMessages[39m: 0
+    [35mqueues[39m: []
+[14:40:13.665] [34mDEBUG[39m (374540): [36mQueue depth check passed — all queues healthy[39m
+    [35mmodule[39m: "scheduled"
+[14:40:14.180] [34mDEBUG[39m (374540): [36mhttp response received[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:14.181] [34mDEBUG[39m (374540): [36mhttp request result: {"ok":true,"url":"wss://wss-primary.slack.com/link/?ticket=a26e5019-9161-43ee-b736-ed844007be4c&app_id=eef720744f9da851192bc7c9a59843bbcba74ab1fe5097c51867e1480159c359","response_metadata":{"scopes":["connections:write"],"acceptedScopes":["connections:write"]}}[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:14.181] [34mDEBUG[39m (374540): [36mapiCall('apps.connections.open') end[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:14.181] [34mDEBUG[39m (374540): [36mInitiating new WebSocket connection.[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:14.216] [34mDEBUG[39m (374540): [36mhttp response received[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:14.221] [34mDEBUG[39m (374540): [36mhttp request result: {"ok":true,"url":"https://aiminoworkspace.slack.com/","team":"Aimino","user":"syntaro2","team_id":"T023EV54RR7","user_id":"U0BM45TQAUX","bot_id":"B0BMP7P744U","is_enterprise_install":false,"response_metadata":{"scopes":["channels:history","chat:write","im:write","app_mentions:read","chat:write.public","files:write","mpim:write","pins:write","reactions:write","commands","channels:read","files:read","groups:history","groups:read","im:history","im:read","mpim:history","mpim:read","pins:read","reactions:read","emoji:read","usergroups:read","users:read"]}}[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:14.221] [34mDEBUG[39m (374540): [36mapiCall('auth.test') end[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:14.433] [34mDEBUG[39m (374540): [36mLow credit warning check complete[39m
+    [35mmodule[39m: "scheduled"
+[14:40:14.672] [31mERROR[39m (374540): [36m[CRITICAL] slo_breach_webhook_processing_latency_p99: SLO breached for webhook_processing_latency_p99: current=1097.15346, target=5[39m
+    [35mmodule[39m: "alerting"
+    [35mrule[39m: "slo_breach_webhook_processing_latency_p99"
+    [35mmessage[39m: "SLO breached for webhook_processing_latency_p99: current=1097.15346, target=5"
+    [35msliName[39m: "webhook_processing_latency_p99"
+    [35mcurrentValue[39m: 1097.15346
+    [35mtarget[39m: 5
+[14:40:14.673] [33mWARN[39m (374540): [36mN8N_MONITORING_WEBHOOK_URL not configured — skipping n8n alert dispatch[39m
+    [35mmodule[39m: "alerting"
+[14:40:14.673] [31mERROR[39m (374540): [36m[CRITICAL] slo_breach_agent_success_rate: SLO breached for agent_success_rate: current=0, target=90[39m
+    [35mmodule[39m: "alerting"
+    [35mrule[39m: "slo_breach_agent_success_rate"
+    [35mmessage[39m: "SLO breached for agent_success_rate: current=0, target=90"
+    [35msliName[39m: "agent_success_rate"
+    [35mcurrentValue[39m: 0
+    [35mtarget[39m: 90
+[14:40:14.673] [33mWARN[39m (374540): [36mN8N_MONITORING_WEBHOOK_URL not configured — skipping n8n alert dispatch[39m
+    [35mmodule[39m: "alerting"
+[14:40:14.673] [31mERROR[39m (374540): [36m[CRITICAL] slo_breach_uptime: SLO breached for uptime: current=73.88059701492537, target=99.9[39m
+    [35mmodule[39m: "alerting"
+    [35mrule[39m: "slo_breach_uptime"
+    [35mmessage[39m: "SLO breached for uptime: current=73.88059701492537, target=99.9"
+    [35msliName[39m: "uptime"
+    [35mcurrentValue[39m: 73.88059701492537
+    [35mtarget[39m: 99.9
+[14:40:14.673] [33mWARN[39m (374540): [36mN8N_MONITORING_WEBHOOK_URL not configured — skipping n8n alert dispatch[39m
+    [35mmodule[39m: "alerting"
+[14:40:14.673] [32mINFO[39m (374540): [36mSLO compliance check complete[39m
+    [35mmodule[39m: "alerting"
+    [35moverallStatus[39m: "failing"
+    [35mcompliant[39m: 1
+    [35mwarning[39m: 0
+    [35mbreached[39m: 3
+[14:40:14.674] [34mDEBUG[39m (374540): [36mWebSocket open event received (connection established)![39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:14.674] [34mDEBUG[39m (374540): [36mStarted monitoring pings to and pongs from Slack.[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:14.687] [34mDEBUG[39m (374540): [36mReceived a message on the WebSocket: {"type":"hello","num_connections":1,"debug_info":{"host":"applink-3","build_number":25,"approximate_connection_time":18060},"connection_info":{"app_id":"A0BMP7Q0UAY"}}[39m
+    [35mmodule[39m: "slack-bolt"
+[14:40:14.687] [32mINFO[39m (374540): [36mSlack Bolt app started (Socket Mode)[39m
+    [35mmodule[39m: "slack-bolt"
+PROBE-MW1-ENTER /health
+PROBE-MW1-NEXT /health
+[14:40:17.905] [32mINFO[39m (374540): [36mGET /health 200 136ms[39m
+    [35mmodule[39m: "server"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/health"
+    [35mstatusCode[39m: 200
+    [35mlatency[39m: 136
+    [35mrequestId[39m: "182e207c-9ad8-4537-ab7d-2121ba73e481"
+    [35muserAgent[39m: "curl/8.5.0"
+PROBE-MW1-ENTER /health
+PROBE-MW1-NEXT /health
+[14:40:28.770] [32mINFO[39m (374540): [36mGET /health 200 80ms[39m
+    [35mmodule[39m: "server"
+    [35mmethod[39m: "GET"
+    [35mpath[39m: "/health"
+    [35mstatusCode[39m: 200
+    [35mlatency[39m: 80
+    [35mrequestId[39m: "f927afff-058e-4692-b360-99aa8dae3fe0"
+    [35muserAgent[39m: "curl/8.5.0"
+[14:40:32.646] [32mINFO[39m (374540): [36mSIGTERM received — shutting down database pool[39m
+    [35mmodule[39m: "db"
+[14:40:32.646] [32mINFO[39m (374540): [36mClosing database connection pool...[39m
+    [35mmodule[39m: "db"
+[14:40:32.646] [32mINFO[39m (374540): [36mShutting down gracefully[39m
+    [35mmodule[39m: "entry"
+    [35msignal[39m: "SIGTERM"
+[14:40:32.646] [32mINFO[39m (374540): [36mServer closed[39m
+    [35mmodule[39m: "entry"
+[14:40:32.651] [32mINFO[39m (374540): [36mDatabase connection pool closed[39m
+    [35mmodule[39m: "db"
+[14:40:32.652] [32mINFO[39m (374540): [36mCI monitor stopped[39m
+    [35mmodule[39m: "ci-monitor"
+[14:40:32.681] [32mINFO[39m (374540): [36mPR CI monitor stopped[39m
+    [35mmodule[39m: "pr-ci-monitor"
+[14:40:32.681] [32mINFO[39m (374540): [36mMonitoring loop stopped[39m
+    [35mmodule[39m: "monitoring-loop"
+[14:40:32.681] [32mINFO[39m (374540): [36mScheduled maintenance tasks stopped[39m
+    [35mmodule[39m: "scheduled"
+[14:40:32.681] [32mINFO[39m (374540): [36mAgent health client stopped[39m
+    [35mmodule[39m: "opencode-health"
+[14:40:32.690] [33mWARN[39m (374540): [36mRabbitMQ channel closed[39m
+    [35mmodule[39m: "rabbitmq"
+[14:40:32.693] [33mWARN[39m (374540): [36mRabbitMQ connection closed[39m
+    [35mmodule[39m: "rabbitmq"
+[14:40:32.693] [32mINFO[39m (374540): [36mScheduling RabbitMQ reconnection[39m
+    [35mmodule[39m: "rabbitmq"
+    [35mdelayMs[39m: 500
+    [35mattempt[39m: 1
+[14:40:32.693] [32mINFO[39m (374540): [36mRabbitMQ disconnected[39m
+    [35mmodule[39m: "rabbitmq"
+[14:40:32.693] [32mINFO[39m (374540): [36mRabbitMQ disconnected[39m
+    [35mmodule[39m: "entry"

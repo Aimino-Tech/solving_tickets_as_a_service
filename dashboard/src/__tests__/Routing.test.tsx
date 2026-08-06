@@ -15,11 +15,20 @@ vi.mock('@/context/AuthContext', () => ({
 }));
 
 // Mock lucide-react icons
-vi.mock('lucide-react', () => ({
-  Search: () => <span data-testid="icon-search">Search</span>,
-  ArrowLeft: () => <span data-testid="icon-arrow-left">ArrowLeft</span>,
-  Home: () => <span data-testid="icon-home">Home</span>,
-}));
+vi.mock('lucide-react', () => {
+  const iconNames = [
+    'Search', 'ArrowLeft', 'ArrowRight', 'Home', 'Eye', 'EyeOff', 'Menu', 'X',
+    'Bell', 'ChevronDown', 'ChevronRight', 'LogOut', 'User', 'Settings', 'Activity',
+    'FileText', 'GitPullRequest', 'LayoutDashboard', 'AlertTriangle', 'CheckCircle',
+    'XCircle', 'HelpCircle', 'Info', 'Loader', 'RefreshCw', 'ExternalLink', 'Shield',
+    'CreditCard', 'BarChart2', 'Terminal', 'Zap', 'Github', 'MessageSquare', 'Clock', 'Plus',
+  ];
+  const icons: Record<string, () => JSX.Element> = {};
+  for (const name of iconNames) {
+    icons[name] = () => <span data-testid={`icon-${name.toLowerCase()}`} />;
+  }
+  return icons;
+});
 
 // Mock the API client
 vi.mock('@/api/client', () => ({
@@ -39,14 +48,24 @@ vi.mock('@/api/client', () => ({
 }));
 
 import App from '@/App';
+import { ThemeProvider } from '@/context/ThemeContext';
+import { I18nProvider } from '@/i18n/I18nProvider';
+
+function renderApp(initialEntry: string) {
+  render(
+    <I18nProvider>
+      <ThemeProvider>
+        <MemoryRouter initialEntries={[initialEntry]}>
+          <App />
+        </MemoryRouter>
+      </ThemeProvider>
+    </I18nProvider>,
+  );
+}
 
 describe('Routing — catch-all 404', () => {
   it('renders NotFound component for unmatched routes', () => {
-    render(
-      <MemoryRouter initialEntries={['/some/nonexistent/page']}>
-        <App />
-      </MemoryRouter>,
-    );
+    renderApp('/some/nonexistent/page');
 
     // Wait for loading to finish (AuthContext mock returns isLoading=false)
     // then verify the 404 page content is shown
@@ -55,33 +74,21 @@ describe('Routing — catch-all 404', () => {
   });
 
   it('renders a valid existing route (login) correctly', () => {
-    render(
-      <MemoryRouter initialEntries={['/login']}>
-        <App />
-      </MemoryRouter>,
-    );
+    renderApp('/login');
 
     // Login page should render without 404
     expect(screen.queryByText('Page not found')).not.toBeInTheDocument();
   });
 
   it('renders the forgot-password page without 404', async () => {
-    render(
-      <MemoryRouter initialEntries={['/forgot-password']}>
-        <App />
-      </MemoryRouter>,
-    );
+    renderApp('/forgot-password');
 
     expect(screen.queryByText('Page not found')).not.toBeInTheDocument();
     expect(await screen.findByText('Send Reset Link')).toBeInTheDocument();
   });
 
   it('renders the reset-password page without 404', async () => {
-    render(
-      <MemoryRouter initialEntries={['/auth/reset-password']}>
-        <App />
-      </MemoryRouter>,
-    );
+    renderApp('/auth/reset-password');
 
     expect(screen.queryByText('Page not found')).not.toBeInTheDocument();
     expect(await screen.findByText('Update Password')).toBeInTheDocument();
@@ -91,11 +98,7 @@ describe('Routing — catch-all 404', () => {
     // These routes were identified in AIM-4336/AIM-4350 as pages that were
     // deleted by automation but their routes remained — the catch-all should
     // now return 404 for truly unmatched paths.
-    render(
-      <MemoryRouter initialEntries={['/truly-deleted-page']}>
-        <App />
-      </MemoryRouter>,
-    );
+    renderApp('/truly-deleted-page');
 
     expect(screen.getByText('Page not found')).toBeInTheDocument();
   });

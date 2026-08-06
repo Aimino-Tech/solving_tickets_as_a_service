@@ -1,6 +1,15 @@
 import type {
-  Run, DashboardStats, AuditEntry, PaginatedResponse, BenchmarkEntry, BenchmarkPrice,
-  KpiResponse, PricingData, CostCalculation, VsComparisonData, McpApiKey,
+  BenchmarkEntry,
+  BenchmarkPrice,
+  CostCalculation,
+  DashboardStats,
+  KpiResponse,
+  LighthouseApiResponse,
+  McpApiKey,
+  PaginatedResponse,
+  PricingData,
+  Run,
+  VsComparisonData,
 } from '@/api/types';
 
 export type { DashboardStats };
@@ -42,10 +51,7 @@ export function clearToken(): void {
   } catch {}
 }
 
-export async function request<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -94,9 +100,7 @@ export async function request<T>(
     // Only wipe the session for real JWT failures. Upstream Bitbucket/GitHub 401 bodies
     // (e.g. "no Bitbucket scopes") must surface in the form — not redirect to /login.
     const isSessionAuthFailure =
-      errorMsg === 'Authentication required' ||
-      errorMsg === 'Invalid or expired token' ||
-      errorMsg === 'Unauthorized';
+      errorMsg === 'Authentication required' || errorMsg === 'Invalid or expired token' || errorMsg === 'Unauthorized';
     if (!_isAuthFlow && isSessionAuthFailure) {
       clearToken();
       if (typeof window !== 'undefined') {
@@ -208,8 +212,7 @@ export interface BillingSettingsUpdate {
 }
 
 export const billingSettingsApi = {
-  get: (opts?: { signal?: AbortSignal }) =>
-    request<BillingSettings>('/v1/credits/billing-settings', opts),
+  get: (opts?: { signal?: AbortSignal }) => request<BillingSettings>('/v1/credits/billing-settings', opts),
   update: (body: BillingSettingsUpdate) =>
     request<{ settings: BillingSettings }>('/v1/credits/billing-settings', {
       method: 'POST',
@@ -223,8 +226,7 @@ export const billingSettingsApi = {
 };
 
 export const litellm = {
-  usage: () =>
-    request<LitellmUsage>('/v1/litellm/usage'),
+  usage: () => request<LitellmUsage>('/v1/litellm/usage'),
 };
 
 export interface HealthCheck {
@@ -296,29 +298,28 @@ export const auth = {
       method: 'POST',
       body: JSON.stringify({ accessToken, password }),
     }),
-me: () =>
-  request<{
-    id: string;
-    email: string;
-    name: string | null;
-    username?: string;
-    avatarUrl?: string;
-    plan?: string;
-    role?: string;
-    createdAt: string;
-    isAdmin?: boolean;
-    impersonating?: boolean;
-    impersonator?: { id: string; email: string };
-    token?: string;
-    refreshToken?: string;
-  }>('/v1/auth/me'),
+  me: () =>
+    request<{
+      id: string;
+      email: string;
+      name: string | null;
+      username?: string;
+      avatarUrl?: string;
+      plan?: string;
+      role?: string;
+      createdAt: string;
+      isAdmin?: boolean;
+      impersonating?: boolean;
+      impersonator?: { id: string; email: string };
+      token?: string;
+      refreshToken?: string;
+    }>('/v1/auth/me'),
   refresh: (refreshToken: string) =>
     request<AuthResult>('/v1/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
     }),
-  logout: () =>
-    request<{ message: string }>('/v1/auth/logout', { method: 'POST' }),
+  logout: () => request<{ message: string }>('/v1/auth/logout', { method: 'POST' }),
 };
 
 export const credits = {
@@ -326,7 +327,8 @@ export const credits = {
   getPacks: (opts?: { signal?: AbortSignal }) => request<CreditPack[]>('/v1/credits/packs', opts),
   transactions: (limit = 50, offset = 0, opts?: { signal?: AbortSignal }) =>
     request<{ transactions: Transaction[]; pagination: { limit: number; offset: number; total: number } }>(
-      `/v1/credits/transactions?limit=${limit}&offset=${offset}`, opts,
+      `/v1/credits/transactions?limit=${limit}&offset=${offset}`,
+      opts,
     ),
   topUp: (priceId: string, successUrl: string, cancelUrl: string) =>
     request<{ url: string; sessionId: string }>('/v1/credits/top-up', {
@@ -334,9 +336,7 @@ export const credits = {
       body: JSON.stringify({ priceId, successUrl, cancelUrl }),
     }),
   usage: (period: 'daily' | 'weekly' | 'monthly' = 'monthly', opts?: { signal?: AbortSignal }) =>
-    request<{ accountId: number; period: string; usage: MonthlyUsage[] }>(
-      `/v1/credits/usage?period=${period}`, opts,
-    ),
+    request<{ accountId: number; period: string; usage: MonthlyUsage[] }>(`/v1/credits/usage?period=${period}`, opts),
   redeemCoupon: (code: string) =>
     request<{ coupon: Coupon; newBalance: number }>('/v1/credits/redeem-coupon', {
       method: 'POST',
@@ -361,15 +361,12 @@ export interface UsageLimits {
 }
 
 export const usageLimitsApi = {
-  get: (opts?: { signal?: AbortSignal }) =>
-    request<UsageLimits>('/v1/usage-limits', opts),
-  updatePreferences: (body: {
-    useBalanceAfterLimits?: boolean;
-  }) =>
-    request<{ success: boolean; useBalanceAfterLimits: boolean }>(
-      '/v1/usage-limits/preferences',
-      { method: 'POST', body: JSON.stringify(body) },
-    ),
+  get: (opts?: { signal?: AbortSignal }) => request<UsageLimits>('/v1/usage-limits', opts),
+  updatePreferences: (body: { useBalanceAfterLimits?: boolean }) =>
+    request<{ success: boolean; useBalanceAfterLimits: boolean }>('/v1/usage-limits/preferences', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 };
 
 // -- Usage & cost analytics (OpenCode Go "Kosten" parity) --
@@ -418,14 +415,17 @@ export const usageApi = {
 };
 
 export const runs = {
-  list: (params?: {
-    page?: number;
-    perPage?: number;
-    status?: string;
-    repo?: string;
-    from?: string;
-    to?: string;
-  }, opts?: { signal?: AbortSignal }) => {
+  list: (
+    params?: {
+      page?: number;
+      perPage?: number;
+      status?: string;
+      repo?: string;
+      from?: string;
+      to?: string;
+    },
+    opts?: { signal?: AbortSignal },
+  ) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
     if (params?.perPage) qs.set('perPage', String(params.perPage));
@@ -435,7 +435,8 @@ export const runs = {
     if (params?.to) qs.set('to', params.to);
     const query = qs.toString();
     return request<{ data: Run[]; total: number; page: number; perPage: number; totalPages: number }>(
-      `/v1/runs${query ? `?${query}` : ''}`, opts,
+      `/v1/runs${query ? `?${query}` : ''}`,
+      opts,
     );
   },
   get: (id: string, opts?: { signal?: AbortSignal }) => request<Run>(`/v1/runs/${id}`, opts),
@@ -454,6 +455,53 @@ export const runs = {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
+};
+
+// -- Ticket creation API (plan-gated, AIM runs overview) --
+
+export interface CreateTicketParams {
+  repoOwner: string;
+  repoName: string;
+  issueTitle: string;
+  issueBody?: string;
+  source?: string;
+}
+
+export interface CreateTicketResult {
+  runId: string;
+  status: 'accepted';
+  planId?: string;
+  isUnlimited?: boolean;
+}
+
+export interface Ticket {
+  id: number;
+  accountId: number;
+  repoOwner: string;
+  repoName: string;
+  issueNumber: number;
+  title: string;
+  body: string | null;
+  source: string;
+  kind: 'ticket' | 'warning';
+  severity: string | null;
+  status: 'open' | 'fixing' | 'fixed' | 'failed' | 'closed';
+  fixDispatchId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const tickets = {
+  create: (body: CreateTicketParams, opts?: { signal?: AbortSignal }) =>
+    request<CreateTicketResult & { ticketId?: number; used?: number; limit?: number }>('/v1/tickets', {
+      method: 'POST',
+      body: JSON.stringify(body),
+      ...opts,
+    }),
+  list: (opts?: { signal?: AbortSignal; status?: string }) => {
+    const qs = opts?.status ? `?status=${encodeURIComponent(opts.status)}` : '';
+    return request<{ tickets: Ticket[] }>(`/v1/tickets${qs}`, { signal: opts?.signal });
+  },
 };
 
 export interface GitHubInstallation {
@@ -491,8 +539,7 @@ export const repos = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  disconnect: (id: string) =>
-    request<{ success: boolean }>(`/repos/${id}`, { method: 'DELETE' }),
+  disconnect: (id: string) => request<{ success: boolean }>(`/repos/${id}`, { method: 'DELETE' }),
 };
 
 export interface TeamMember {
@@ -538,17 +585,16 @@ export const teamApi = {
       body: JSON.stringify({ role }),
     }),
   setLimit: (teamId: number, userId: number, monthlyLimitCredits: number | null) =>
-    request<{ success: boolean; monthlyLimitCredits: number | null }>(
-      `/teams/${teamId}/members/${userId}/limit`,
-      { method: 'POST', body: JSON.stringify({ monthlyLimitCredits }) },
-    ),
+    request<{ success: boolean; monthlyLimitCredits: number | null }>(`/teams/${teamId}/members/${userId}/limit`, {
+      method: 'POST',
+      body: JSON.stringify({ monthlyLimitCredits }),
+    }),
   revokeInvite: (teamId: number, inviteId: number) =>
     request<{ success: boolean }>(`/teams/${teamId}/invites/${inviteId}`, { method: 'DELETE' }),
 };
 
 export const github = {
-  getOAuthUrl: () =>
-    request<{ url: string }>('/v1/auth/github/url', { method: 'POST' }),
+  getOAuthUrl: () => request<{ url: string }>('/v1/auth/github/url', { method: 'POST' }),
   storeToken: (providerToken: string) =>
     request<{ success: boolean }>('/v1/auth/github/token', {
       method: 'POST',
@@ -560,13 +606,16 @@ export const github = {
       body: JSON.stringify({ code }),
       ...opts,
     }),
-  getStatus: (opts?: { signal?: AbortSignal }) =>
-    request<GitHubConnectionStatus>('/v1/auth/github/status', opts),
-  disconnect: () =>
-    request<{ success: boolean }>('/v1/auth/github/disconnect', { method: 'DELETE' }),
+  getStatus: (opts?: { signal?: AbortSignal }) => request<GitHubConnectionStatus>('/v1/auth/github/status', opts),
+  disconnect: () => request<{ success: boolean }>('/v1/auth/github/disconnect', { method: 'DELETE' }),
   listInstallations: (opts?: { signal?: AbortSignal }) =>
     request<{ installations: GitHubInstallation[]; error?: string }>('/v1/github/installations', opts),
-  syncInstallation: (body: { installationId: number; accountLogin: string; accountType?: string; repoScope?: string }) =>
+  syncInstallation: (body: {
+    installationId: number;
+    accountLogin: string;
+    accountType?: string;
+    repoScope?: string;
+  }) =>
     request<{ success: boolean }>('/v1/github/installations/sync', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -579,10 +628,9 @@ export const github = {
       { method: 'POST' },
     ),
   removeWebhook: (installationId: number, owner: string, repo: string) =>
-    request<{ success: boolean }>(
-      `/v1/github/installations/${installationId}/repos/${owner}/${repo}/webhook`,
-      { method: 'DELETE' },
-    ),
+    request<{ success: boolean }>(`/v1/github/installations/${installationId}/repos/${owner}/${repo}/webhook`, {
+      method: 'DELETE',
+    }),
 };
 
 export interface BitbucketRepo {
@@ -602,10 +650,8 @@ export interface BitbucketStatus {
 }
 
 export const bitbucket = {
-  getStatus: (opts?: { signal?: AbortSignal }) =>
-    request<BitbucketStatus>('/v1/bitbucket/status', opts),
-  getOAuthUrl: () =>
-    request<{ url: string; redirectUri?: string }>('/v1/auth/bitbucket/url', { method: 'POST' }),
+  getStatus: (opts?: { signal?: AbortSignal }) => request<BitbucketStatus>('/v1/bitbucket/status', opts),
+  getOAuthUrl: () => request<{ url: string; redirectUri?: string }>('/v1/auth/bitbucket/url', { method: 'POST' }),
   handleOAuthCallback: (code: string, workspace?: string) =>
     request<{
       connected: boolean;
@@ -638,8 +684,7 @@ export const bitbucket = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  disconnect: () =>
-    request<{ success: boolean }>('/v1/bitbucket/disconnect', { method: 'DELETE' }),
+  disconnect: () => request<{ success: boolean }>('/v1/bitbucket/disconnect', { method: 'DELETE' }),
   listRepos: (opts?: { signal?: AbortSignal }) =>
     request<{ connected: boolean; workspace: string; repos: BitbucketRepo[] }>('/v1/bitbucket/repos', opts),
   configureWebhook: (owner: string, repo: string) =>
@@ -651,10 +696,8 @@ export const bitbucket = {
 };
 
 export const billing = {
-  plan: () =>
-    request<BillingPlan>('/v1/billing/plan'),
-  listPlans: () =>
-    request<{ plans: BillingPlan[] }>('/v1/billing/plans'),
+  plan: () => request<BillingPlan>('/v1/billing/plan'),
+  listPlans: () => request<{ plans: BillingPlan[] }>('/v1/billing/plans'),
   createCheckout: (planId: string, successUrl: string, cancelUrl: string) =>
     request<{ url: string; sessionId: string }>('/v1/billing/subscription/create-checkout', {
       method: 'POST',
@@ -665,8 +708,7 @@ export const billing = {
       method: 'POST',
       body: JSON.stringify({ returnUrl }),
     }),
-  invoices: () =>
-    request<{ invoices: Invoice[] }>('/v1/billing/invoices'),
+  invoices: () => request<{ invoices: Invoice[] }>('/v1/billing/invoices'),
 };
 
 // -- Referral API (AIM-4643) --
@@ -682,17 +724,13 @@ export interface ReferralReward {
 }
 
 export const referralApi = {
-  code: (opts?: { signal?: AbortSignal }) =>
-    request<{ code: string }>('/v1/referral/code', opts),
-  createCode: () =>
-    request<{ code: string }>('/v1/referral/code', { method: 'POST' }),
-  rewards: (opts?: { signal?: AbortSignal }) =>
-    request<{ rewards: ReferralReward[] }>('/v1/referral/rewards', opts),
+  code: (opts?: { signal?: AbortSignal }) => request<{ code: string }>('/v1/referral/code', opts),
+  createCode: () => request<{ code: string }>('/v1/referral/code', { method: 'POST' }),
+  rewards: (opts?: { signal?: AbortSignal }) => request<{ rewards: ReferralReward[] }>('/v1/referral/rewards', opts),
   claim: (id: number) =>
-    request<{ claimed: boolean; reward: ReferralReward; newBalance: number }>(
-      `/v1/referral/rewards/${id}/claim`,
-      { method: 'POST' },
-    ),
+    request<{ claimed: boolean; reward: ReferralReward; newBalance: number }>(`/v1/referral/rewards/${id}/claim`, {
+      method: 'POST',
+    }),
 };
 
 export interface WizardProgress {
@@ -718,28 +756,21 @@ export interface WizardConfig {
 }
 
 export const onboarding = {
-  getStatus: () =>
-    request<{ progress: WizardProgress; config: WizardConfig }>('/v1/onboarding'),
-  start: () =>
-    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding', { method: 'POST' }),
+  getStatus: () => request<{ progress: WizardProgress; config: WizardConfig }>('/v1/onboarding'),
+  start: () => request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding', { method: 'POST' }),
   completeStep: (step: string, body?: Record<string, unknown>) =>
-    request<{ success: boolean; progress: WizardProgress }>(
-      `/v1/onboarding/step/${step}`,
-      { method: 'POST', body: body ? JSON.stringify(body) : undefined },
-    ),
-  skip: () =>
-    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/skip', { method: 'POST' }),
-  reset: () =>
-    request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/reset', { method: 'POST' }),
-  getConfig: () =>
-    request<{ config: WizardConfig }>('/v1/onboarding/config'),
+    request<{ success: boolean; progress: WizardProgress }>(`/v1/onboarding/step/${step}`, {
+      method: 'POST',
+      body: body ? JSON.stringify(body) : undefined,
+    }),
+  skip: () => request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/skip', { method: 'POST' }),
+  reset: () => request<{ success: boolean; progress: WizardProgress }>('/v1/onboarding/reset', { method: 'POST' }),
+  getConfig: () => request<{ config: WizardConfig }>('/v1/onboarding/config'),
 };
 
 export const health = {
-  getStatus: () =>
-    request<HealthResponse>('/health'),
-  getVerbose: () =>
-    request<HealthResponse>('/health/verbose'),
+  getStatus: () => request<HealthResponse>('/health'),
+  getVerbose: () => request<HealthResponse>('/health/verbose'),
 };
 
 export const settings = {
@@ -781,10 +812,8 @@ export const privacy = {
       '/v1/privacy/deletion-request',
       { method: 'POST' },
     ),
-  cancelDeletion: () =>
-    request<{ cancelled: unknown }>('/v1/privacy/deletion-request/cancel', { method: 'POST' }),
-  exportData: (opts?: { signal?: AbortSignal }) =>
-    request<Record<string, unknown>>('/v1/privacy/portability', opts),
+  cancelDeletion: () => request<{ cancelled: unknown }>('/v1/privacy/deletion-request/cancel', { method: 'POST' }),
+  exportData: (opts?: { signal?: AbortSignal }) => request<Record<string, unknown>>('/v1/privacy/portability', opts),
 };
 
 export const configApi = {
@@ -793,11 +822,27 @@ export const configApi = {
       env: Record<string, string>;
       rateLimits: Array<{ endpoint: string; limit: number; window: string }>;
       tokens: Array<{ id: string; name: string; scopes: string[]; createdAt: string; lastUsed: string | null }>;
-      symphonies: Array<{ id: string; name: string; status: 'connected' | 'disconnected' | 'error'; endpoint: string; lastSync: string | null }>;
+      symphonies: Array<{
+        id: string;
+        name: string;
+        status: 'connected' | 'disconnected' | 'error';
+        endpoint: string;
+        lastSync: string | null;
+      }>;
       subscriptions: Array<{ id: string; event: string; channel: string; target: string; enabled: boolean }>;
-      warnings: Array<{ id: string; type: 'rate_limit' | 'quota' | 'token_expiry' | 'system'; message: string; severity: 'info' | 'warning' | 'critical'; dismissed: boolean; createdAt: string }>;
+      warnings: Array<{
+        id: string;
+        type: 'rate_limit' | 'quota' | 'token_expiry' | 'system';
+        message: string;
+        severity: 'info' | 'warning' | 'critical';
+        dismissed: boolean;
+        createdAt: string;
+      }>;
       integrations: Array<{ id: string; name: string; icon: string; connected: boolean; configUrl?: string }>;
-      infrastructure: Record<string, { provider: string; host: string; port: number; status: 'connected' | 'disconnected' | 'error' }>;
+      infrastructure: Record<
+        string,
+        { provider: string; host: string; port: number; status: 'connected' | 'disconnected' | 'error' }
+      >;
       publicUrl?: string;
       mcp?: { apiUrl: string; serverUrl: string };
     }>('/v1/config', opts),
@@ -813,8 +858,7 @@ export const configApi = {
     }),
   regenerateToken: (tokenId: string) =>
     request<{ success: boolean }>(`/v1/config/tokens/${tokenId}/regenerate`, { method: 'POST' }),
-  revokeToken: (tokenId: string) =>
-    request<{ success: boolean }>(`/v1/config/tokens/${tokenId}`, { method: 'DELETE' }),
+  revokeToken: (tokenId: string) => request<{ success: boolean }>(`/v1/config/tokens/${tokenId}`, { method: 'DELETE' }),
   toggleIntegration: (id: string, connected: boolean) =>
     request<{ success: boolean }>(`/v1/config/integrations/${id}`, {
       method: 'PUT',
@@ -822,10 +866,10 @@ export const configApi = {
     }),
   testInfrastructure: (provider: string) =>
     request<{ status: string }>(`/v1/config/infrastructure/${provider}/test`, { method: 'POST' }),
-  verifyService: (service: string, apiKey: string) =>
+  verifyService: (service: string, apiKey: string, extra?: { url?: string; email?: string }) =>
     request<{ connected: boolean; name?: string; error?: string }>('/v1/config/verify', {
       method: 'POST',
-      body: JSON.stringify({ service, apiKey }),
+      body: JSON.stringify({ service, apiKey, ...extra }),
     }),
 };
 
@@ -846,15 +890,24 @@ export const mcpKeysApi = {
 };
 
 export const sla = {
-  getMetrics: () =>
-    request<SLAMetrics>('/v1/sla/metrics'),
+  getMetrics: () => request<SLAMetrics>('/v1/sla/metrics'),
 };
 
 // -- Stats / Analytics API --
 
 export const stats = {
-  get: () =>
-    request<DashboardStats>('/v1/stats'),
+  get: () => request<DashboardStats>('/v1/stats'),
+};
+
+// -- Lighthouse evaluation API --
+
+export const evaluation = {
+  lighthouse: (opts?: { signal?: AbortSignal }) => request<LighthouseApiResponse>('/v1/evaluation/lighthouse', opts),
+  runLighthouse: (opts?: { signal?: AbortSignal }) =>
+    request<{ id: string; status: string; message: string }>('/v1/evaluation/lighthouse/run', {
+      method: 'POST',
+      ...opts,
+    }),
 };
 
 // -- Audit Log API --
@@ -929,8 +982,7 @@ export const kpi = {
       count: number;
       generatedAt: string;
     }>(`/v1/admin/kpi?days=${params.days}`),
-  exportUrl: (days: number) =>
-    `/api/v1/admin/kpi/export?days=${days}`,
+  exportUrl: (days: number) => `/api/v1/admin/kpi/export?days=${days}`,
 };
 
 // -- Pricing API --
@@ -1008,4 +1060,3 @@ export const pricing = {
       };
     }>(`/v1/pricing/vs/${competitor}`),
 };
-

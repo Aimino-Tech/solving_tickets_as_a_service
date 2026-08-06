@@ -12,6 +12,7 @@ import { Router, type Request, type Response } from 'express';
 import { queryWithRetry } from '../db/connection.js';
 import { rootLogger } from '../utils/logger.js';
 import { config } from '../config.js';
+import { requireAuth } from '../auth/middleware.js';
 
 const log = rootLogger.child({ module: 'dashboard-api' });
 
@@ -463,10 +464,10 @@ router.get('/dashboard/accounts/:accountId/usage/total', async (req: Request, re
 
 const configRouter: Router = Router();
 
-configRouter.get('/', (_req: Request, res: Response) => {
+configRouter.get('/', requireAuth, (_req: Request, res: Response) => {
   try {
     const env: Record<string, string> = {};
-    const trackedKeys = ['LINEAR_API_KEY', 'BITBUCKET_APP_PASSWORD', 'JIRA_API_TOKEN', 'GITHUB_TOKEN', 'SLACK_BOT_TOKEN', 'SLACK_APP_TOKEN'];
+    const trackedKeys = ['LINEAR_API_KEY', 'BITBUCKET_APP_PASSWORD', 'JIRA_API_TOKEN', 'JIRA_URL', 'JIRA_EMAIL', 'GITHUB_TOKEN', 'SLACK_BOT_TOKEN', 'SLACK_APP_TOKEN'];
     for (const key of trackedKeys) {
       const val = key in envOverrides && envOverrides[key]
         ? envOverrides[key]
@@ -475,6 +476,8 @@ configRouter.get('/', (_req: Request, res: Response) => {
         env[key] = val;
       }
     }
+
+    const jiraConfigured = (k: string) => (k in envOverrides && envOverrides[k]) ? envOverrides[k] : process.env[k] || '';
 
     const integrations = [
       {
@@ -504,6 +507,13 @@ configRouter.get('/', (_req: Request, res: Response) => {
         icon: 'bitbucket',
         connected: !!(config.bitbucket.username && config.bitbucket.appPassword),
         configUrl: 'https://bitbucket.org/account/settings/app-passwords/',
+      },
+      {
+        id: 'jira',
+        name: 'Jira',
+        icon: 'jira',
+        connected: !!(jiraConfigured('JIRA_URL') && jiraConfigured('JIRA_EMAIL') && jiraConfigured('JIRA_API_TOKEN')),
+        configUrl: '',
       },
     ];
 
@@ -535,7 +545,7 @@ const mcpApiUrl = process.env.SYNTARO_API_URL || 'https://api.syntaro.io';
   }
 });
 
-configRouter.put('/env', (req: Request, res: Response) => {
+configRouter.put('/env', requireAuth, (req: Request, res: Response) => {
   try {
     const updates = req.body || {};
     for (const [key, val] of Object.entries(updates)) {
@@ -552,7 +562,7 @@ configRouter.put('/env', (req: Request, res: Response) => {
   }
 });
 
-configRouter.post('/verify', async (req: Request, res: Response) => {
+configRouter.post('/verify', requireAuth, async (req: Request, res: Response) => {
   try {
     const { service, apiKey } = req.body || {};
     if (!service || !apiKey) {
@@ -580,6 +590,33 @@ configRouter.post('/verify', async (req: Request, res: Response) => {
         res.json({ connected: true, name: auth.team || null });
       } else {
         res.json({ connected: false, error: 'Invalid bot token — could not authenticate with Slack' });
+      }
+    } else if (service === 'jira') {
+      const { url, email } = req.body || {};
+      if (!url || !email || !apiKey) {
+        res.status(400).json({ connected: false, error: 'Jira site URL, email and API token are required' });
+        return;
+      }
+      const baseUrl = String(url).trim().replace(/\/+$/, '');
+      try {
+        const resp = await fetch(`${baseUrl}/rest/api/3/myself`, {
+          headers: {
+            Accept: 'application/json',
+            Authorization: 'Basic ' + Buffer.from(`${email}:${apiKey}`).toString('base64'),
+          },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          res.json({ connected: true, name: data.displayName || data.name || null });
+        } else if (resp.status === 401 || resp.status === 403) {
+          res.json({ connected: false, error: `Invalid Jira credentials (status ${resp.status})` });
+        } else {
+          res.json({ connected: false, error: `Jira API returned status ${resp.status}` });
+        }
+      } catch (err) {
+        const msg = (err as Error)?.message || String(err);
+        res.json({ connected: false, error: `Could not reach Jira site — check the site URL (${msg})` });
       }
     } else {
       res.status(400).json({ connected: false, error: `Unknown service: ${service}` });

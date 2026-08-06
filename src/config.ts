@@ -395,6 +395,7 @@ const envSchema = z.object({
   OPENSYMPHONY_CELERY_PIPELINE_URL: z.string().default(''),
   OPENSYMPHONY_CELERY_PIPELINE_API_KEY: z.string().default(''),
   OPENSYMPHONY_CELERY_PIPELINE_ENABLED: boolSchema(false),
+  OPEN_SYMPHONY_DISPATCH_URL: z.string().default(''),
   OPENSYMPHONY_DISPATCH_URL: z.string().default(''),
   OPENSYMPHONY_API_KEY: z.string().default(''),
   OPENSYMPHONY_TENANT: z.string().default('default'),
@@ -825,7 +826,7 @@ function buildConfig(env: ParsedEnv) {
       enabled: env.OPENSYMPHONY_ENABLED,
       port: env.OPENSYMPHONY_PORT,
       host: env.OPENSYMPHONY_HOST,
-      dispatchUrl: env.OPENSYMPHONY_DISPATCH_URL,
+      dispatchUrl: env.OPEN_SYMPHONY_DISPATCH_URL || env.OPENSYMPHONY_DISPATCH_URL,
       apiKey: env.OPENSYMPHONY_API_KEY,
       tenant: env.OPENSYMPHONY_TENANT,
       celeryPipeline: {

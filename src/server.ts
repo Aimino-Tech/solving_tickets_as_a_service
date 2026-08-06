@@ -46,7 +46,6 @@ import { streamAuditExportCsv, streamAuditExportJson } from './audit/export.js';
 import { authRouter } from './auth/index.js';
 import { oauthRouter } from './auth/oauth.js';
 import { billingRouter } from './billing/index.js';
-import { usageLimitsRouter } from './usage-limits/routes.js'; // AIM-4645
 import { registerSlackMentionHandler } from './channels/slack/handler.js';
 import { config } from './config.js';
 import { pipelineHistoryRouter } from './history/pipelineHistoryApi.js';
@@ -68,14 +67,15 @@ import { adminWebhooksRouter } from './routes/adminWebhooks.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { badgeRouter } from './routes/badge.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
+import { bitbucketRouter } from './routes/bitbucket.js';
+import { bitbucketOAuthRouter } from './routes/bitbucketOAuth.js';
 import { configRouter, dashboardRouter } from './routes/dashboard.js';
 import { dpaRouter } from './routes/dpa.js';
+import { evaluationRouter } from './routes/evaluation.js';
 import { featureFlagsRouter } from './routes/featureFlags.js';
 import { gitHubOAuthRouter } from './routes/githubOAuth.js';
 import healthRouter from './routes/health.js';
 import { kpiRouter } from './routes/kpi.js';
-import { bitbucketRouter } from './routes/bitbucket.js';
-import { bitbucketOAuthRouter } from './routes/bitbucketOAuth.js';
 import { linearOAuthRouter } from './routes/linearOAuth.js';
 import { litellmUsageRouter } from './routes/litellmUsage.js';
 import mcpKeysRouter from './routes/mcpKeys.js';
@@ -92,6 +92,7 @@ import { runFeedbackRouter } from './routes/runFeedback.js';
 import { runsRouter } from './routes/runs.js';
 import { runsApiRouter } from './routes/runsApi.js';
 import { slaRouter } from './routes/sla.js';
+import { ticketsRouter } from './routes/tickets.js';
 import { viralRouter } from './routes/viral.js';
 import { workspaceRouter } from './routes/workspace.js';
 import { ipAllowlistMiddleware } from './security/ipAllowlist.js';
@@ -100,6 +101,7 @@ import { teamRouter } from './team/routes.js';
 import { getTracker, initTrackers } from './trackers/index.js';
 import { handleJiraWebhook, verifyJiraWebhookSignature } from './trackers/jira.js';
 import { handleLinearWebhook, verifyLinearWebhookSignature } from './trackers/linear.js';
+import { usageLimitsRouter } from './usage-limits/routes.js'; // AIM-4645
 import { rootLogger } from './utils/logger.js';
 import { extractOrGenerateTraceId, runWithTraceId, TRACE_HEADER } from './utils/trace.js';
 import type { IssueJobData } from './utils/types.js';
@@ -111,6 +113,49 @@ import { recordWebhookDuration } from './webhooks/metrics.js';
 import { startWebhookRetryWorker } from './webhooks/retryWorker.js';
 
 const log = rootLogger.child({ module: 'server' });
+
+async function updateRunStatus(
+  data: IssueJobData,
+  status: 'pending' | 'running' | 'failed',
+  note?: string,
+): Promise<void> {
+  try {
+    const { queryWithRetry } = await import('./db/connection.js');
+    const { createStorage } = await import('./storage/index.js');
+    const update = await queryWithRetry(
+      `UPDATE run_history
+       SET status = $1, summary = COALESCE($2, summary), error = $3, updated_at = NOW()
+       WHERE installation_id = $4 AND repo_owner = $5 AND repo_name = $6 AND issue_number = $7
+         AND status IN ('pending', 'running')
+       RETURNING id`,
+      [
+        status,
+        data.issueTitle,
+        status === 'failed' ? note : null,
+        data.installationId ?? 0,
+        data.repoOwner,
+        data.repoName,
+        data.issueNumber,
+      ],
+    );
+    if (update.rows.length === 0) {
+      const storage = await createStorage();
+      if (storage) {
+        await storage.saveRun({
+          installationId: data.installationId ?? 0,
+          repoOwner: data.repoOwner,
+          repoName: data.repoName,
+          issueNumber: data.issueNumber,
+          status,
+          summary: data.issueTitle,
+          error: status === 'failed' ? note : undefined,
+        });
+      }
+    }
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to save run record');
+  }
+}
 
 export async function createApp(): Promise<express.Application> {
   const app = express();
@@ -748,6 +793,8 @@ export async function createApp(): Promise<express.Application> {
 
   // -- Health check endpoints --------------------------------------------------
   app.use(healthRouter);
+  // Alias under /api so dashboard calls like /api/health/verbose resolve too.
+  app.use('/api', healthRouter);
 
   // ── Monitoring Loop Status ────────────────────────────────────────
   // GET /api/monitoring/status — Monitoring loop stats (JSON)
@@ -812,6 +859,9 @@ export async function createApp(): Promise<express.Application> {
   const { statsRouter, auditRouter } = await import('./routes/statsAndAudit.js');
   app.use('/api/v1/stats', statsRouter);
   app.use('/api/v1/audit', auditRouter);
+
+  // ── Evaluation API (Lighthouse quality checks) ─────────
+  app.use('/api/v1/evaluation', evaluationRouter);
 
   // ── DPA API ──────────────────────────────────────────────
   app.use('/api/v1/billing', dpaRouter);
@@ -936,7 +986,15 @@ export async function createApp(): Promise<express.Application> {
   if (fs.existsSync(path.join(dashboardDist, 'index.html'))) {
     app.use(express.static(dashboardDist));
     app.get('*', (req: Request, res: Response, next: NextFunction) => {
-      if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+      if (
+        req.path.startsWith('/api/') ||
+        req.path.startsWith('/health') ||
+        req.path.startsWith('/metrics') ||
+        req.path.startsWith('/mcp') ||
+        req.path.startsWith('/discovery') ||
+        req.path.startsWith('/.well-known') ||
+        req.path.startsWith('/badge/')
+      ) {
         next();
         return;
       }
@@ -1192,6 +1250,9 @@ export async function createApp(): Promise<express.Application> {
   app.use('/api/v1/runs', runsApiRouter);
   app.use('/api/v1/runs', runFeedbackRouter);
 
+  // ── Tickets API (plan-gated, authenticated ticket creation) ─────
+  app.use('/api/v1/tickets', ticketsRouter);
+
   // SAML 2.0 SSO routes (optional)
   try {
     const { default: samlRouter } = await import('./routes/saml.js');
@@ -1202,8 +1263,7 @@ export async function createApp(): Promise<express.Application> {
 
   // Enterprise routes (optional)
   try {
-    const enterpriseModule = await import('./routes/enterprise.js');
-    const enterpriseRouter = (enterpriseModule as any).default || enterpriseModule;
+    const { enterpriseRouter } = await import('./routes/enterprise.js');
     app.use('/api/v1/enterprise', enterpriseRouter);
   } catch (err) {
     log.warn({ err: String(err) }, 'Enterprise routes not available — skipping');
@@ -1211,8 +1271,11 @@ export async function createApp(): Promise<express.Application> {
 
   app.get('/metrics', async (_req: Request, res: Response) => {
     try {
-      const { bridgeMetrics } = await import('./bridge/metrics.js');
-      const metrics = bridgeMetrics.render();
+      const [{ bridgeMetrics }, { renderMetrics }] = await Promise.all([
+        import('./bridge/metrics.js'),
+        import('./webhooks/metrics.js'),
+      ]);
+      const metrics = `${bridgeMetrics.render()}\n${renderMetrics()}`;
       res.type('text/plain; version=0.0.4').send(metrics);
     } catch (err) {
       log.error({ err: String(err) }, 'Failed to load metrics');
@@ -1361,8 +1424,43 @@ async function tryListen(app: express.Application, port: number, attempt: number
             const result = await dispatchToOpenSymphony(data);
             if (!result.success) {
               log.error({ errors: result.errors }, 'OpenSymphony dispatch failed');
+              await updateRunStatus(data, 'failed', result.errors?.[0]);
             } else {
               log.info({ runId: result.runId, prUrl: result.prUrl }, 'OpenSymphony dispatch completed');
+              await updateRunStatus(data, 'running', result.summary);
+              if (data._meta?.ticketId) {
+                try {
+                  const { ticketsRepository } = await import('./db/repositories/index.js');
+                  await ticketsRepository.updateStatus(data._meta.ticketId, 'fixing', result.runId);
+                } catch (ticketErr) {
+                  log.warn({ err: String(ticketErr), ticketId: data._meta.ticketId }, 'Failed to mark ticket fixing');
+                }
+              }
+              if (result.runId) {
+                const { startRunCompletionPoll } = await import('./dispatch/runCompletionPoller.js');
+                startRunCompletionPoll(result.runId, data);
+              }
+              // Record usage against the account's credit ledger (free plan: 1 credit per fix dispatch)
+              try {
+                const { queryWithRetry } = await import('./db/connection.js');
+                const { usageRepository } = await import('./db/repositories/index.js');
+                const acctResult = await queryWithRetry<{ id: number }>(
+                  'SELECT id FROM accounts WHERE github_installation_id = $1 LIMIT 1',
+                  [data.installationId ?? 0],
+                );
+                if (acctResult.rows[0]) {
+                  await usageRepository.record({
+                    accountId: acctResult.rows[0].id,
+                    issueId: data.issueNumber > 0 ? data.issueNumber : undefined,
+                    repo: `${data.repoOwner}/${data.repoName}`,
+                    action: 'fix_dispatch',
+                    creditsUsed: 1,
+                  });
+                  log.info({ accountId: acctResult.rows[0].id }, 'Recorded fix usage credit');
+                }
+              } catch (usageErr) {
+                log.warn({ err: String(usageErr) }, 'Failed to record usage credit');
+              }
               // Post result back to Slack thread if the original request came from Slack
               const slackMeta = data._meta;
               if (slackMeta?.slackChannel) {

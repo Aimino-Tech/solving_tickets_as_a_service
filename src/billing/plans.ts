@@ -38,6 +38,10 @@ export interface Plan {
   amountCents: number;
   /** Stripe Price ID for this plan's monthly subscription. */
   priceId: string;
+  /** Maximum fixes per rolling 24h window. */
+  dailyFixLimit: number;
+  /** Maximum fixes per rolling 7d window. */
+  weeklyFixLimit: number;
   /** Maximum fixes per billing month. */
   monthlyFixLimit: number;
   /** Whether premium models (claude-sonnet-4, GPT-4o) are available. */
@@ -87,6 +91,8 @@ export const PLANS: Record<PlanId, Plan> = {
     description: 'Unlimited fixes, your API key, your infrastructure',
     amountCents: 0,
     priceId: '',
+    dailyFixLimit: 999_999,
+    weeklyFixLimit: 999_999,
     monthlyFixLimit: 999_999,
     premiumModels: true,
     concurrentFixes: 10,
@@ -103,6 +109,8 @@ export const PLANS: Record<PlanId, Plan> = {
     description: '10 fixes/mo — basic fix runs for individuals and small projects',
     amountCents: 0,
     priceId: '',
+    dailyFixLimit: 3,
+    weeklyFixLimit: 5,
     monthlyFixLimit: 10,
     premiumModels: false,
     concurrentFixes: 1,
@@ -119,7 +127,9 @@ export const PLANS: Record<PlanId, Plan> = {
     description: 'For individual developers — frontier models, 100 fixes/mo',
     amountCents: 4900,
     priceId: getPlanPriceId('solo'),
-    monthlyFixLimit: 100,
+    dailyFixLimit: 30,
+    weeklyFixLimit: 200,
+    monthlyFixLimit: 500,
     premiumModels: true,
     concurrentFixes: 3,
     sandboxTimeoutMs: 600_000,
@@ -135,7 +145,9 @@ export const PLANS: Record<PlanId, Plan> = {
     description: 'For teams — higher limits, priority support',
     amountCents: 14900,
     priceId: getPlanPriceId('team'),
-    monthlyFixLimit: 500,
+    dailyFixLimit: 999_999,
+    weeklyFixLimit: 999_999,
+    monthlyFixLimit: 999_999,
     premiumModels: true,
     concurrentFixes: 10,
     sandboxTimeoutMs: 900_000,
@@ -151,6 +163,8 @@ export const PLANS: Record<PlanId, Plan> = {
     description: 'Unlimited fixes, custom terms, dedicated support',
     amountCents: 0,
     priceId: '',
+    dailyFixLimit: 999_999,
+    weeklyFixLimit: 999_999,
     monthlyFixLimit: 999_999,
     premiumModels: true,
     concurrentFixes: 50,

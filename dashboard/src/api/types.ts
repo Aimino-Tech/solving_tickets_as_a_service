@@ -18,7 +18,7 @@ export interface Run {
   repoName: string;
   issueNumber: number;
   issueTitle: string;
-  status: 'queued' | 'running' | 'success' | 'failed' | 'cancelled';
+  status: 'queued' | 'pending' | 'running' | 'completed' | 'success' | 'failed' | 'cancelled';
   modelUsed?: string;
   costCents?: number;
   durationSeconds?: number;
@@ -32,6 +32,8 @@ export interface Run {
   testOutput?: string;
   creditsUsed?: number;
 }
+
+export type RunStatus = Run['status'];
 
 export interface Repo {
   id: string;
@@ -50,6 +52,7 @@ export interface DashboardStats {
   runsByDay: { date: string; count: number; passed: number }[];
   costByDay: { date: string; costCents: number }[];
   fixRateByWeek: { week: string; rate: number }[];
+  fixesUsedThisMonth?: number;
 }
 
 export interface AuditEntry {
@@ -217,4 +220,46 @@ export interface VsComparisonData {
     ourCostPerFixCents: number;
     theirCostPerFixCents: number;
   };
+}
+
+// ── Lighthouse evaluation (Lighthouse-based quality checks) ──────────────────
+
+export type LighthouseSeverity = 'good' | 'warning' | 'critical' | 'empty';
+
+export type LighthouseCategory = 'performance' | 'accessibility' | 'best-practices' | 'seo';
+
+export interface LighthouseRubricItem {
+  id: string;
+  route: string;
+  value: number | null;
+  criteria: string;
+  severity: LighthouseSeverity;
+  evidence: string;
+  weight: number;
+  higherIsBetter: boolean;
+}
+
+export interface LighthouseEvaluation {
+  timestamp: string;
+  score: number | null;
+  verdict: LighthouseSeverity;
+  rubric: LighthouseRubricItem[];
+  actions: string[];
+}
+
+export interface LighthouseFeedbackDelta {
+  id: string;
+  route: string;
+  before: number | null;
+  after: number | null;
+  delta: number | null;
+  severityBefore: LighthouseSeverity;
+  severityAfter: LighthouseSeverity;
+  trend: 'improved' | 'regressed' | 'unchanged' | 'new';
+}
+
+export interface LighthouseApiResponse {
+  lastRunAt: string | null;
+  evaluation: LighthouseEvaluation | null;
+  feedback: LighthouseFeedbackDelta[];
 }

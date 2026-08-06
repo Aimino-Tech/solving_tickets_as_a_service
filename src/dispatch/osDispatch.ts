@@ -17,6 +17,26 @@ export interface DispatchResult {
 export async function dispatchToOpenSymphony(data: IssueJobData): Promise<DispatchResult> {
   const celeryEnabled = config.opensymphony?.celeryPipeline?.enabled === true;
 
+  // Fix-only usage gate: ticket creation is free/unlimited; each fix dispatch
+  // consumes budget. Accounts at the monthly fix limit are not dispatched.
+  if (data.installationId) {
+    const { resolveAccountIdByInstallation, getFixBudgetStatus } = await import('../billing/fixBudget.js');
+    const accountId = await resolveAccountIdByInstallation(data.installationId);
+    if (accountId) {
+      const budget = await getFixBudgetStatus(accountId);
+      if (budget.exhausted) {
+        log.warn(
+          { accountId, used: budget.used, limit: budget.limit, repo: `${data.repoOwner}/${data.repoName}` },
+          'Fix budget exhausted — skipping dispatch',
+        );
+        return {
+          success: false,
+          errors: [`usage_limit_reached: monthly fix limit (${budget.limit}) reached — upgrade to fix`],
+        };
+      }
+    }
+  }
+
   if (celeryEnabled) {
     const result = await dispatchFullPipeline(data);
     if (result.success) {
@@ -77,6 +97,8 @@ export async function dispatchToOpenSymphony(data: IssueJobData): Promise<Dispat
       details: { dispatchTarget: 'opensymphony-http', dispatchId },
     });
 
+    await recordFixUsage(data, dispatchId);
+
     return {
       success: true,
       runId: dispatchId || undefined,
@@ -93,5 +115,32 @@ export async function dispatchToOpenSymphony(data: IssueJobData): Promise<Dispat
       error: String(err),
     });
     return { success: false, errors: [String(err)] };
+  }
+}
+
+/**
+ * Record one fix-dispatch credit against the account's usage ledger
+ * (free plan = 1 credit per fix dispatch). Account is resolved from the
+ * installation id; silently skips when no matching account exists.
+ */
+async function recordFixUsage(data: IssueJobData, dispatchId: string): Promise<void> {
+  try {
+    const { queryWithRetry } = await import('../db/connection.js');
+    const { usageRepository } = await import('../db/repositories/index.js');
+    const acctResult = await queryWithRetry<{ id: number }>(
+      'SELECT id FROM accounts WHERE github_installation_id = $1 LIMIT 1',
+      [data.installationId ?? 0],
+    );
+    if (!acctResult.rows[0]) return;
+    await usageRepository.record({
+      accountId: acctResult.rows[0].id,
+      issueId: data.issueNumber > 0 ? data.issueNumber : undefined,
+      repo: `${data.repoOwner}/${data.repoName}`,
+      action: 'fix_dispatch',
+      creditsUsed: 1,
+    });
+    log.info({ accountId: acctResult.rows[0].id, dispatchId }, 'Recorded fix usage credit');
+  } catch (usageErr) {
+    log.warn({ err: String(usageErr) }, 'Failed to record usage credit');
   }
 }

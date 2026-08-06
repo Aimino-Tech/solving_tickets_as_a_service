@@ -30,51 +30,79 @@ function GithubLogo({ className = 'size-[18px]' }: { className?: string }) {
 
 function GitlabLogo({ className = 'size-[18px]' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" className={className}>
-      <path fill="#FC6D26" d="M22.65 14.39L12 22.13 1.35 14.39a.84.84 0 01-.3-.94l1.22-3.78 2.44-7.51c.06-.18.26-.3.46-.3.2 0 .39.11.46.29l2.42 7.45h8.9l2.42-7.45c.07-.18.26-.29.46-.29.2 0 .4.12.46.3l2.44 7.51 1.22 3.78a.84.84 0 01-.3.94z" />
-      <path fill="#E24329" d="M12 22.13L1.35 14.39a.84.84 0 01-.3-.94l1.22-3.78L12 22.13z" />
-      <path fill="#FCA326" d="M1.05 13.45l1.22-3.78 3.68 11.33L1.05 13.45z" />
-      <path fill="#E24329" d="M12 22.13l10.65-7.74a.84.84 0 00.3-.94l-1.22-3.78L12 22.13z" />
-      <path fill="#FCA326" d="M22.95 13.45l-1.22-3.78-3.68 11.33 4.9-7.55z" />
+    <svg viewBox="0 0 16 16" width="18" height="18" className={className}>
+      <path fill="#FC6D26" d="M14.975 8.904L14.19 6.55l-1.552-4.67a.268.268 0 00-.255-.18.268.268 0 00-.254.18l-1.552 4.667H5.422L3.87 1.879a.267.267 0 00-.254-.179.267.267 0 00-.254.18l-1.55 4.667-.784 2.357a.515.515 0 00.193.583l6.78 4.812 6.778-4.812a.516.516 0 00.196-.583z" />
+      <path fill="#E24329" d="M8 14.296l2.578-7.75H5.423L8 14.296z" />
+      <path fill="#FC6D26" d="M8 14.296l-2.579-7.75H1.813L8 14.296z" />
+      <path fill="#FCA326" d="M1.81 6.549l-.784 2.354a.515.515 0 00.193.583L8 14.3 1.81 6.55z" />
+      <path fill="#E24329" d="M1.812 6.549h3.612L3.87 1.882a.268.268 0 00-.254-.18.268.268 0 00-.255.18L1.812 6.549z" />
+      <path fill="#FC6D26" d="M8 14.296l2.578-7.75h3.614L8 14.296z" />
+      <path fill="#FCA326" d="M14.19 6.549l.783 2.354a.514.514 0 01-.193.583L8 14.296l6.188-7.747h.001z" />
+      <path fill="#E24329" d="M14.19 6.549H10.58l1.551-4.667a.267.267 0 01.255-.18c.115 0 .217.073.254.18l1.552 4.667z" />
     </svg>
   );
 }
 
 function AzureDevopsLogo({ className = 'size-[18px]' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" className={className}>
-      <path fill="#0078D4" d="M0 8.868L4.697 4.5 14.28 1.5 24 6.787v10.426l-9.72 5.287-9.583-3-4.697-4.368z" />
-      <path fill="#005A9E" d="M4.697 4.5l9.583 12.713L24 6.787v10.426l-9.72 5.287-9.583-3L0 15.132V8.868L4.697 4.5z" />
-      <path fill="#50E6FF" opacity="0.8" d="M14.28 1.5L4.697 4.5v10.632l9.583 2.081L24 6.787 14.28 1.5z" />
-      <path fill="#0078D4" d="M4.697 4.5L14.28 1.5v15.713L4.697 15.132V4.5z" />
+    <svg viewBox="0 -28.5 256 256" width="18" height="18" className={className}>
+      <g fill="none" fill-rule="evenodd">
+        <path fill="#0089D6" fill-rule="nonzero" d="M118.431947,187.698037 C151.322003,181.887937 178.48731,177.08008 178.799309,177.013916 L179.366585,176.893612 L148.31513,139.958881 C131.236843,119.644776 117.26369,102.945381 117.26369,102.849118 C117.26369,102.666861 149.32694,14.3716012 149.507189,14.057257 C149.567455,13.952452 171.38747,51.62411 202.400338,105.376064 C231.435152,155.699606 255.372949,197.191547 255.595444,197.580359 L255.999996,198.287301 L157.315912,198.274572 L58.6318456,198.261895 L118.431947,187.698073 L118.431947,187.698037 Z M-4.03864498e-06,176.434723 C-4.03864498e-06,176.382721 14.631291,150.983941 32.5139844,119.992969 L65.0279676,63.6457518 L102.919257,31.8473052 C123.759465,14.3581634 140.866667,0.0274832751 140.935253,0.00062917799 C141.003839,-0.0247829554 140.729691,0.665213042 140.326034,1.53468179 C139.922377,2.40415053 121.407304,42.1170321 99.1814268,89.7855264 L58.7707514,176.455514 L29.3853737,176.492355 C13.2234196,176.512639 -4.03864498e-06,176.486664 -4.03864498e-06,176.434703 L-4.03864498e-06,176.434723 Z" />
+      </g>
     </svg>
   );
 }
 
 function BitbucketLogo({ className = 'size-[18px]' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" className={className}>
-      <path fill="#2684FF" d="M2.6 3c-.4 0-.7.3-.8.7l-1.8 13.6c-.1.5.3.9.8.9h18.4c.4 0 .8-.4.8-.9L18.2 3.7c-.1-.4-.4-.7-.8-.7H2.6zM13.6 12.8H6.4L5.2 6.5h9.6l-1.2 6.3z" />
+    <svg viewBox="0 0 32 32" width="18" height="18" className={className}>
+      <defs>
+        <linearGradient id="a" x1="-792.28" y1="633.265" x2="-793.365" y2="632.418" gradientTransform="matrix(12.821, 0, 0, -12.821, 10188.143, 8132.963)" gradientUnits="userSpaceOnUse">
+          <stop offset="0.18" stopColor="#0052cc" />
+          <stop offset="1" stopColor="#2684ff" />
+        </linearGradient>
+      </defs>
+      <path fill="#2684FF" d="M2.909,3.41A.9.9,0,0,0,2,4.3a.8.8,0,0,0,.012.155L5.82,27.568a1.22,1.22,0,0,0,1.193,1.018H25.282a.9.9,0,0,0,.9-.754L29.987,4.454a.9.9,0,0,0-.737-1.033.911.911,0,0,0-.147-.012ZM18.944,20.119H13.113l-1.579-8.244h8.823Z" />
+      <path fill="url(#a)" d="M28.776,11.874H20.357l-1.413,8.244H13.113L6.228,28.3a1.21,1.21,0,0,0,.785.3H25.287a.9.9,0,0,0,.9-.754Z" />
     </svg>
   );
 }
 
 function SlackLogo({ className = 'size-[18px]' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" className={className}>
-      <path fill="#E01E5A" d="M6 15a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zm0-2.5a2.5 2.5 0 0 0 2.5-2.5V6a2.5 2.5 0 1 0-5 0v4A2.5 2.5 0 0 0 6 12.5z" />
-      <path fill="#36C5F0" d="M9 6a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zm2.5 0A2.5 2.5 0 0 0 14 3.5V1a2.5 2.5 0 1 0-5 0v2.5A2.5 2.5 0 0 0 11.5 6z" />
-      <path fill="#2EB67D" d="M18 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm0 2.5a2.5 2.5 0 0 0-2.5 2.5V18a2.5 2.5 0 1 0 5 0v-4a2.5 2.5 0 0 0-2.5-2.5z" />
-      <path fill="#ECB22E" d="M15 18a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0zm-2.5 0a2.5 2.5 0 0 0-2.5 2.5V23a2.5 2.5 0 1 0 5 0v-2.5a2.5 2.5 0 0 0-2.5-2.5z" />
+    <svg viewBox="-2.45 0 2452.5 2452.5" width="18" height="18" className={className}>
+      <g clip-rule="evenodd" fill-rule="evenodd">
+        <path fill="#36c5f0" d="m897.4 0c-135.3.1-244.8 109.9-244.7 245.2-.1 135.3 109.5 245.1 244.8 245.2h244.8v-245.1c.1-135.3-109.5-245.1-244.9-245.3.1 0 .1 0 0 0m0 654h-652.6c-135.3.1-244.9 109.9-244.8 245.2-.2 135.3 109.4 245.1 244.7 245.3h652.7c135.3-.1 244.9-109.9 244.8-245.2.1-135.4-109.5-245.2-244.8-245.3z" />
+        <path fill="#2eb67d" d="m2447.6 899.2c.1-135.3-109.5-245.1-244.8-245.2-135.3.1-244.9 109.9-244.8 245.2v245.3h244.8c135.3-.1 244.9-109.9 244.8-245.3zm-652.7 0v-654c.1-135.2-109.4-245-244.7-245.2-135.3.1-244.9 109.9-244.8 245.2v654c-.2 135.3 109.4 245.1 244.7 245.3 135.3-.1 244.9-109.9 244.8-245.3z" />
+        <path fill="#ecb22e" d="m1550.1 2452.5c135.3-.1 244.9-109.9 244.8-245.2.1-135.3-109.5-245.1-244.8-245.2h-244.8v245.2c-.1 135.2 109.5 245 244.8 245.2zm0-654.1h652.7c135.3-.1 244.9-109.9 244.8-245.2.2-135.3-109.4-245.1-244.7-245.3h-652.7c-135.3.1-244.9 109.9-244.8 245.2-.1 135.4 109.4 245.2 244.7 245.3z" />
+        <path fill="#e01e5a" d="m0 1553.2c-.1 135.3 109.5 245.1 244.8 245.2 135.3-.1 244.9-109.9 244.8-245.2v-245.2h-244.8c-135.3.1-244.9 109.9-244.8 245.2zm652.7 0v654c-.2 135.3 109.4 245.1 244.7 245.3 135.3-.1 244.9-109.9 244.8-245.2v-653.9c.2-135.3-109.4-245.1-244.7-245.3-135.4 0-244.9 109.8-244.8 245.1 0 0 0 .1 0 0" />
+      </g>
     </svg>
   );
 }
 
 function TeamsLogo({ className = 'size-[18px]' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" className={className}>
-      <path fill="#5059C9" d="M19.5 7.5A2.5 2.5 0 1 0 17 5a2.5 2.5 0 0 0 2.5 2.5zm-1.5 1h-2a1.5 1.5 0 0 0-1.5 1.5v3.5h7V10A1.5 1.5 0 0 0 20 8.5z" />
-      <path fill="#7B83EB" d="M12.5 6.5a3.5 3.5 0 1 0-7 0 3.5 3.5 0 0 0 7 0zm-6 4.5A2.5 2.5 0 0 0 4 13.5V18a2.5 2.5 0 0 0 2.5 2.5h6A2.5 2.5 0 0 0 15 18v-4.5A2.5 2.5 0 0 0 12.5 11z" />
+    <svg viewBox="0 0 16 16" width="18" height="18" className={className}>
+      <path fill="#5059C9" d="M10.765 6.875h3.616c.342 0 .619.276.619.617v3.288a2.272 2.272 0 01-2.274 2.27h-.01a2.272 2.272 0 01-2.274-2.27V7.199c0-.179.145-.323.323-.323zM13.21 6.225c.808 0 1.464-.655 1.464-1.462 0-.808-.656-1.463-1.465-1.463s-1.465.655-1.465 1.463c0 .807.656 1.462 1.465 1.462z" />
+      <path fill="#7B83EB" d="M8.651 6.225a2.114 2.114 0 002.117-2.112A2.114 2.114 0 008.65 2a2.114 2.114 0 00-2.116 2.112c0 1.167.947 2.113 2.116 2.113zM11.473 6.875h-5.97a.611.611 0 00-.596.625v3.75A3.669 3.669 0 008.488 15a3.669 3.669 0 003.582-3.75V7.5a.611.611 0 00-.597-.625z" />
+      <path fill="#000000" opacity=".1" d="M8.814 6.875v5.255a.598.598 0 01-.596.595H5.193a3.951 3.951 0 01-.287-1.476V7.5a.61.61 0 01.597-.624h3.31z" />
+      <path fill="#000000" opacity=".2" d="M8.488 6.875v5.58a.6.6 0 01-.596.595H5.347a3.22 3.22 0 01-.267-.65 3.951 3.951 0 01-.172-1.15V7.498a.61.61 0 01.596-.624h2.985z" />
+      <path fill="#000000" opacity=".2" d="M8.488 6.875v4.93a.6.6 0 01-.596.595H5.08a3.951 3.951 0 01-.172-1.15V7.498a.61.61 0 01.596-.624h2.985z" />
+      <path fill="#000000" opacity=".2" d="M8.163 6.875v4.93a.6.6 0 01-.596.595H5.079a3.951 3.951 0 01-.172-1.15V7.498a.61.61 0 01.596-.624h2.66z" />
+      <path fill="#000000" opacity=".1" d="M8.814 5.195v1.024c-.055.003-.107.006-.163.006-.055 0-.107-.003-.163-.006A2.115 2.115 0 016.593 4.6h1.625a.598.598 0 01.596.594z" />
+      <path fill="#000000" opacity=".2" d="M8.488 5.52v.699a2.115 2.115 0 01-1.79-1.293h1.195a.598.598 0 01.595.594z" />
+      <path fill="#000000" opacity=".2" d="M8.488 5.52v.699a2.115 2.115 0 01-1.79-1.293h1.195a.598.598 0 01.595.594z" />
+      <path fill="#000000" opacity=".2" d="M8.163 5.52v.647a2.115 2.115 0 01-1.465-1.242h.87a.598.598 0 01.595.595z" />
+      <path fill="url(#microsoft-teams-color-16__paint0_linear_2372_494)" d="M1.597 4.925h5.969c.33 0 .597.267.597.596v5.958a.596.596 0 01-.597.596h-5.97A.596.596 0 011 11.479V5.521c0-.33.267-.596.597-.596z" />
+      <path fill="#ffffff" d="M6.152 7.193H4.959v3.243h-.76V7.193H3.01v-.63h3.141v.63z" />
+      <defs>
+        <linearGradient id="microsoft-teams-color-16__paint0_linear_2372_494" x1="2.244" y1="4.46" x2="6.906" y2="12.548" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#5A62C3" />
+          <stop offset=".5" stopColor="#4D55BD" />
+          <stop offset="1" stopColor="#3940AB" />
+        </linearGradient>
+      </defs>
     </svg>
   );
 }
@@ -82,18 +110,30 @@ function TeamsLogo({ className = 'size-[18px]' }: { className?: string }) {
 function LinearLogo({ className = 'size-[18px]' }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" className={className} fill="none">
-      <path d="M1.75 12a10.25 10.25 0 1 1 20.5 0 10.25 10.25 0 0 1-20.5 0Z" fill="currentColor" fillOpacity="0.1" />
-      <path d="M3.5 12a8.5 8.5 0 0 0 14.5 6.01L5.99 6.01A8.47 8.47 0 0 0 3.5 12Z" fill="currentColor" />
-      <path d="M7.4 4.6 19.4 16.6A8.5 8.5 0 0 0 7.4 4.6Z" fill="currentColor" />
+      <path d="M3.03509 12.9431C3.24245 14.9227 4.10472 16.8468 5.62188 18.364C7.13904 19.8811 9.0631 20.7434 11.0428 20.9508L3.03509 12.9431Z" fill="#000000" />
+      <path d="M3 11.4938L12.4921 20.9858C13.2976 20.9407 14.0981 20.7879 14.8704 20.5273L3.4585 9.11548C3.19793 9.88771 3.0451 10.6883 3 11.4938Z" fill="#000000" />
+      <path d="M3.86722 8.10999L15.8758 20.1186C16.4988 19.8201 17.0946 19.4458 17.6493 18.9956L4.99021 6.33659C4.54006 6.89125 4.16573 7.487 3.86722 8.10999Z" fill="#000000" />
+      <path d="M5.66301 5.59517C9.18091 2.12137 14.8488 2.135 18.3498 5.63604C21.8508 9.13708 21.8645 14.8049 18.3907 18.3228L5.66301 5.59517Z" fill="#000000" />
     </svg>
   );
 }
 
 function JiraLogo({ className = 'size-[18px]' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" className={className}>
-      <path fill="#2684FF" d="M11.53 2c0 2.4-1.97 4.35-4.4 4.35H3.59V9.9c0 2.4-1.96 4.35-4.4 4.35v6.16c5.96 0 10.8-4.8 10.8-10.74V2h1.54z" />
-      <path fill="#0052CC" d="M12.47 2c0 5.94 4.84 10.74 10.8 10.74V6.58c-2.44 0-4.4-1.95-4.4-4.35h-3.54V2h-2.86z" />
+    <svg viewBox="0 0 256 256" width="18" height="18" className={className}>
+      <defs>
+        <linearGradient id="linearGradient-1" x1="98.0308675%" y1="0.160599572%" x2="58.8877062%" y2="40.7655246%">
+          <stop stopColor="#0052CC" offset="18%" />
+          <stop stopColor="#2684FF" offset="100%" />
+        </linearGradient>
+        <linearGradient id="linearGradient-2" x1="100.665247%" y1="0.45503212%" x2="55.4018095%" y2="44.7269807%">
+          <stop stopColor="#0052CC" offset="18%" />
+          <stop stopColor="#2684FF" offset="100%" />
+        </linearGradient>
+      </defs>
+      <path fill="#2684FF" d="M244.657778,0 L121.706667,0 C121.706667,14.7201046 127.554205,28.837312 137.962891,39.2459977 C148.371577,49.6546835 162.488784,55.5022222 177.208889,55.5022222 L199.857778,55.5022222 L199.857778,77.3688889 C199.877391,107.994155 224.699178,132.815943 255.324444,132.835556 L255.324444,10.6666667 C255.324444,4.77562934 250.548815,3.60722001e-16 244.657778,0 Z" />
+      <path fill="url(#linearGradient-1)" d="M183.822222,61.2622222 L60.8711111,61.2622222 C60.8907238,91.8874888 85.7125112,116.709276 116.337778,116.728889 L138.986667,116.728889 L138.986667,138.666667 C139.025905,169.291923 163.863607,194.097803 194.488889,194.097778 L194.488889,71.9288889 C194.488889,66.0378516 189.71326,61.2622222 183.822222,61.2622222 Z" />
+      <path fill="url(#linearGradient-2)" d="M122.951111,122.488889 L0,122.488889 C3.75391362e-15,153.14192 24.8491913,177.991111 55.5022222,177.991111 L78.2222222,177.991111 L78.2222222,199.857778 C78.241767,230.45532 103.020285,255.265647 133.617778,255.324444 L133.617778,133.155556 C133.617778,127.264518 128.842148,122.488889 122.951111,122.488889 Z" />
     </svg>
   );
 }
@@ -346,6 +386,13 @@ export default function Settings() {
   const [bbOauthConfigured, setBbOauthConfigured] = useState(false);
   const [showBbTokenFallback, setShowBbTokenFallback] = useState(false);
   const bbErrorRef = useRef<HTMLDivElement | null>(null);
+  const [jiraExpanded, setJiraExpanded] = useState(false);
+  const [jiraForm, setJiraForm] = useState({ url: '', email: '', apiToken: '' });
+  const [showJiraPassword, setShowJiraPassword] = useState(false);
+  const [jiraConnecting, setJiraConnecting] = useState(false);
+  const [jiraSaving, setJiraSaving] = useState(false);
+  const [jiraFormError, setJiraFormError] = useState<string | null>(null);
+  const jiraErrorRef = useRef<HTMLDivElement | null>(null);
   const [slackConnected, setSlackConnected] = useState(false);
   const [mcpKeys, setMcpKeys] = useState<McpApiKey[]>([]);
   const [mcpKeysLoading, setMcpKeysLoading] = useState(false);
@@ -365,6 +412,12 @@ export default function Settings() {
       bbErrorRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [bbFormError]);
+
+  useEffect(() => {
+    if (jiraFormError && typeof jiraErrorRef.current?.scrollIntoView === 'function') {
+      jiraErrorRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [jiraFormError]);
 
   const guideJsonKey = (guideKeyId && revealedKeys[guideKeyId]) || Object.values(revealedKeys)[0] || '';
 
@@ -521,6 +574,20 @@ export default function Settings() {
   const hasLinearKey = !!env.LINEAR_API_KEY;
   const linearConnected = li?.connected && hasLinearKey;
   const githubInt = sysConfig?.integrations?.find((i: any) => i.id === 'github');
+  const jiraInt = sysConfig?.integrations?.find((i: any) => i.id === 'jira');
+  const jiraConnected = !!jiraInt?.connected;
+  const jiraHasSaved = !!(env.JIRA_URL && env.JIRA_EMAIL && env.JIRA_API_TOKEN);
+
+  useEffect(() => {
+    if (!jiraExpanded) return;
+    if (jiraForm.url || jiraForm.email || jiraForm.apiToken) return;
+    if (!(env.JIRA_URL || env.JIRA_EMAIL || env.JIRA_API_TOKEN)) return;
+    setJiraForm({
+      url: env.JIRA_URL || '',
+      email: env.JIRA_EMAIL || '',
+      apiToken: env.JIRA_API_TOKEN || '',
+    });
+  }, [jiraExpanded]);
   const slackFields = [
     { id: 'slack_bot_token', key: 'SLACK_BOT_TOKEN', label: 'Bot Token', placeholder: 'xoxb-...', docUrl: 'https://api.slack.com/authentication/token-types#bot' },
     { id: 'slack_app_token', key: 'SLACK_APP_TOKEN', label: 'App Token', placeholder: 'xapp-...', docUrl: 'https://api.slack.com/authentication/token-types#app' },
@@ -1318,28 +1385,231 @@ export default function Settings() {
           </div>
 
           {/* ── Jira ── */}
-          <div className="flex flex-row flex-nowrap items-center justify-between gap-3 p-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={iconContainerClass}>
-                <JiraLogo />
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Jira API Token</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  Connect a Jira site to delegate issues to Cloud Agents
+          <div className="p-4 space-y-3">
+            <div className="flex flex-row flex-nowrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={iconContainerClass}>
+                  <JiraLogo />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Jira</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    Connect a Jira site to delegate issues to Cloud Agents
+                  </div>
                 </div>
               </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {jiraSaving ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-yellow-500" />
+                    Connecting
+                  </span>
+                ) : jiraConnected ? (
+                  <button
+                    type="button"
+                    onClick={() => setJiraExpanded(!jiraExpanded)}
+                    className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors"
+                  >
+                    Manage
+                    <ChevronDown size={14} className="text-gray-400" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setJiraFormError(null);
+                      setJiraExpanded(!jiraExpanded);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors"
+                  >
+                    Connect
+                    <ArrowUpRight size={13} className="text-gray-400" />
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span
-                aria-disabled="true"
-                title="Setup guide coming soon"
-                className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 cursor-not-allowed select-none"
-              >
-                Connect
-                <ArrowUpRight size={13} />
-              </span>
-            </div>
+
+            {jiraExpanded && (
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                {jiraConnected ? (
+                  <>
+                    <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2 border border-gray-200 dark:border-gray-700">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        Connected to Jira site <code className="font-mono text-gray-700 dark:text-gray-300">{env.JIRA_URL}</code>. Credentials are stored encrypted.
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setJiraForm({
+                            url: env.JIRA_URL || '',
+                            email: env.JIRA_EMAIL || '',
+                            apiToken: env.JIRA_API_TOKEN || '',
+                          });
+                          setJiraFormError(null);
+                          setSysConfig((prev: any) => ({
+                            ...prev,
+                            integrations: prev.integrations?.map((i: any) =>
+                              i.id === 'jira' ? { ...i, connected: false } : i,
+                            ) || prev.integrations,
+                          }));
+                        }}
+                        className="btn-secondary text-xs min-h-[36px] px-3"
+                      >
+                        Reconnect
+                      </button>
+                      <button
+                        type="button"
+                        disabled={jiraConnecting}
+                        onClick={async () => {
+                          setJiraConnecting(true);
+                          setMessage(null);
+                          try {
+                            await configApi.updateEnv({ JIRA_URL: '', JIRA_EMAIL: '', JIRA_API_TOKEN: '' });
+                            setJiraForm({ url: '', email: '', apiToken: '' });
+                            setJiraFormError(null);
+                            setJiraExpanded(false);
+                            setSysConfig((prev: any) => ({
+                              ...prev,
+                              env: { ...prev.env, JIRA_URL: '', JIRA_EMAIL: '', JIRA_API_TOKEN: '' },
+                              integrations: prev.integrations?.map((i: any) =>
+                                i.id === 'jira' ? { ...i, connected: false } : i,
+                              ) || prev.integrations,
+                            }));
+                            setMessage({ type: 'success', text: 'Jira disconnected.' });
+                            setTimeout(() => setMessage(null), 3000);
+                          } catch (err) {
+                            setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Could not disconnect Jira' });
+                          } finally {
+                            setJiraConnecting(false);
+                          }
+                        }}
+                        className="btn-danger text-xs min-h-[36px] px-3"
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {jiraFormError && (
+                      <div
+                        ref={jiraErrorRef}
+                        role="alert"
+                        className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs text-red-700 dark:text-red-300"
+                      >
+                        {jiraFormError}
+                      </div>
+                    )}
+
+                    <label className="block space-y-1 max-w-xl">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Jira site URL</span>
+                      <input
+                        type="text"
+                        placeholder="https://your-domain.atlassian.net"
+                        value={jiraForm.url}
+                        onChange={(e) => {
+                          setJiraFormError(null);
+                          setJiraForm((prev) => ({ ...prev, url: e.target.value }));
+                        }}
+                        className="input-field w-full font-mono text-sm min-h-[36px]"
+                        autoComplete="off"
+                      />
+                    </label>
+                    <label className="block space-y-1 max-w-xl">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Email</span>
+                      <input
+                        type="text"
+                        placeholder="you@company.com"
+                        value={jiraForm.email}
+                        onChange={(e) => {
+                          setJiraFormError(null);
+                          setJiraForm((prev) => ({ ...prev, email: e.target.value }));
+                        }}
+                        className="input-field w-full font-mono text-sm min-h-[36px]"
+                        autoComplete="off"
+                      />
+                    </label>
+                    <label className="block space-y-1 max-w-xl">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">API token</span>
+                      <div className="relative">
+                        <input
+                          type={showJiraPassword ? 'text' : 'password'}
+                          placeholder="ATATT3xFfGF0..."
+                          value={jiraForm.apiToken}
+                          onChange={(e) => {
+                            setJiraFormError(null);
+                            setJiraForm((prev) => ({ ...prev, apiToken: e.target.value }));
+                          }}
+                          className="input-field w-full font-mono text-sm min-h-[36px] pr-10"
+                          autoComplete="off"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowJiraPassword(!showJiraPassword)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                          tabIndex={-1}
+                          aria-label={showJiraPassword ? 'Hide API token' : 'Show API token'}
+                        >
+                          {showJiraPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </label>
+                    <a
+                      href="https://id.atlassian.com/manage-profile/security/api-tokens"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-xs text-brand-600 hover:text-brand-700"
+                    >
+                      How to get?
+                    </a>
+                    <button
+                      type="button"
+                      disabled={jiraSaving}
+                      onClick={async () => {
+                        const url = jiraForm.url.trim();
+                        const email = jiraForm.email.trim();
+                        const apiToken = jiraForm.apiToken.trim();
+                        if (!url || !email || !apiToken) {
+                          setJiraFormError('Enter the Jira site URL, email and API token.');
+                          return;
+                        }
+                        setJiraSaving(true);
+                        setJiraFormError(null);
+                        setMessage(null);
+                        try {
+                          await configApi.updateEnv({ JIRA_URL: url, JIRA_EMAIL: email, JIRA_API_TOKEN: apiToken });
+                          const result = await configApi.verifyService('jira', apiToken, { url, email });
+                          if (result.connected) {
+                            setSysConfig((prev: any) => ({
+                              ...prev,
+                              env: { ...prev.env, JIRA_URL: url, JIRA_EMAIL: email, JIRA_API_TOKEN: apiToken },
+                              integrations: prev.integrations?.map((i: any) =>
+                                i.id === 'jira' ? { ...i, connected: true } : i,
+                              ) || prev.integrations,
+                            }));
+                            setJiraForm({ url: '', email: '', apiToken: '' });
+                            setJiraExpanded(false);
+                            setMessage({ type: 'success', text: result.name ? `Connected to Jira as ${result.name}.` : 'Connected to Jira.' });
+                            setTimeout(() => setMessage(null), 8000);
+                          } else {
+                            setJiraFormError(result.error || 'Failed to verify Jira credentials');
+                          }
+                        } catch (err) {
+                          setJiraFormError(err instanceof Error ? err.message : 'Failed to connect Jira');
+                        } finally {
+                          setJiraSaving(false);
+                        }
+                      }}
+                      className="btn-primary text-xs min-h-[36px] px-3"
+                    >
+                      {jiraSaving ? '...' : 'Save'}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ── Sentry ── */}

@@ -44,6 +44,16 @@ export interface IssueJobData {
 
   /** Channel target identifier (e.g. Slack channelId:threadTs for thread replies). */
   channelTarget?: string;
+
+  /** Internal metadata attached by the enqueueing route (e.g. local ticket id). */
+  _meta?: {
+    messageId?: string;
+    enqueuedAt?: string;
+    createdBy?: string;
+    ticketId?: number;
+    slackChannel?: string;
+    slackThreadTs?: string;
+  };
 }
 
 /**

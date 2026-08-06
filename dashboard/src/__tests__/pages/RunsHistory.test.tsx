@@ -1,13 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/__tests__/test-utils';
 import RunsHistory from '@/pages/RunsHistory';
 import type { Run } from '@/api/types';
 
 const mockRunsList = vi.hoisted(() => vi.fn());
+const mockBillingPlan = vi.hoisted(() => vi.fn());
+const mockStatsGet = vi.hoisted(() => vi.fn());
+const mockTicketsCreate = vi.hoisted(() => vi.fn());
+const mockTicketsList = vi.hoisted(() => vi.fn());
+
 vi.mock('@/api/client', () => ({
   runs: { list: mockRunsList },
+  billing: { plan: mockBillingPlan },
+  stats: { get: mockStatsGet },
+  tickets: { create: mockTicketsCreate, list: mockTicketsList },
+}));
+
+vi.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ user: { plan: 'free' } }),
 }));
 
 function makeRun(id: string, overrides?: Partial<Run>): Run {
@@ -24,14 +36,13 @@ function makeRun(id: string, overrides?: Partial<Run>): Run {
   };
 }
 
-function makeRunsResponse(data: Run[], overrides?: Record<string, unknown>) {
+function makeRunsResponse(data: Run[]) {
   return {
     data,
     total: data.length,
     page: 1,
-    perPage: 20,
+    perPage: 100,
     totalPages: 1,
-    ...overrides,
   };
 }
 
@@ -39,162 +50,91 @@ describe('RunsHistory', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRunsList.mockResolvedValue(makeRunsResponse([]));
+    mockBillingPlan.mockResolvedValue({ id: 'free', name: 'Free', monthlyFixLimit: 10 });
+    mockTicketsList.mockResolvedValue({ tickets: [] });
+    mockStatsGet.mockResolvedValue({
+      totalRuns: 0,
+      passRate: 0,
+      avgDurationSeconds: 0,
+      activeRepos: 0,
+      runsByDay: [],
+      costByDay: [],
+      fixRateByWeek: [],
+    });
+    mockTicketsCreate.mockResolvedValue({ runId: 'ticket-1', status: 'accepted' });
   });
 
-  it('renders runs table with data', async () => {
-    const runs = [makeRun('run-1', { issueTitle: 'Fix login bug' })];
-    mockRunsList.mockResolvedValue(makeRunsResponse(runs));
+  it('renders the project overview (plan tier + kanban columns)', async () => {
+    mockRunsList.mockResolvedValue(makeRunsResponse([makeRun('r1', { status: 'running' })]));
 
     renderWithProviders(<RunsHistory />);
 
     await waitFor(() => {
-      expect(screen.getAllByText(/owner\/repo#1/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Free').length).toBeGreaterThan(0);
     });
-
-    // Issue title appears in both desktop table and mobile card view
-    expect(screen.getAllByText(/Fix login bug/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Pending').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Done / Verified').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Failed').length).toBeGreaterThan(0);
   });
 
-  it('displays correct status badge for each status', async () => {
-    const runs: Run[] = [
-      makeRun('r1', { status: 'success' }),
-      makeRun('r2', { status: 'failed' }),
-      makeRun('r3', { status: 'running' }),
-      makeRun('r4', { status: 'queued' }),
-      makeRun('r5', { status: 'cancelled' }),
-    ];
-    mockRunsList.mockResolvedValue(makeRunsResponse(runs, { total: 5 }));
+  it('opens the detail aside when a kanban card is clicked', async () => {
+    mockRunsList.mockResolvedValue(makeRunsResponse([makeRun('r1', { issueTitle: 'Fix login bug', costCents: 250 })]));
 
     renderWithProviders(<RunsHistory />);
 
     await waitFor(() => {
-      expect(screen.getAllByText('success').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('failed').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('running').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('queued').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('cancelled').length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/owner\/repo#1/).length).toBeGreaterThan(0);
     });
+    await userEvent.click(screen.getAllByText(/owner\/repo#1/)[0]);
+
+    expect(screen.getAllByText(/Was this fix helpful\?/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Fix login bug/).length).toBeGreaterThan(0);
   });
 
-  it('shows pagination controls when multiple pages exist', async () => {
-    const runs = Array.from({ length: 20 }, (_, i) => makeRun(`r${i}`));
-    mockRunsList.mockResolvedValue(makeRunsResponse(runs, { page: 1, totalPages: 3, total: 45 }));
+  it('opens the aside with a grouped list from a metric card, then run detail on click', async () => {
+    mockRunsList.mockResolvedValue(
+      makeRunsResponse([
+        makeRun('r1', { issueNumber: 10, issueTitle: 'Fix login bug' }),
+        makeRun('r2', { issueNumber: 11, issueTitle: 'Fix logout' }),
+      ]),
+    );
+    mockStatsGet.mockResolvedValue({
+      totalRuns: 2,
+      passRate: 80,
+      avgDurationSeconds: 120,
+      activeRepos: 1,
+      runsByDay: [],
+      costByDay: [],
+      fixRateByWeek: [],
+    });
 
     renderWithProviders(<RunsHistory />);
 
     await waitFor(() => {
-      expect(screen.getByText(/page 1 of 3/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /issues created/i })).toBeInTheDocument();
     });
+    await userEvent.click(screen.getByRole('button', { name: /issues created/i }));
 
-    expect(screen.getByText('Previous')).toBeDisabled();
-    expect(screen.getByText('Next')).not.toBeDisabled();
+    expect(screen.getByText(/distinct issues tracked/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Fix login bug/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Fix logout/).length).toBeGreaterThan(0);
+
+    await userEvent.click(screen.getAllByText(/Fix login bug/)[0]);
+    expect(screen.getAllByText(/Was this fix helpful\?/).length).toBeGreaterThan(0);
   });
 
-  it('disables Previous button on page 1', async () => {
-    const runs = Array.from({ length: 20 }, (_, i) => makeRun(`r${i}`));
-    mockRunsList.mockResolvedValue(makeRunsResponse(runs, { page: 1, totalPages: 2, total: 25 }));
+  it('closes the detail aside on Escape', async () => {
+    mockRunsList.mockResolvedValue(makeRunsResponse([makeRun('r1')]));
 
     renderWithProviders(<RunsHistory />);
 
     await waitFor(() => {
-      expect(screen.getByText('Previous')).toBeDisabled();
+      expect(screen.getAllByText(/owner\/repo#1/).length).toBeGreaterThan(0);
     });
-  });
+    await userEvent.click(screen.getAllByText(/owner\/repo#1/)[0]);
+    expect(screen.getAllByText(/Was this fix helpful\?/).length).toBeGreaterThan(0);
 
-  it('shows empty state when no runs', async () => {
-    mockRunsList.mockResolvedValue(makeRunsResponse([]));
-
-    renderWithProviders(<RunsHistory />);
-
-    await waitFor(() => {
-      expect(screen.getAllByText(/no runs found/i).length).toBeGreaterThan(0);
-    });
-  });
-
-  it('shows error state with error message', async () => {
-    mockRunsList.mockRejectedValue(new Error('Failed to fetch runs'));
-
-    renderWithProviders(<RunsHistory />);
-
-    await waitFor(() => {
-      expect(screen.getAllByText(/failed to fetch runs/i).length).toBeGreaterThan(0);
-    });
-  });
-
-  it('shows status filter dropdown with all options', async () => {
-    const runs = [makeRun('r1')];
-    mockRunsList.mockResolvedValue(makeRunsResponse(runs));
-
-    renderWithProviders(<RunsHistory />);
-
-    await waitFor(() => {
-      expect(screen.getAllByText('owner/repo#1').length).toBeGreaterThan(0);
-    });
-
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
-    const options = screen.getAllByRole('option');
-    const optionTexts = options.map((o) => o.textContent);
-    expect(optionTexts).toEqual(['All', 'Running', 'Success', 'Failed', 'Queued', 'Cancelled']);
-  });
-
-  it('shows repo filter input', async () => {
-    const runs = [makeRun('r1')];
-    mockRunsList.mockResolvedValue(makeRunsResponse(runs));
-
-    renderWithProviders(<RunsHistory />);
-
-    await waitFor(() => {
-      expect(screen.getAllByText('owner/repo#1').length).toBeGreaterThan(0);
-    });
-
-    expect(screen.getByPlaceholderText('owner/repo')).toBeInTheDocument();
-  });
-
-  it('shows Clear filters button when filters are active', async () => {
-    const runs = [makeRun('r1')];
-    mockRunsList.mockResolvedValue(makeRunsResponse(runs));
-
-    renderWithProviders(<RunsHistory />, { initialEntries: ['/?status=running'] });
-
-    await waitFor(() => {
-      expect(screen.getByText(/clear filters/i)).toBeInTheDocument();
-    });
-  });
-
-  it('calls runs.list with repo param when repo filter changes', async () => {
-    mockRunsList.mockResolvedValue(makeRunsResponse([]));
-
-    renderWithProviders(<RunsHistory />);
-
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText('owner/repo')).toBeInTheDocument();
-    });
-
-    mockRunsList.mockClear();
-
-    const repoInput = screen.getByPlaceholderText('owner/repo');
-    await userEvent.type(repoInput, 'test');
-
-    await waitFor(() => {
-      // After typing, at least one call should have the repo param
-      const calls = mockRunsList.mock.calls.filter(
-        ([params]: [any]) => params?.repo === 'test',
-      );
-      expect(calls.length).toBeGreaterThan(0);
-    });
-  });
-
-  it('renders mobile card view with run data', async () => {
-    const runs = [makeRun('mobile-1', { durationSeconds: 90, costCents: 250 })];
-    mockRunsList.mockResolvedValue(makeRunsResponse(runs));
-
-    renderWithProviders(<RunsHistory />);
-
-    await waitFor(() => {
-      expect(screen.getAllByText(/owner\/repo#1/i).length).toBeGreaterThan(0);
-    });
-
-    // Cost $2.50 from costCents=250 should be visible
-    expect(screen.getAllByText(/\$2\.50/).length).toBeGreaterThan(0);
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByText(/Was this fix helpful\?/)).not.toBeInTheDocument();
   });
 });

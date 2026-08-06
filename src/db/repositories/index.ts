@@ -18,3 +18,4 @@ export { WorkspaceRepository, workspaceRepository } from './WorkspaceRepository.
 export { NotificationPreferencesRepository, notificationPreferencesRepository } from './NotificationPreferencesRepository.js';
 export { RunFeedbackRepository, runFeedbackRepository } from './RunFeedbackRepository.js';
 export { BitbucketConnectionRepository, bitbucketConnectionRepository } from './BitbucketConnectionRepository.js';
+export { TicketsRepository, ticketsRepository } from './TicketsRepository.js';

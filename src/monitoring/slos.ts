@@ -131,9 +131,10 @@ export async function getWebhookLatencyP99(windowMinutes: number = 60): Promise<
   try {
     const { queryWithRetry } = await import('../db/connection.js');
     const result = await queryWithRetry(
-      `SELECT percentile_cont(0.99) WITHIN GROUP (ORDER BY duration_ms) AS percentile
+      `SELECT percentile_cont(0.99) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (processed_at - created_at))) AS percentile
        FROM webhook_events
-       WHERE created_at > NOW() - ($1::int || ' minutes')::interval`,
+       WHERE processed_at IS NOT NULL
+         AND created_at > NOW() - ($1::int || ' minutes')::interval`,
       [String(windowMinutes)],
     );
     return result.rows[0]?.percentile ?? 0;
@@ -168,7 +169,7 @@ export async function getAgentSuccessRate(): Promise<number> {
   try {
     const { queryWithRetry } = await import('../db/connection.js');
     const result = await queryWithRetry(
-      `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = 'completed') AS succeeded
+      `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status IN ('completed', 'success')) AS succeeded
        FROM run_history
        WHERE created_at > NOW() - INTERVAL '24 hours'`,
     );
@@ -197,7 +198,7 @@ export async function getUptime(): Promise<number> {
     const row = result.rows[0];
     const total = Number(row?.total ?? 0);
     const healthy = Number(row?.healthy ?? 0);
-    if (total === 0) return 100;
+    if (total < 20) return 100;
     const rate = (healthy / total) * 100;
     return Number.isFinite(rate) ? rate : 0;
   } catch {
