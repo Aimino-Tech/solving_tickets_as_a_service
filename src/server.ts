@@ -852,6 +852,10 @@ export async function createApp(): Promise<express.Application> {
   // ── MCP API Keys (per-user agent keys) ─────────────────────
   app.use('/api/v1/mcp-keys', mcpKeysRouter);
 
+  // ── Incidents API (OpenSymphony observability + service catalog) ──
+  const { incidentsRouter } = await import('./routes/incidents.js');
+  app.use('/api/v1/incidents', incidentsRouter);
+
   // ── Bitbucket workspace API (dashboard) ────────────────────
   app.use('/api/v1/bitbucket', bitbucketRouter);
 

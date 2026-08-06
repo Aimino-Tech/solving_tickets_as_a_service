@@ -19,3 +19,4 @@ export { NotificationPreferencesRepository, notificationPreferencesRepository } 
 export { RunFeedbackRepository, runFeedbackRepository } from './RunFeedbackRepository.js';
 export { BitbucketConnectionRepository, bitbucketConnectionRepository } from './BitbucketConnectionRepository.js';
 export { TicketsRepository, ticketsRepository } from './TicketsRepository.js';
+export { IncidentServiceCatalogRepository, incidentServiceCatalogRepository } from './IncidentServiceCatalogRepository.js';

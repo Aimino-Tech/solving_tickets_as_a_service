@@ -378,6 +378,11 @@ const envSchema = z.object({
   OSY_API_KEY: z.string().default(''),
   OSY_TENANT: z.string().default('default'),
 
+  // Incidents (AIM-4631) — OpenSymphony observability API
+  OS_INCIDENTS_URL: z.string().default(''),
+  OS_INCIDENTS_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+  INCIDENT_RESOLVE_NOTIFICATIONS: boolSchema(true),
+
   // LiteLLM
   LITELLM_API_KEY: z.string().default(''),
   LITELLM_BASE_URL: z.string().default('http://localhost:4000'),
@@ -432,6 +437,14 @@ function parseConcurrencyOverrides(raw: string): Record<string, number> {
     }
   }
   return result;
+}
+
+function safeOrigin(value: string): string {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return '';
+  }
 }
 
 function buildConfig(env: ParsedEnv) {
@@ -840,6 +853,12 @@ function buildConfig(env: ParsedEnv) {
       dispatchUrl: env.OSY_DISPATCH_URL,
       apiKey: env.OSY_API_KEY,
       tenant: env.OSY_TENANT,
+    },
+
+    incidents: {
+      osUrl: env.OS_INCIDENTS_URL || (env.OSY_DISPATCH_URL ? safeOrigin(env.OSY_DISPATCH_URL) : ''),
+      timeoutMs: env.OS_INCIDENTS_TIMEOUT_MS,
+      resolveNotifications: env.INCIDENT_RESOLVE_NOTIFICATIONS,
     },
 
     litellm: {
