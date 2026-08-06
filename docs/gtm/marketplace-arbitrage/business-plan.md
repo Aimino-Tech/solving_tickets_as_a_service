@@ -73,7 +73,7 @@ und 5 Apps**:
 | -- | -- | -- | -- |
 | SMB-Volumen (Annual $99–149) | App A, B, E | Shopify | Volumen, schnelle First-Sales, Review-Kompetenz |
 | Mid-Market ($490) | App C | HubSpot | Höherer ACV, weniger Konkurrenz, 0% RevShare |
-| Enterprise ($3.500) | App D | AppExchange (Direct Sales) | Größter Einzelbeitrag (~€26k) |
+| Enterprise ($3.500) | App D | AppExchange (Direct Sales) | Größter Einzelbeitrag (~€31,5k) |
 
 **Warum Portfolio:** Misserfolg einer App (Review-Ablehnung, Sync-Problem, kein Sales) kostet
 1/5 des Umsatzpfads, nicht alles.

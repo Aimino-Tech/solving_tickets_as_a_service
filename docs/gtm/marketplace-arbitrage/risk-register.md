@@ -29,7 +29,7 @@
 | R9 | **CAC ist doch nicht 0 (Listing-Keywords, Store-SEO)** | Mittel | Mittel | Zusätzliche Kosten, geringere Conversion | Store-SEO (Titel, Keywords, Screenshots) als fester Listing-Schritt; A/B-Tests W1–W2; Launch-Community als organischer Booster | Marketing | Offen |
 | R10 | **Datenschutz/Compliance (EU): GDPR, Datenverarbeitung** | Mittel | Niedrig | Bußgeld, De-Listing, Vertrauensverlust | Privacy Policy + ToS online vor jedem Listing; Datenverarbeitung auf EU-Hosting dokumentieren; minimaler Scope-Bedarf (nur nötige API-Scopes); Reverse-Charge-MwSt korrekt | Legal | Offen |
 | R11 | **Billing/Steuer-Komplexität (MwSt EU, Reverse-Charge)** | Mittel | Niedrig | Fehlbuchungen, Compliance-Aufwand | B2B Reverse-Charge (0% MwSt) als Standard; B2C-MwSt (DE 19%) als Pass-through; Billing über Store-Billing-APIs (Shopify App Pricing) statt Eigenabwicklung wo möglich | Finance | Offen |
-| R12 | **Enterprise-Deals (App D) kommen nicht zustande** | Hoch | Mittel | ~€26k Lücke → €100k-Ziel gefährdet | 30 Kontakte ab W0; Migrations-Angebot; Demo bereit ab W2; Fallback: 5. Shopify-App (App E) hochziehen, Portfolio-Mix verschieben | Sales | Offen |
+| R12 | **Enterprise-Deals (App D) kommen nicht zustande** | Hoch | Mittel | ~€31,5k Lücke → €100k-Ziel gefährdet | 30 Kontakte ab W0; Migrations-Angebot; Demo bereit ab W2; Fallback: 5. Shopify-App (App E) hochziehen, Portfolio-Mix verschieben | Sales | Offen |
 
 ---
 

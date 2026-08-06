@@ -7,7 +7,7 @@
 ## 1. Funktionsweise
 
 1. **Harte Kriterien (Gate):** Jeder Kandidat muss **alle** harten Kriterien erfüllen — sonst Abbruch, keine Scoring-Punkte.
-2. **Gewichtete Kriterien (Score):** Kandidaten, die das Gate passieren, erhalten 0–100 Punkte über gewichtete Kriterien.
+2. **Gewichtete Kriterien (Score):** Kandidaten, die das Gate passieren, erhalten 0–100 Punkte über gewichtete Kriterien (Skala siehe §3).
 3. **Cut-off:** Score ≥ 70 → Build-Pipeline; 55–69 → Watchlist; < 55 → verworfen.
 4. **Max. gleichzeitige Apps:** 3 (2 Shopify + 1 HubSpot) in W0–W2, danach Erweiterung.
 
@@ -41,7 +41,7 @@
 | K6 Annual-Prepay-Fähigkeit | 10% | nur monatlich | optional | Standard-Angebot |
 | K7 Datenverfügbarkeit für Scrape | 5% | Reviews nicht zugreifbar | eingeschränkt | öffentlich via API/Seite |
 
-**Score-Formel:** `Score = Σ (Kriterium-Punkte × Gewicht)`, Punkte je Kriterium auf 0–10 skaliert.
+**Score-Formel:** `Score (0–100) = Σ (Kriterium-Punkte × Gewicht) × 10`, Punkte je Kriterium auf 0–10 skaliert.
 
 ---
 
@@ -52,14 +52,16 @@ typische Kandidaten-Silhouetten bewertet:
 
 | Kandidat | Gate | Store | Preisdiff | Wechselk. | Beschw.-Dichte | Build | Annual | Scrape | **Score** | Empfehlung |
 | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |
-| Sync-Fix für Shopify-Export | ✅ | Shopify | 8 | 8 | 9 | 7 | 9 | 9 | **8,2** | Build |
-| Billige Preis-Alternative (B2C-Label) | ✅ | Shopify | 10 | 8 | 7 | 8 | 8 | 9 | **8,4** | Build |
-| HubSpot-CRM-Lücke (Reporting) | ✅ | HubSpot | 8 | 6 | 8 | 6 | 9 | 8 | **7,6** | Build |
-| Enterprise-Sync (AppExchange) | ✅* | AppExchange | 7 | 5 | 8 | 5 | 10 | 7 | **7,0** | Direct Sales |
+| Sync-Fix für Shopify-Export | ✅ | Shopify | 8 | 8 | 9 | 7 | 9 | 9 | **85** | Build |
+| Billige Preis-Alternative (B2C-Label) | ✅ | Shopify | 10 | 8 | 7 | 8 | 8 | 9 | **86** | Build |
+| HubSpot-CRM-Lücke (Reporting) | ✅ | HubSpot | 8 | 6 | 8 | 6 | 9 | 8 | **78** | Build |
+| Enterprise-Sync (AppExchange) | ✅* | AppExchange | 7 | 5 | 8 | 5 | 10 | 7 | **66** | Watchlist* (Direct-Sales-Pfad) |
 | Slack-Bot (Workflow) | ❌ G5 | Slack | 9 | 7 | 8 | 6 | 7 | 9 | — | **Verworfen** (Review) |
 | Deep-ML-Analytics-App | ❌ G3 | Shopify | 8 | 5 | 6 | 2 | 9 | 8 | — | **Verworfen** (Komplexität) |
 
 \* AppExchange Kandidat erfüllt Gate nur für **Direct-Sales-Pfad**; öffentliches Listing in W4 nicht möglich.
+    Score 66 liegt im Watchlist-Band (55–69), wird aber wegen des hohen ACV ($3.500) als Direct-Sales-Kandidat
+    mitverfolgt — Entscheidung im W0-Review mit Begründung zu dokumentieren.
 
 ---
 

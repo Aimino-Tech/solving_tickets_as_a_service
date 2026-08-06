@@ -94,8 +94,13 @@ def money(v: float) -> float:
     return round(v, 2)
 
 
-def app_revenue(app: dict, unit_mult: float = 1.0, fx: float = FX_EUR_USD) -> dict:
-    """Revenue breakdown for one app under a scenario."""
+def app_revenue(app: dict, unit_mult: float = 1.0, fx: float = FX_EUR_USD,
+                ent_checkout: float = 0.0) -> dict:
+    """Revenue breakdown for one app under a scenario.
+
+    ent_checkout = fraction of AppExchange revenue sold via Checkout (15% rev
+    share). Default 0.0 = all enterprise deals direct pre-listing (0% share).
+    """
     name = app["name"]
     store = app["store"]
     n = app["cum_customers"]
@@ -107,7 +112,10 @@ def app_revenue(app: dict, unit_mult: float = 1.0, fx: float = FX_EUR_USD) -> di
     setup_rev = round(n_units * app["setup_rate"] * app["setup_fee"])
     gross = sub_rev + setup_rev
     fees = MARKET_FEES[store]
-    rev_share = gross * fees["rev_share"]
+    if store == "AppExchange":
+        rev_share = gross * fees["rev_share"] * ent_checkout
+    else:
+        rev_share = gross * fees["rev_share"]
     processing = sub_rev * fees["processing"]
     net = gross - rev_share - processing
     return {
@@ -120,12 +128,7 @@ def app_revenue(app: dict, unit_mult: float = 1.0, fx: float = FX_EUR_USD) -> di
 def total_for_scenario(fx: float, unit_mult: float, ent_checkout: float) -> dict:
     rows = []
     for app in PORTFOLIO:
-        r = app_revenue(app, unit_mult, fx)
-        # Apply enterprise checkout share only to AppExchange
-        if app["store"] == "AppExchange":
-            r["rev_share"] = r["gross"] * MARKET_FEES["AppExchange"]["rev_share"] * ent_checkout
-            r["net"] = r["gross"] - r["rev_share"] - r["processing"]
-            r["net_eur"] = r["net"] / fx
+        r = app_revenue(app, unit_mult, fx, ent_checkout)
         rows.append(r)
     gross = sum(r["gross"] for r in rows)
     net = sum(r["net"] for r in rows)

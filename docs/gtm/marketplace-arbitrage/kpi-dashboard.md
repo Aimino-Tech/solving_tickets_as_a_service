@@ -10,7 +10,7 @@
 | -- | -- | -- | -- | -- |
 | **Kumulierter Netto-Umsatz** | Σ Netto-Umsatz aller Apps (USD→EUR, nach Gebühren) | ≥ €100k bis W4 | täglich | Billing (Stripe/Shopify Billing), Finanzmodell-Abgleich |
 | **MRR / ARR** | Monthly/Annual Recurring Revenue | MRR ≥ $8k/W4 · ARR ≥ $100k/W4 | wöchentlich | Billing |
-| **Installs** | Anzahl Installationen pro App | App A/B ≥ 150/Woche | täglich | Store-APIs |
+| **Installs** | Anzahl Installationen (Trial) pro App | App A/B ≥ 1.000/Woche* | täglich | Store-APIs |
 | **Trial→Paid-Conversion** | Paid-Installs ÷ Trial-Starts | ≥ 3% | wöchentlich | Billing + Store |
 | **Time-to-First-Sale** | Tage von Listing-Live bis erste Zahlung | < 7 Tage pro App | pro App | Billing |
 | **Churn / Refund-Quote** | (Stornierte + refundierte Jahresverträge) ÷ aktive | < 5% | wöchentlich | Billing |
@@ -21,6 +21,12 @@
 | **Annual-Prepay-Quote** | Annual-Verträge ÷ alle bezahlten Verträge | ≥ 50% | wöchentlich | Billing |
 | **Setup-Fee-Einnahmen** | Σ Migrations-/Setup-Fees | ≥ $15k bis W4 | wöchentlich | Billing |
 | **Enterprise-Deals (App D)** | Anzahl geschlossener Deals | 8 bis W4 | wöchentlich | CRM |
+
+\* Abgeleitet aus dem Finanzmodell (Weekly-Ramp): App A erreicht 30–65 neue **Paid-Kunden** pro Woche.
+   Bei der Ziel-Conversion von ≥ 3% (Trial→Paid) sind dafür **~1.000–2.200 Trial-Installs pro Woche** nötig
+   (Berechnung: Paid/Woche ÷ 3%). Der Zielwert ≥ 1.000 ist die Untergrenze; W4-Spitzen (65 paid) erfordern
+   bis zu ~2.200 Installs. Wird die Conversion-Grenze als erfüllt gemessen, die Install-Untergrenze aber
+   unterschritten, sind Listing-/SEO- und Onboarding-Maßnahmen zu prüfen.
 
 ---
 
