@@ -1,0 +1,12 @@
+App Marketplace Arbitrage — Finanzmodell;Szenario:;Base
+
+App;Store;Kunden;Sub (USD);Setup (USD);Brutto (USD);RevShare (USD);Processing (USD);Netto (USD);Netto (EUR)
+App A — Sync-Fix Alternative;Shopify;200;19800;3920;23720;0.0;574.2;23145.8;21431.3
+App B — Price Alternative;Shopify;150;22350;3555;25905;0.0;648.15;25256.85;23385.97
+App C — HubSpot Gap;HubSpot;60;29400;4470;33870;0.0;852.6;33017.4;30571.67
+App D — Enterprise;AppExchange;8;28000;6000;34000;0.0;0.0;34000.0;31481.48
+App E — Shopify Secondary;Shopify;100;9900;1470;11370;0.0;287.1;11082.9;10261.94
+SUMME;;;109450;19415;128865;0.0;2362.05;126502.95;117132.36
+
+COGS (USD);15550;Contribution (EUR);102734.21
+FX EUR/USD;1.08;Netto EUR;117132.36
