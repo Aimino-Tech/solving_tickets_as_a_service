@@ -142,7 +142,7 @@ The four org-level actions, all needing an org admin in the GitHub UI:
 1. Prepare the remaining assets (see `docs/marketplace-listing.md` →
    "Visual Assets Preparation Guide"):
    - Logo 120×120 PNG (≤1 MB)
-   - One or more screenshots 1280×640 PNG (≤2 MB) — use the `syntaro-demo` repo
+   - One or more screenshots 1280×640 PNG (≤2 MB) — use the `stas-demo` repo
    - Optional demo GIF (30–45 s, ≤10 MB)
 2. Configure the pricing plan in the Marketplace billing UI (tiers in the
    listing doc: Free OSS / Solo $49 / Team $149 / Enterprise).

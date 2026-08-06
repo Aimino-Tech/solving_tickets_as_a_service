@@ -1,9 +1,9 @@
 {
   "name": "SYNTARO",
   "url": "https://github.com/Aimino-Tech/solving_tickets_as_a_service",
-  "description": "SYNTARO is a GitHub bot that automatically investigates, fixes, and opens pull requests for labeled issues. Label an issue with 'syntaro:fix' and our AI agent analyzes the codebase, implements a fix, runs tests, and opens a PR — all autonomously.",
+  "description": "SYNTARO is a GitHub App that automatically investigates, fixes, and opens pull requests for labeled issues. Label an issue with 'syntaro:fix' and our AI agent analyzes the codebase, implements a fix, runs tests, and opens a PR — all autonomously.",
   "hook_attributes": {
-    "url": "https://YOUR_DOMAIN.com/webhook",
+    "url": "https://api.syntaro.io/webhook/github",
     "active": true
   },
   "public": true,
@@ -12,9 +12,11 @@
     "issue_comment",
     "pull_request",
     "pull_request_review",
+    "pull_request_review_comment",
     "push",
     "check_run",
     "check_suite",
+    "workflow_run",
     "marketplace_purchase"
   ],
   "default_permissions": {
@@ -25,11 +27,12 @@
     "issues": "write",
     "metadata": "read",
     "pull_requests": "write",
-    "statuses": "read"
+    "statuses": "read",
+    "workflows": "write"
   },
   "request_oauth_on_install": true,
-  "redirect_url": "https://YOUR_DOMAIN.com/plg/github/callback",
-  "setup_url": "https://YOUR_DOMAIN.com/plg/onboarding",
+  "redirect_url": "https://syntaro.io/plg/github/callback",
+  "setup_url": "https://syntaro.io/plg/onboarding",
   "setup_on_update": true,
   "pem": ""
 }

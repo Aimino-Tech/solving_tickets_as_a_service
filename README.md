@@ -17,7 +17,7 @@
 [![Star History](https://api.star-history.com/svg?repos=Aimino-Tech/solving_tickets_as_a_service&type=Date)](https://star-history.com/#Aimino-Tech/solving_tickets_as_a_service&Date)
 [![Uptime](https://img.shields.io/badge/Uptime-100%25-brightgreen)](https://syntaro.betteruptime.com)
 [![Status Page](https://img.shields.io/badge/Status_Page-0055FF)](https://syntaro.betteruptime.com)
-[![Demo Repo](https://img.shields.io/badge/Demo-282661?logo=flask&logoColor=white)](https://github.com/Aimino-Tech/syntaro-demo)
+[![Demo Repo](https://img.shields.io/badge/Demo-282661?logo=flask&logoColor=white)](https://github.com/Aimino-Tech/stas-demo)
 
 **Label a GitHub issue. Get a pull request.**
 
@@ -80,13 +80,13 @@ npx -y @aimino/syntaro-mcp
 
 ### Try It Without Installing
 
-Visit **[Aimino-Tech/syntaro-demo](https://github.com/Aimino-Tech/syntaro-demo)** — a public Flask + SQLite Todo app with 15+ seeded bugs labeled `syntaro:fix`. Label any issue and watch SYNTARO create a PR in minutes. No setup required.
+Visit **[Aimino-Tech/stas-demo](https://github.com/Aimino-Tech/stas-demo)** — a public Flask + SQLite Todo app with 15+ seeded bugs labeled `syntaro:fix`. Label any issue and watch SYNTARO create a PR in minutes. No setup required.
 
 ```bash
 # Quick test: query the demo repo's fixable issues
 curl https://api.syntaro.io/api/v1/preview \
   -H "Content-Type: application/json" \
-  -d '{"repoUrl": "https://github.com/Aimino-Tech/syntaro-demo"}'
+  -d '{"repoUrl": "https://github.com/Aimino-Tech/stas-demo"}'
 ```
 
 ## Quick Start — First Fix in <15 Minutes

@@ -44,7 +44,7 @@ SYNTARO is an automated AI bug fix bot that reads your entire codebase, plans th
 
 ### Try It First
 
-Visit the [SYNTARO Demo Repository](https://github.com/Aimino-Tech/syntaro-demo) — a public app with 15+ seeded bugs. Label any issue with `syntaro:fix` and see SYNTARO create a PR in minutes. No installation required.
+Visit the [SYNTARO Demo Repository](https://github.com/Aimino-Tech/stas-demo) — a public app with 15+ seeded bugs. Label any issue with `syntaro:fix` and see SYNTARO create a PR in minutes. No installation required.
 
 ### Key Features
 
@@ -182,7 +182,7 @@ Three options — pick one or all:
 
 | Time | Scene | Description |
 |------|-------|-------------|
-| 0:00–0:03 | **Intro** | Browser tab titled "GitHub — syntaro-demo/issues" with an open issue. Issue has label `syntaro:fix` |
+| 0:00–0:03 | **Intro** | Browser tab titled "GitHub — stas-demo/issues" with an open issue. Issue has label `syntaro:fix` |
 | 0:03–0:08 | **Label applied** | User clicks "Labels" → selects `syntaro:fix` → label appears on issue |
 | 0:08–0:10 | **Transition** | Fade to black or flash effect showing "SYNTARO is working..." |
 | 0:10–0:22 | **Plan appears** | Issue auto-refreshes showing SYNTARO's plan comment: "Root Cause Analysis" + "Fix Approach" |
@@ -197,7 +197,7 @@ Three options — pick one or all:
 - Frame rate: 15–24 fps
 - Codec: H.264 (widest compatibility)
 - No audio
-- Clean UI: use a demo repo (`syntaro-demo` or similar) with sanitized data
+- Clean UI: use a demo repo (`stas-demo` or similar) with sanitized data
 
 **Recording tools:**
 - [Kap](https://getkap.co/) (macOS, free, lightweight)
