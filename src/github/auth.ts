@@ -7,8 +7,8 @@ import { Octokit } from '@octokit/rest';
 import { config } from '../config.js';
 import { rootLogger } from '../utils/logger.js';
 import {
-  loadPrivateKey as loadKey,
   createAuth,
+  loadPrivateKey,
   createAppOctokit,
   createInstallationOctokit,
   getInstallationToken as getInstallationTokenFromPackage,
@@ -48,10 +48,7 @@ let _auth: ReturnType<typeof createAuth> | undefined;
 function getAuth() {
   if (!_auth) {
     const cfg = buildConfig();
-    const loadOpts = config.github.privateKeyPath
-      ? { readFileSync: readFileSync as (path: string) => string }
-      : undefined;
-    _auth = createAuth(cfg, loadOpts ? (c: any) => loadKey(c, loadOpts) : undefined);
+    _auth = createAuth(cfg, (c) => loadPrivateKey(c));
   }
   return _auth;
 }
@@ -61,10 +58,7 @@ let _appOctokit: ReturnType<typeof createAppOctokit> | undefined;
 function getAppOctokit() {
   if (!_appOctokit) {
     const cfg = buildConfig();
-    const loadOpts = config.github.privateKeyPath
-      ? { readFileSync: readFileSync as (path: string) => string }
-      : undefined;
-    _appOctokit = createAppOctokit(cfg, loadOpts ? (c: any) => loadKey(c, loadOpts) : undefined);
+    _appOctokit = createAppOctokit(cfg, (c) => loadPrivateKey(c));
   }
   return _appOctokit;
 }

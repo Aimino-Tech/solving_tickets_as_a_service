@@ -29,7 +29,7 @@ demo-walkthrough.mp4                — Demo walkthrough video
 - Brand colors: See `docs/brand-guide.md` or `public/github-app-manifest.json`
 - Font: Playfair Display (headings) / DM Sans (body) — consistent with website
 - Logo should be high-contrast on both light and dark backgrounds
-- Screenshots must use a demo repo (e.g. `syntaro-demo`) with no sensitive data
+- Screenshots must use a demo repo (e.g. `stas-demo`) with no sensitive data
 - Minimum readable text size: 14 px
 
 ## Tools
