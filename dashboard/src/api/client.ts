@@ -21,6 +21,18 @@ export type { DashboardStats };
 
 const API_BASE = '/api';
 
+export class ApiError extends Error {
+  readonly code?: string;
+  readonly status?: number;
+
+  constructor(message: string, code?: string, status?: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
 function getToken(): string | null {
   try {
     return localStorage.getItem('syntaro_token');
@@ -98,6 +110,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     const errorMsg = typeof body.error === 'string' ? body.error : 'Unauthorized';
     const hint = typeof (body as { hint?: string }).hint === 'string' ? (body as { hint: string }).hint.trim() : '';
     const fullMsg = hint && !errorMsg.includes(hint) ? `${errorMsg}. ${hint}` : errorMsg;
+    const code = typeof (body as { code?: string }).code === 'string' ? (body as { code: string }).code : undefined;
 
     const _isLogin = path.includes('/auth/login') || path.includes('/auth/register');
     const _isReset = path.includes('/auth/forgot-password') || path.includes('/auth/reset-password');
@@ -113,16 +126,17 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
       }
     }
     if (_isReset) {
-      throw new Error(typeof body.error === 'string' ? body.error : 'Invalid credentials');
+      throw new ApiError(typeof body.error === 'string' ? body.error : 'Invalid credentials', code, res.status);
     }
-    throw new Error(_isLogin ? 'Invalid login credentials' : fullMsg);
+    throw new ApiError(_isLogin ? 'Invalid login credentials' : fullMsg, code, res.status);
   }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
     const errorMsg = typeof body.error === 'string' ? body.error : `Request failed: ${res.status}`;
     const hint = typeof body.hint === 'string' && body.hint.trim() ? body.hint.trim() : '';
-    throw new Error(hint && !errorMsg.includes(hint) ? `${errorMsg}. ${hint}` : errorMsg);
+    const code = typeof (body as { code?: string }).code === 'string' ? (body as { code: string }).code : undefined;
+    throw new ApiError(hint && !errorMsg.includes(hint) ? `${errorMsg}. ${hint}` : errorMsg, code, res.status);
   }
 
   return res.json() as Promise<T>;
@@ -651,6 +665,8 @@ export const github = {
       ...opts,
     }),
   getStatus: (opts?: { signal?: AbortSignal }) => request<GitHubConnectionStatus>('/v1/auth/github/status', opts),
+  getAppStatus: (opts?: { signal?: AbortSignal }) =>
+    request<{ installed: boolean; installationCount: number }>('/v1/github/app-status', opts),
   disconnect: () => request<{ success: boolean }>('/v1/auth/github/disconnect', { method: 'DELETE' }),
   listInstallations: (opts?: { signal?: AbortSignal }) =>
     request<{ installations: GitHubInstallation[]; error?: string }>('/v1/github/installations', opts),
@@ -695,6 +711,13 @@ export interface BitbucketStatus {
 
 export const bitbucket = {
   getStatus: (opts?: { signal?: AbortSignal }) => request<BitbucketStatus>('/v1/bitbucket/status', opts),
+  getForgeStatus: (opts?: { signal?: AbortSignal }) =>
+    request<{
+      configured: boolean;
+      installUrl: string | null;
+      workspaceConnected: string | null;
+      appInstalled: boolean;
+    }>('/v1/bitbucket/forge-status', opts),
   getOAuthUrl: () => request<{ url: string; redirectUri?: string }>('/v1/auth/bitbucket/url', { method: 'POST' }),
   handleOAuthCallback: (code: string, workspace?: string) =>
     request<{
@@ -752,6 +775,11 @@ export const billing = {
       method: 'POST',
       body: JSON.stringify({ returnUrl }),
     }),
+  acceptDpa: () =>
+    request<{ accepted: boolean; version: string }>('/v1/billing/dpa/accept', {
+      method: 'POST',
+    }),
+  dpaStatus: () => request<{ accepted: boolean; currentVersion: string; requiresAcceptance: boolean }>('/v1/billing/dpa'),
   invoices: () => request<{ invoices: Invoice[] }>('/v1/billing/invoices'),
 };
 
@@ -762,18 +790,38 @@ export interface ReferralReward {
   accountId: number;
   referredEmail: string;
   amountCredits: number;
-  status: 'pending' | 'claimed';
+  amountFixes: number;
+  status: 'pending' | 'qualified' | 'claimed' | 'expired' | 'fraud';
   createdAt: string;
   claimedAt: string | null;
+  qualificationProgress?: { completedSteps: number; totalSteps: number };
+}
+
+export interface ReferralStats {
+  totalClicks: number;
+  totalInvited: number;
+  totalEarnedFixes: number;
+  pendingFixes: number;
 }
 
 export const referralApi = {
   code: (opts?: { signal?: AbortSignal }) => request<{ code: string }>('/v1/referral/code', opts),
   createCode: () => request<{ code: string }>('/v1/referral/code', { method: 'POST' }),
   rewards: (opts?: { signal?: AbortSignal }) => request<{ rewards: ReferralReward[] }>('/v1/referral/rewards', opts),
+  stats: (opts?: { signal?: AbortSignal }) => request<{ stats: ReferralStats }>('/v1/referral/stats', opts),
   claim: (id: number) =>
-    request<{ claimed: boolean; reward: ReferralReward; newBalance: number }>(`/v1/referral/rewards/${id}/claim`, {
+    request<{ claimed: boolean; reward: ReferralReward; newAllowance: number }>(`/v1/referral/rewards/${id}/claim`, {
       method: 'POST',
+    }),
+  trackClick: (code: string) =>
+    request<{ ok: boolean }>('/v1/referral/click', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+  signupLink: (code: string) =>
+    request<{ url: string }>('/v1/referral/signup', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
     }),
 };
 

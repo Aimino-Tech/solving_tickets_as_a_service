@@ -20,6 +20,7 @@
   },
   "scripts": {
     "init": "tsx scripts/init.ts",
+    "bb:oauth-check": "node scripts/bitbucket-oauth-check.mjs",
     "dev": "tsx watch src/index.ts",
     "dev:api": "RUN_MODE=api tsx watch src/index.ts",
     "dev:worker": "RUN_MODE=worker tsx watch src/index.ts",

@@ -77,6 +77,36 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Forge app (Bitbucket App) status for the dashboard Settings page.
+ * Reports whether the install link is configured and whether the app is
+ * installed on the user's connected workspace.
+ */
+router.get('/forge-status', requireAuth, async (req: Request, res: Response) => {
+  const installUrl = config.forge.installUrl;
+  let workspaceConnected: string | null = null;
+  let appInstalled = false;
+  try {
+    const row = await loadUserConnection(req);
+    if (row && !isPendingWorkspace(row.workspace)) {
+      workspaceConnected = row.workspace;
+      const { bitbucketForgeInstallationRepository } = await import(
+        '../db/repositories/BitbucketForgeInstallationRepository.js'
+      );
+      const forge = await bitbucketForgeInstallationRepository.findByWorkspace(row.workspace);
+      appInstalled = Boolean(forge?.workspaceUuid);
+    }
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to resolve Forge installation status');
+  }
+  res.json({
+    configured: Boolean(installUrl),
+    installUrl: installUrl || null,
+    workspaceConnected,
+    appInstalled,
+  });
+});
+
 router.post('/connect', requireAuth, async (req: Request, res: Response) => {
   // Atlassian API tokens authenticate as email:token (Basic auth).
   const apiToken = String(req.body.apiToken ?? req.body.appPassword ?? '').trim();

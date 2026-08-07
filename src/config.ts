@@ -22,6 +22,7 @@ const envSchema = z.object({
   RUN_MODE: z.enum(['api', 'worker', 'both']).default('both'),
 
   GITHUB_APP_ID: z.string().min(1, 'GITHUB_APP_ID is required'),
+  GITHUB_APP_NAME: z.string().default('syntaro-bot'),
   GITHUB_APP_PRIVATE_KEY: z
     .string()
     .min(1, 'GITHUB_APP_PRIVATE_KEY or GITHUB_APP_PRIVATE_KEY_PATH is required')
@@ -169,6 +170,10 @@ const envSchema = z.object({
   BITBUCKET_BASE_URL: z.string().default('https://api.bitbucket.org'),
   BITBUCKET_OAUTH_CLIENT_ID: z.string().optional(),
   BITBUCKET_OAUTH_CLIENT_SECRET: z.string().optional(),
+  FORGE_APP_ID: z.string().optional(),
+  FORGE_JWKS_URL: z.string().optional(),
+  FORGE_SKIP_FIT_VERIFY: z.string().optional(),
+  FORGE_INSTALL_URL: z.string().optional(),
 
   SLACK_WEBHOOK_URL: z.string().optional(),
   SLACK_CHANNEL: z.string().optional(),
@@ -456,6 +461,7 @@ function buildConfig(env: ParsedEnv) {
     nodeEnv: env.NODE_ENV,
     github: {
       appId: env.GITHUB_APP_ID,
+      appName: env.GITHUB_APP_NAME,
       privateKeyPath: env.GITHUB_APP_PRIVATE_KEY_PATH,
       privateKeyEnv: env.GITHUB_APP_PRIVATE_KEY,
       token: env.GITHUB_TOKEN,
@@ -534,6 +540,13 @@ function buildConfig(env: ParsedEnv) {
       baseUrl: env.BITBUCKET_BASE_URL,
       oauthClientId: env.BITBUCKET_OAUTH_CLIENT_ID ?? '',
       oauthClientSecret: env.BITBUCKET_OAUTH_CLIENT_SECRET ?? '',
+    },
+
+    forge: {
+      appId: env.FORGE_APP_ID ?? '',
+      jwksUrl: env.FORGE_JWKS_URL ?? '',
+      skipFitVerify: env.FORGE_SKIP_FIT_VERIFY === 'true',
+      installUrl: env.FORGE_INSTALL_URL ?? '',
     },
 
     ci: {

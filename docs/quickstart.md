@@ -78,13 +78,13 @@ Select at least one repository and press Enter.
 
 ### Step 3 — Install the SYNTARO GitHub App
 
-The CLI opens `https://github.com/apps/syntaro/installations/new` in your browser:
+The CLI opens `https://github.com/apps/syntaro-bot/installations/new` in your browser:
 
 ```
 SYNTARO app installation required.
 
 1. Open this URL in your browser:
-   https://github.com/apps/syntaro/installations/new
+   https://github.com/apps/syntaro-bot/installations/new
 
 2. Select the repositories you want SYNTARO to access
 3. Click 'Install'
@@ -170,7 +170,7 @@ Config is stored at `~/.config/syntaro/config.json`:
 ```json
 {
   "githubToken": "ghp_...",
-  "installUrl": "https://github.com/apps/syntaro/installations/12345",
+  "installUrl": "https://github.com/apps/syntaro-bot/installations/12345",
   "poweredBy": "SYNTARO — AI bug fixes for your repo"
 }
 ```
@@ -192,4 +192,4 @@ The token is stored for reuse on subsequent runs. If you're using a CI environme
 - [Getting Started](getting-started.md) — Full installation guide for all deployment options
 - [Troubleshooting](troubleshooting.md) — Common issues and fixes
 - [GitHub Token Setup](https://github.com/settings/tokens) — Create a personal access token
-- [SYNTARO App Installation](https://github.com/apps/syntaro/installations/new) — Install the GitHub App
+- [SYNTARO App Installation](https://github.com/apps/syntaro-bot/installations/new) — Install the GitHub App

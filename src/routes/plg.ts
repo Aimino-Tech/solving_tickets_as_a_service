@@ -75,7 +75,7 @@ function getInstallationId(req: Request): number | undefined {
 }
 
 function buildInstallUrl(): string {
-  return `https://github.com/apps/${config.github.appId}/installations/new`;
+  return `https://github.com/apps/${config.github.appName}/installations/new`;
 }
 
 // ---------------------------------------------------------------------------

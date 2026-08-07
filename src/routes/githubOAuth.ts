@@ -130,6 +130,9 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
         res.json({ connected: true, githubLogin: 'dev-user', devMode: true });
         return;
       }
+      // Security: connection status reflects the user's OWN GitHub account.
+      // Without an OAuth row we cannot know which installation belongs to this
+      // user, so report not-connected instead of surfacing another account's.
       res.json({ connected: false });
       return;
     }

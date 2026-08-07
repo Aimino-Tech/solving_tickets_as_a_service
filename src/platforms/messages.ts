@@ -653,7 +653,7 @@ export function buildShareMessage(runUrl: string): string {
     `- [Share on LinkedIn](https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(runUrl)})`,
     '',
     `[![Syntaro](https://img.shields.io/badge/Syntaro-Solving_Tickets_As_A_Service-8250DF)](https://syntaro.io)`,
-    `[Add Syntaro to your repo](https://github.com/apps/${config.github.appId}/installations/new)`,
+    `[Add Syntaro to your repo](https://github.com/apps/${config.github.appName}/installations/new)`,
     '',
     BOT_SIGNATURE,
   ].join('\n');

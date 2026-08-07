@@ -1,0 +1,20 @@
+{
+  "name": "syntaro-bitbucket-forge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SYNTARO Bitbucket App — thin Forge Remote proxy forwarding Bitbucket events to the SYNTARO backend",
+  "license": "AGPL-3.0-or-later",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "deploy:development": "forge deploy --environment development",
+    "deploy:staging": "forge deploy --environment staging",
+    "deploy:production": "forge deploy --environment production",
+    "install:local": "forge install --upgrade --product bitbucket",
+    "lint:manifest": "forge lint"
+  },
+  "devDependencies": {
+    "@forge/cli": "^9.0.0"
+  }
+}

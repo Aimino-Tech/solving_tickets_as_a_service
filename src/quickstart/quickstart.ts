@@ -19,7 +19,7 @@ import { Octokit } from '@octokit/rest';
 export const POWERED_BY = 'SYNTARO — AI bug fixes for your repo';
 export const ISSUE_TITLE = 'SYNTARO Quickstart Demo — Fix Me';
 export const ISSUE_LABEL = 'syntaro:fix';
-export const INSTALL_URL = 'https://github.com/apps/syntaro/installations/new';
+export const INSTALL_URL = 'https://github.com/apps/syntaro-bot/installations/new';
 
 export const ISSUE_BODY = [
   'This issue was created automatically by `npx syntaro quickstart`',

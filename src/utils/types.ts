@@ -54,6 +54,17 @@ export interface IssueJobData {
     slackChannel?: string;
     slackThreadTs?: string;
   };
+
+  /** Job kind — PR-completion runs work on the source branch of an existing PR
+   *  (Bitbucket Forge app trigger), instead of opening a fresh fix branch. */
+  jobKind?: 'issue-fix' | 'pr-completion';
+
+  /** Forge installation id (Bitbucket app) — worker resolves the bot token
+   *  from the installation registry. */
+  forgeInstallationId?: string;
+
+  /** Forge workspace UUID (`{...}`) — used to resolve the workspace slug. */
+  forgeWorkspaceUuid?: string;
 }
 
 /**

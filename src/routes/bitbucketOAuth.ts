@@ -112,6 +112,13 @@ async function postToken(params: URLSearchParams): Promise<TokenResponse> {
   const json = (await res.json().catch(() => ({}))) as TokenResponse;
   if (!res.ok || !json.access_token) {
     const msg = json.error_description || json.error || `HTTP ${res.status}`;
+    if (/host must match configured redirect uri/i.test(msg)) {
+      throw new Error(
+        `Bitbucket OAuth callback mismatch: ${redirectUri()} is not registered as the Callback URL on this OAuth client. ` +
+          `Fix in Bitbucket → Workspace settings → OAuth clients → set Callback URL to match SYNTARO_PUBLIC_URL. ` +
+          `Run \`npm run bb:oauth-check\` to verify.`,
+      );
+    }
     throw new Error(`Bitbucket token exchange failed: ${msg}`);
   }
   return json;

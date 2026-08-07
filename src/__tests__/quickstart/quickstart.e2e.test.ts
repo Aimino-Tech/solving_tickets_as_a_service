@@ -136,7 +136,7 @@ describe('syntaro quickstart --skip-prompts end-to-end (fresh environment)', () 
     expect(existsSync(configPath)).toBe(true);
     const config = JSON.parse(readFileSync(configPath, 'utf8')) as Record<string, string>;
     expect(config.githubToken).toBe('ghp_fresh');
-    expect(config.installUrl).toBe('https://github.com/apps/syntaro/installations/new');
+    expect(config.installUrl).toBe('https://github.com/apps/syntaro-bot/installations/new');
     expect(config.poweredBy).toBe('SYNTARO — AI bug fixes for your repo');
 
     const createCall = calls.find(

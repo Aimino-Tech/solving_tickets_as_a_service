@@ -69,6 +69,7 @@ import { badgeRouter } from './routes/badge.js';
 import { benchmarksRouter } from './routes/benchmarks.js';
 import { bitbucketRouter } from './routes/bitbucket.js';
 import { bitbucketOAuthRouter } from './routes/bitbucketOAuth.js';
+import { createForgeRemoteRouter } from './forge/remote.js';
 import { configRouter, dashboardRouter } from './routes/dashboard.js';
 import { dpaRouter } from './routes/dpa.js';
 import { evaluationRouter } from './routes/evaluation.js';
@@ -233,6 +234,7 @@ export async function createApp(): Promise<express.Application> {
       '/webhook/stripe',
       '/webhook/telegram',
       '/webhook/whatsapp',
+      '/forge/remote',
     ],
     express.raw({ type: 'application/json', verify: addRawBody }),
   );
@@ -859,6 +861,10 @@ export async function createApp(): Promise<express.Application> {
   // ── Bitbucket workspace API (dashboard) ────────────────────
   app.use('/api/v1/bitbucket', bitbucketRouter);
 
+  // ── Forge remote (Bitbucket App) — events/lifecycle/token-refresh ──
+  const forgeRemoteRouter = createForgeRemoteRouter(enqueueIssue);
+  app.use('/forge/remote', forgeRemoteRouter);
+
   // ── Stats & Audit API ──────────────────────────────────
   const { statsRouter, auditRouter } = await import('./routes/statsAndAudit.js');
   app.use('/api/v1/stats', statsRouter);
@@ -893,6 +899,39 @@ export async function createApp(): Promise<express.Application> {
 
   app.use('/api/v1', slaRouter);
 
+  // ── Referral API (AIM-4643) ──────────────────────────────
+  // GET  /api/v1/referral/code
+  // POST /api/v1/referral/code
+  // POST /api/v1/referral/redeem          (public)
+  // POST /api/v1/referral/click           (public)
+  // GET  /api/v1/referral/stats
+  // GET  /api/v1/referral/rewards
+  // POST /api/v1/referral/rewards/:id/claim
+  // NOTE: mounted BEFORE the credits router — credits applies requireAuth
+  // router-wide, which would otherwise 401 the public /redeem and /click
+  // endpoints (and /api/v1/preview) before they reach this router.
+  let referralRouter: Router;
+  try {
+    const mod = await import('./referral/index.js');
+    referralRouter = mod.referralRouter;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load referral API — using empty router');
+    referralRouter = Router();
+  }
+  app.use('/api/v1', referralRouter);
+
+  // ── Preview API (public, no auth) ────────────────────────
+  // NOTE: must stay before the credits router (see referral NOTE above).
+  let previewRouter: Router;
+  try {
+    const mod = await import('./routes/preview.js');
+    previewRouter = mod.previewRouter;
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to load preview API — using empty router');
+    previewRouter = Router();
+  }
+  app.use('/api/v1', previewRouter);
+
   // ── Credits API ──────────────────────────────────────────
   // GET  /api/v1/credits/balance
   // GET  /api/v1/credits/transactions
@@ -907,22 +946,6 @@ export async function createApp(): Promise<express.Application> {
     creditRouter = Router();
   }
   app.use('/api/v1', creditRouter);
-
-  // ── Referral API (AIM-4643) ──────────────────────────────
-  // GET  /api/v1/referral/code
-  // POST /api/v1/referral/code
-  // POST /api/v1/referral/redeem
-  // GET  /api/v1/referral/rewards
-  // POST /api/v1/referral/rewards/:id/claim
-  let referralRouter: Router;
-  try {
-    const mod = await import('./referral/index.js');
-    referralRouter = mod.referralRouter;
-  } catch (err) {
-    log.warn({ err: String(err) }, 'Failed to load referral API — using empty router');
-    referralRouter = Router();
-  }
-  app.use('/api/v1', referralRouter);
 
   // ── Usage metering API ──────────────────────────────────────────
   app.use('/api/v1/credits/usage', usageRouter);
@@ -1196,17 +1219,6 @@ export async function createApp(): Promise<express.Application> {
 
   // ── Pricing API (public) ─────────────────────────────────────────
   app.use('/api/v1/pricing', pricingRouter);
-
-  // ── Preview API (public, no auth) ────────────────────────────────
-  let previewRouter: Router;
-  try {
-    const mod = await import('./routes/preview.js');
-    previewRouter = mod.previewRouter;
-  } catch (err) {
-    log.warn({ err: String(err) }, 'Failed to load preview API — using empty router');
-    previewRouter = Router();
-  }
-  app.use('/api/v1', previewRouter);
 
   // Ticket Result API (non-code ticket results)
   let ticketResultRouter: Router;

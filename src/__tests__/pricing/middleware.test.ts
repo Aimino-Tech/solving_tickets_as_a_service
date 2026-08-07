@@ -35,10 +35,20 @@ vi.mock('../../pricing/quota.js', () => ({
   getMonthlyUsage: vi.fn(),
 }));
 
+vi.mock('../../referral/service.js', () => ({
+  consumeReferralFix: vi.fn(),
+}));
+
+vi.mock('../../usage-limits/enforcement.js', () => ({
+  applyBalanceAfterLimit: vi.fn(),
+}));
+
 import { quotaMiddleware, defaultGetAccountId } from '../../pricing/middleware.js';
 import { getTierForAccount } from '../../ratelimit/tiers.js';
 import { getFeatureGate } from '../../pricing/tiers.js';
 import { getMonthlyUsage } from '../../pricing/quota.js';
+import { consumeReferralFix } from '../../referral/service.js';
+import { applyBalanceAfterLimit } from '../../usage-limits/enforcement.js';
 
 // Helper to create mock Express objects
 function mockReq(overrides: Record<string, any> = {}): Partial<Request> {
@@ -77,6 +87,14 @@ describe('defaultGetAccountId', () => {
 describe('quotaMiddleware', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Defaults: no referral allowance, no balance override — existing tests
+    // keep their exact behavior unless a case opts into one of the paths.
+    vi.mocked(consumeReferralFix).mockResolvedValue(false);
+    vi.mocked(applyBalanceAfterLimit).mockResolvedValue({
+      allowed: false,
+      consumedCredits: 0,
+      remainingBalance: 0,
+    });
   });
 
   it('allows request when within quota', async () => {
@@ -136,6 +154,117 @@ describe('quotaMiddleware', () => {
         upgradeUrl: 'https://syntaro.ai/pricing',
       }),
     );
+  });
+
+  it('consumes a referral fix past the quota before any paid overage', async () => {
+    const req = mockReq({ body: { installation: { id: 555 } } }) as Request;
+    const res = mockRes() as Response;
+    const next = vi.fn() as NextFunction;
+
+    vi.mocked(getTierForAccount).mockReturnValue('free');
+    vi.mocked(getFeatureGate).mockReturnValue({
+      concurrentFixes: 1,
+      monthlyFixQuota: 10,
+      premiumModels: false,
+      maxRetries: 2,
+      sandboxTimeoutMs: 300_000,
+      customWebhooks: false,
+      prioritySupport: false,
+    });
+    vi.mocked(getMonthlyUsage).mockResolvedValue(10);
+    vi.mocked(consumeReferralFix).mockResolvedValue(true);
+
+    await quotaMiddleware()(req, res, next);
+
+    expect(consumeReferralFix).toHaveBeenCalledWith(555);
+    expect(applyBalanceAfterLimit).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalledWith(402);
+  });
+
+  it('falls back to the balance override when no referral allowance remains', async () => {
+    const req = mockReq({ body: { installation: { id: 555 } } }) as Request;
+    const res = mockRes() as Response;
+    const next = vi.fn() as NextFunction;
+
+    vi.mocked(getTierForAccount).mockReturnValue('free');
+    vi.mocked(getFeatureGate).mockReturnValue({
+      concurrentFixes: 1,
+      monthlyFixQuota: 10,
+      premiumModels: false,
+      maxRetries: 2,
+      sandboxTimeoutMs: 300_000,
+      customWebhooks: false,
+      prioritySupport: false,
+    });
+    vi.mocked(getMonthlyUsage).mockResolvedValue(10);
+    vi.mocked(consumeReferralFix).mockResolvedValue(false);
+    vi.mocked(applyBalanceAfterLimit).mockResolvedValue({
+      allowed: true,
+      consumedCredits: 50,
+      remainingBalance: 100,
+    });
+
+    await quotaMiddleware()(req, res, next);
+
+    expect(consumeReferralFix).toHaveBeenCalledWith(555);
+    expect(applyBalanceAfterLimit).toHaveBeenCalledWith(555);
+    expect(next).toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalledWith(402);
+  });
+
+  it('rejects with 402 when referral allowance and balance override both fail', async () => {
+    const req = mockReq({ body: { installation: { id: 555 } } }) as Request;
+    const res = mockRes() as Response;
+    const next = vi.fn() as NextFunction;
+
+    vi.mocked(getTierForAccount).mockReturnValue('free');
+    vi.mocked(getFeatureGate).mockReturnValue({
+      concurrentFixes: 1,
+      monthlyFixQuota: 10,
+      premiumModels: false,
+      maxRetries: 2,
+      sandboxTimeoutMs: 300_000,
+      customWebhooks: false,
+      prioritySupport: false,
+    });
+    vi.mocked(getMonthlyUsage).mockResolvedValue(10);
+    vi.mocked(consumeReferralFix).mockResolvedValue(false);
+    vi.mocked(applyBalanceAfterLimit).mockResolvedValue({
+      allowed: false,
+      consumedCredits: 0,
+      remainingBalance: 0,
+    });
+
+    await quotaMiddleware()(req, res, next);
+
+    expect(consumeReferralFix).toHaveBeenCalledWith(555);
+    expect(applyBalanceAfterLimit).toHaveBeenCalledWith(555);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(402);
+  });
+
+  it('does not consume a referral fix while quota remains', async () => {
+    const req = mockReq({ body: { installation: { id: 555 } } }) as Request;
+    const res = mockRes() as Response;
+    const next = vi.fn() as NextFunction;
+
+    vi.mocked(getTierForAccount).mockReturnValue('free');
+    vi.mocked(getFeatureGate).mockReturnValue({
+      concurrentFixes: 1,
+      monthlyFixQuota: 10,
+      premiumModels: false,
+      maxRetries: 2,
+      sandboxTimeoutMs: 300_000,
+      customWebhooks: false,
+      prioritySupport: false,
+    });
+    vi.mocked(getMonthlyUsage).mockResolvedValue(3);
+
+    await quotaMiddleware()(req, res, next);
+
+    expect(consumeReferralFix).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalled();
   });
 
   it('allows team tier with correct 500-fix limit', async () => {

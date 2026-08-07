@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/__tests__/test-utils';
 import Settings from '@/pages/Settings';
 
-const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest, mockMcpKeysApiList, mockPrivacy, mockBitbucket } = vi.hoisted(() => ({
+const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest, mockMcpKeysApiList, mockPrivacy, mockBitbucket, mockGithub } = vi.hoisted(() => ({
   mockConfigApiGet: vi.fn(),
   mockConfigApiUpdateEnv: vi.fn(),
   mockRequest: vi.fn(),
@@ -15,6 +15,10 @@ const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest, mockMcpKeysApiLis
     cancelDeletion: vi.fn(),
     exportData: vi.fn(),
   },
+  mockGithub: {
+    getOAuthUrl: vi.fn(),
+    getStatus: vi.fn(),
+  },
   mockBitbucket: {
     getStatus: vi.fn(),
     connect: vi.fn(),
@@ -23,6 +27,7 @@ const { mockConfigApiGet, mockConfigApiUpdateEnv, mockRequest, mockMcpKeysApiLis
     getOAuthUrl: vi.fn(),
     handleOAuthCallback: vi.fn(),
     getOAuthStatus: vi.fn(),
+    getForgeStatus: vi.fn(),
   },
 }));
 
@@ -44,9 +49,7 @@ vi.mock('@/api/client', () => ({
     rename: vi.fn(),
     get: vi.fn(),
   },
-  github: {
-    getOAuthUrl: vi.fn(),
-  },
+  github: mockGithub,
   bitbucket: mockBitbucket,
   privacy: mockPrivacy,
 }));
@@ -67,6 +70,7 @@ describe('Settings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockMcpKeysApiList.mockResolvedValue({ keys: [] });
+    mockGithub.getStatus.mockResolvedValue({ connected: false, githubLogin: null });
     mockPrivacy.getDeletionStatus.mockResolvedValue({ activeRequest: null, retentionDays: 30 });
     mockBitbucket.getStatus.mockResolvedValue({ connected: false, workspace: '', username: null });
     mockBitbucket.getOAuthStatus.mockResolvedValue({
@@ -77,6 +81,12 @@ describe('Settings', () => {
       username: null,
     });
     mockBitbucket.getOAuthUrl.mockResolvedValue({ url: 'https://bitbucket.org/site/oauth2/authorize?client_id=x' });
+    mockBitbucket.getForgeStatus.mockResolvedValue({
+      configured: false,
+      installUrl: null,
+      workspaceConnected: null,
+      appInstalled: false,
+    });
 
     mockUseAuth.mockReturnValue({
       user: { id: '1', email: 'test@test.com', name: 'Test User' },
@@ -135,7 +145,7 @@ describe('Settings', () => {
     expect(disabledConnects.length).toBe(2);
 
     const bbDescription = screen.getByText(
-      'Connect with Bitbucket OAuth (recommended) or an API token',
+      'Connect with Bitbucket OAuth — one click, no API token',
     );
     const bbCard = bbDescription.closest('div.p-4') as HTMLElement;
     const bbConnect = within(bbCard).getByRole('button', { name: 'Connect' });
@@ -203,7 +213,7 @@ describe('Settings', () => {
 
   async function expandBitbucketPanel() {
     const description = screen.getByText(
-      'Connect with Bitbucket OAuth (recommended) or an API token',
+      'Connect with Bitbucket OAuth — one click, no API token',
     );
     const card = description.closest('div.p-4') as HTMLElement;
     await userEvent.click(within(card).getByRole('button', { name: 'Connect' }));
@@ -212,55 +222,66 @@ describe('Settings', () => {
     });
   }
 
-  it('surfaces Bitbucket scopes error under the form and stays disconnected', async () => {
-    mockBitbucket.connect.mockRejectedValue(
-      new Error('API Token provided has no Bitbucket scopes'),
-    );
+  it('hides the API token option — OAuth / Forge app only', async () => {
     renderWithProviders(<Settings />);
 
     await waitFor(() => {
       expect(screen.getByText('Bitbucket')).toBeInTheDocument();
     });
     await expandBitbucketPanel();
-    await userEvent.click(screen.getByRole('button', { name: 'Use API token instead' }));
 
-    const tokenInput = screen.getByPlaceholderText('ATATT3xFfGF0...');
-    await userEvent.clear(tokenInput);
-    await userEvent.type(tokenInput, 'ATATT3xFfGF0-this-is-a-long-enough-fake-token');
-
-    await userEvent.click(screen.getByRole('button', { name: 'Connect with API token' }));
-
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('no Bitbucket scopes');
-    });
-    expect(mockBitbucket.connect).toHaveBeenCalledWith({
-      apiToken: 'ATATT3xFfGF0-this-is-a-long-enough-fake-token',
-    });
+    expect(screen.getByRole('button', { name: 'Connect with Bitbucket' })).toBeInTheDocument();
+    expect(screen.queryByText('Use API token instead')).not.toBeInTheDocument();
+    expect(screen.queryByText(/ATATT3/i)).not.toBeInTheDocument();
+    expect(mockBitbucket.connect).not.toHaveBeenCalled();
   });
 
-  it('shows Manage after successful Bitbucket connect', async () => {
-    mockBitbucket.connect.mockResolvedValue({
-      connected: true,
-      workspace: 'aimino',
-      repoCount: 3,
-      emailUsed: 'test@test.com',
+  it('shows the Bitbucket App install card when Forge is configured', async () => {
+    mockBitbucket.getForgeStatus.mockResolvedValue({
+      configured: true,
+      installUrl: 'https://developer.atlassian.com/console/install/app-1?signature=x&product=bitbucket',
+      workspaceConnected: null,
+      appInstalled: false,
     });
     renderWithProviders(<Settings />);
 
     await waitFor(() => {
       expect(screen.getByText('Bitbucket')).toBeInTheDocument();
     });
-    await expandBitbucketPanel();
-    await userEvent.click(screen.getByRole('button', { name: 'Use API token instead' }));
-
-    const tokenInput = screen.getByPlaceholderText('ATATT3xFfGF0...');
-    await userEvent.type(tokenInput, 'ATATT3xFfGF0-this-is-a-long-enough-fake-token');
-    await userEvent.click(screen.getByRole('button', { name: 'Connect with API token' }));
+    const heading = screen.getByText('Bitbucket');
+    const card = heading.closest('div.p-4') as HTMLElement;
+    await userEvent.click(within(card).getByRole('button', { name: 'Connect' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Manage/i })).toBeInTheDocument();
+      expect(screen.getByText('SYNTARO Bitbucket App')).toBeInTheDocument();
     });
-    expect(screen.getByText(/workspace aimino/i)).toBeInTheDocument();
+    const installLink = screen.getByRole('link', { name: /Install Bitbucket App/i });
+    expect(installLink).toHaveAttribute(
+      'href',
+      'https://developer.atlassian.com/console/install/app-1?signature=x&product=bitbucket',
+    );
+    expect(screen.getByText(/syntaro fix/i)).toBeInTheDocument();
+  });
+
+  it('shows the Installed badge when the app is installed on the connected workspace', async () => {
+    mockBitbucket.getForgeStatus.mockResolvedValue({
+      configured: true,
+      installUrl: 'https://developer.atlassian.com/console/install/app-1?signature=x&product=bitbucket',
+      workspaceConnected: 'aimino',
+      appInstalled: true,
+    });
+    renderWithProviders(<Settings />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Bitbucket')).toBeInTheDocument();
+    });
+    const heading = screen.getByText('Bitbucket');
+    const card = heading.closest('div.p-4') as HTMLElement;
+    await userEvent.click(within(card).getByRole('button', { name: 'Connect' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Installed ✓')).toBeInTheDocument();
+    });
   });
 
   it('renders Data & Privacy section with export and deletion controls', async () => {

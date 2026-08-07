@@ -126,6 +126,51 @@ export class BitbucketPlatformClient implements PlatformClient {
     });
   }
 
+  /**
+   * Fetch a single pull request comment (Forge events only carry the id).
+   * Returns the raw markdown content when present.
+   */
+  async getPullRequestComment(
+    repo: string,
+    prNumber: number,
+    commentId: number,
+  ): Promise<{ content?: { raw?: string } | null }> {
+    const { owner, repo: repoName } = parseRepo(repo);
+    return this.request<any>(
+      'GET',
+      `/repositories/${owner}/${repoName}/pullrequests/${prNumber}/comments/${commentId}`,
+    );
+  }
+
+  /**
+   * Fetch a pull request with its description — the Forge `pullrequest`
+   * payload carries title but NOT the description body.
+   */
+  async getPullRequestDetail(
+    repo: string,
+    prNumber: number,
+  ): Promise<{ title?: string; description?: string | null }> {
+    const { owner, repo: repoName } = parseRepo(repo);
+    const data = await this.request<any>(
+      'GET',
+      `/repositories/${owner}/${repoName}/pullrequests/${prNumber}`,
+    );
+    return { title: data.title ?? '', description: data.description ?? null };
+  }
+
+  /** Resolve a workspace UUID to its slug (Forge events only carry the UUID). */
+  async resolveWorkspaceSlug(workspaceUuid: string): Promise<string | null> {
+    try {
+      const data = await this.request<{ slug?: string; name?: string }>(
+        'GET',
+        `/workspaces/${encodeURIComponent(workspaceUuid)}`,
+      );
+      return data.slug ?? data.name ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async updateIssue(repo: string, issueNumber: number, updates: Partial<Issue>): Promise<void> {
     const { owner, repo: repoName } = parseRepo(repo);
     const params: Record<string, unknown> = {};

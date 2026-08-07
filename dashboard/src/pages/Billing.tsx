@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { stats, billing, litellm, credits, billingSettingsApi } from '@/api/client';
+import { stats, billing, litellm, credits, billingSettingsApi, ApiError } from '@/api/client';
 import type {
   DashboardStats,
   BillingPlan,
@@ -58,6 +58,8 @@ export default function Billing() {
   const [portalError, setPortalError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [dpaPendingPlan, setDpaPendingPlan] = useState<string | null>(null);
+  const [dpaAccepting, setDpaAccepting] = useState(false);
   const [searchParams] = useSearchParams();
   const autoTriggered = useRef(false);
   const [litellmData, setLitellmData] = useState<any>(null);
@@ -216,8 +218,26 @@ export default function Billing() {
       );
       window.location.href = url;
     } catch (err) {
-      setCheckoutError(err instanceof Error ? err.message : 'Failed to start checkout');
+      if (err instanceof ApiError && err.code === 'DPA_REQUIRED') {
+        setDpaPendingPlan(planId);
+      } else {
+        setCheckoutError(err instanceof Error ? err.message : 'Failed to start checkout');
+      }
       setCheckoutLoading(null);
+    }
+  }
+
+  async function handleAcceptDpa() {
+    setDpaAccepting(true);
+    try {
+      await billing.acceptDpa();
+      const planId = dpaPendingPlan;
+      setDpaPendingPlan(null);
+      setDpaAccepting(false);
+      if (planId) await handleSubscribe(planId);
+    } catch (err) {
+      setDpaAccepting(false);
+      setCheckoutError(err instanceof Error ? err.message : 'Failed to accept DPA');
     }
   }
 
@@ -904,6 +924,37 @@ export default function Billing() {
           Contact Support
         </a>
       </div>
+
+      {dpaPendingPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Data Processing Agreement">
+          <div className="w-full max-w-lg rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Data Processing Agreement required</h2>
+            <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+              Before subscribing to a paid plan, you must accept the Data Processing Agreement (version{' '}
+              <strong>2026-06-01</strong>) so we can process your payment data in compliance with GDPR.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                onClick={() => setDpaPendingPlan(null)}
+                disabled={dpaAccepting}
+                className="btn-secondary min-h-[44px]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAcceptDpa}
+                disabled={dpaAccepting}
+                className="btn-primary min-h-[44px]"
+              >
+                {dpaAccepting ? 'Accepting...' : 'Accept DPA & Continue'}
+              </button>
+            </div>
+            <a href="/dpa" className="mt-4 inline-block text-sm text-brand-600 underline hover:text-brand-700">
+              Read the full Data Processing Agreement
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

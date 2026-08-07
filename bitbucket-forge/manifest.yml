@@ -1,0 +1,109 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SYNTARO Bitbucket App — thin Forge Remote proxy.
+#
+# All events are forwarded to the SYNTARO backend over Forge Remote with the
+# x-forge-oauth-system token (app bot identity). The backend does the real work
+# (agent runs, git operations, draft PRs). No Forge functions/resources are
+# needed — this app is a pure event-forwarder.
+#
+# Deploy: see README.md — forge login && forge register && forge deploy.
+
+modules:
+  trigger:
+    # PR command trigger: user comments "/syntaro fix" on a PR.
+    - key: pr-comment-trigger
+      endpoint: ep-events
+      events:
+        - avi:bitbucket:created:pullrequest-comment
+
+    # PR marker trigger: PR description contains "syntaro:fix".
+    - key: pr-created-trigger
+      endpoint: ep-events
+      events:
+        - avi:bitbucket:created:pullrequest
+
+    # Lifecycle: register the installation in SYNTARO.
+    - key: on-app-installed
+      endpoint: ep-lifecycle
+      events:
+        - avi:forge:installed:app
+
+    - key: on-app-upgraded
+      endpoint: ep-lifecycle
+      events:
+        - avi:forge:upgraded:app
+
+  endpoint:
+    - key: ep-events
+      remote: app-backend
+      route:
+        path: /forge/remote/events
+      auth:
+        appSystemToken:
+          enabled: true
+
+    - key: ep-lifecycle
+      remote: app-backend
+      route:
+        path: /forge/remote/lifecycle
+      auth:
+        appSystemToken:
+          enabled: true
+
+    - key: ep-pre-uninstall
+      remote: app-backend
+      route:
+        path: /forge/remote/uninstall
+      auth:
+        appSystemToken:
+          enabled: true
+
+    - key: ep-token-refresh
+      remote: app-backend
+      route:
+        path: /forge/remote/token-refresh
+      auth:
+        appSystemToken:
+          enabled: true
+
+  scheduledTrigger:
+    # Hourly: keep a fresh x-forge-oauth-system token cached in SYNTARO so the
+    # worker can act as the app's bot user without waiting for the next event.
+    - key: token-refresh
+      endpoint: ep-token-refresh
+      interval: hour
+
+  preUninstall:
+    - key: pre-uninstall-remote
+      endpoint: ep-pre-uninstall
+
+remotes:
+  - key: app-backend
+    baseUrl: "${SYNTARO_FORGE_REMOTE_URL}"
+    operations:
+      - compute
+    auth:
+      appSystemToken:
+        enabled: true
+
+permissions:
+  scopes:
+    # Required to receive x-forge-oauth-system tokens on the remote.
+    read:app-system-token: {}
+    # Repos: clone (read) + push fix commits (write).
+    read:repository:bitbucket: {}
+    write:repository:bitbucket: {}
+    # PRs: read events/comments, write status comments + update PRs.
+    read:pullrequest:bitbucket: {}
+    write:pullrequest:bitbucket: {}
+    # Resolve workspace slug/uuid and actor identity.
+    read:workspace:bitbucket: {}
+    read:user:bitbucket: {}
+    # Forge KVS (reserved for future settings).
+    storage:app: {}
+
+app:
+  # Replace with the id assigned by `forge register`.
+  id: ari:cloud:ecosystem::app/YOUR-APP-ID
+  runtime:
+    name: nodejs24.x

@@ -27,6 +27,7 @@ import { getTierForAccount } from '../ratelimit/tiers.js';
 import { getFeatureGate } from './tiers.js';
 import { getMonthlyUsage } from './quota.js';
 import { applyBalanceAfterLimit } from '../usage-limits/enforcement.js'; // AIM-4645
+import { consumeReferralFix } from '../referral/service.js'; // AIM-4643
 import { rootLogger } from '../utils/logger.js';
 
 const log = rootLogger.child({ module: 'pricing-middleware' });
@@ -109,6 +110,14 @@ export function quotaMiddleware(options?: Partial<QuotaCheckOptions>) {
       res.setHeader('X-RateLimit-Reset', String(getNextMonthStartMs()));
 
       if (remaining <= 0 && features.monthlyFixQuota < 999_999) {
+        // Referral fixes allowance (AIM-4643): consume referral-granted fixes before paid overage
+        const referralConsumed = await consumeReferralFix(accountId);
+        if (referralConsumed) {
+          log.info({ accountId, tier }, 'Referral fixes allowance consumed for fix run past monthly quota');
+          next();
+          return;
+        }
+
         // AIM-4645: when the account opts in, consume balance instead of blocking
         const override = await applyBalanceAfterLimit(accountId);
         if (override.allowed) {

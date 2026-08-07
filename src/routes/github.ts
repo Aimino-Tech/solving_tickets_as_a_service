@@ -9,13 +9,32 @@ import { gitHubWebhookRepository } from '../db/repositories/GitHubWebhookReposit
 import { gitHubOAuthRepository } from '../db/repositories/GitHubOAuthRepository.js';
 import { decrypt } from '../utils/encryption.js';
 import { rootLogger } from '../utils/logger.js';
-import { getInstallationToken } from '../github/auth.js';
+import { getInstallationToken, getAppOctokitInstance } from '../github/auth.js';
 
 const log = rootLogger.child({ module: 'github-routes' });
 const router: Router = Router();
 const limiter = (rateLimit as any)({ windowMs: 60000, limit: 30, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests' } });
 router.use(limiter);
 router.use(requireAuth);
+
+/**
+ * GET /app-status — app-level installation confirmation.
+ * Security: returns ONLY `{ installed, installationCount }`. Never exposes
+ * account logins, org names, or repository details — that data stays
+ * gated behind OAuth in GET /installations.
+ */
+router.get('/app-status', async (_req: Request, res: Response) => {
+  try {
+    const appOctokit = getAppOctokitInstance();
+    const appResp = await appOctokit.rest.apps.listInstallations({ per_page: 1 });
+    const count = appResp.data.length > 0 ? appResp.headers['x-total-count'] ?? appResp.data.length : 0;
+    const total = Number(count) > 0 ? Number(count) : appResp.data.length;
+    res.json({ installed: total > 0, installationCount: total });
+  } catch (err) {
+    log.warn({ err: String(err) }, 'Failed to list app installations for status');
+    res.json({ installed: false, installationCount: 0, error: 'Failed to check GitHub App installation status' });
+  }
+});
 
 async function getGitHubToken(req: Request): Promise<string | null> {
   const h = req.headers.authorization;
@@ -67,6 +86,63 @@ router.get('/installations', async (req: Request, res: Response) => {
     const storedRows = (stored as unknown as Record<string, unknown>[]).map(normalizeInstallationRow);
 
     if (!token) {
+      // Security: only list installations of the user's own GitHub account
+      const oauth = await gitHubOAuthRepository.findByUserId(req.user!.id);
+      const userLogin = oauth ? ((oauth as any).github_login ?? (oauth as any).githubLogin) : undefined;
+
+      if (!userLogin) {
+        res.json({ installations: storedRows, error: 'GitHub account not connected — connect your GitHub account to see installations' });
+        return;
+      }
+
+      try {
+        const appOctokit = getAppOctokitInstance();
+        const appResp = await appOctokit.rest.apps.listInstallations({ per_page: 100 });
+        const appInstallations: Array<Record<string, unknown>> = [];
+        for (const i of appResp.data ?? []) {
+          if ((i.account?.login ?? '') !== userLogin) continue;
+          const inst: Record<string, unknown> = {
+            installationId: i.id,
+            accountLogin: i.account?.login ?? 'unknown',
+            accountType: i.account?.type ?? 'User',
+            avatarUrl: i.account?.avatar_url ?? null,
+            repoScope: i.repository_selection ?? 'selected',
+            htmlUrl: i.html_url ?? null,
+            stored: false,
+            storedId: null,
+            viaAppAuth: true,
+            repos: [],
+          };
+          try {
+            const token = await getInstallationToken(i.id);
+            const reposRes = await fetch('https://api.github.com/installation/repositories', {
+              headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'syntaro-bot' },
+            });
+            if (reposRes.ok) {
+              const reposData = (await reposRes.json()) as { repositories?: Array<Record<string, any>> };
+              inst.repos = (reposData.repositories ?? []).map((repo) => ({
+                id: repo.id,
+                owner: repo.owner?.login ?? '',
+                name: repo.name,
+                fullName: repo.full_name,
+                private: repo.private,
+                description: repo.description ?? null,
+                defaultBranch: repo.default_branch ?? null,
+                language: repo.language ?? null,
+                updatedAt: repo.updated_at ?? null,
+                syntaroInstalled: false,
+              }));
+            }
+          } catch (reposErr) {
+            log.warn({ err: String(reposErr), installationId: i.id }, 'Failed to fetch repos for app installation');
+          }
+          appInstallations.push(inst);
+        }
+        res.json({ installations: appInstallations, error: null, appLevel: true });
+        return;
+      } catch (appErr) {
+        log.warn({ err: String(appErr) }, 'App-level installation listing failed — falling back to saved rows');
+      }
       res.json({ installations: storedRows, error: 'GitHub OAuth token not available — showing saved installations only' });
       return;
     }
@@ -231,10 +307,18 @@ router.post('/installations/:id/repos/:owner/:repo/webhook', async (req: Request
     const iid = Number(req.params.id);
     if (isNaN(iid)) { res.status(400).json({ error: 'Invalid installation ID' }); return; }
     const { owner, repo } = req.params;
-    const inst = await gitHubInstallationRepository.findById(iid);
-    // Synthetic OAuth fallback installation (id 0) has no DB row — webhook
-    // creation still works via the user's OAuth token.
-    if (!inst && iid !== 0) { res.status(404).json({ error: 'Installation not found' }); return; }
+    const inst = await gitHubInstallationRepository.findByInstallationId(iid);
+    let appLevel = false;
+    if (!inst && iid !== 0) {
+      try {
+        const checkToken = await getInstallationToken(iid);
+        if (!checkToken) throw new Error('no installation token');
+        appLevel = true;
+      } catch {
+        res.status(404).json({ error: 'Installation not found' });
+        return;
+      }
+    }
     if (inst) {
       const instUserId = (inst as any).user_id ?? inst.userId;
       if (instUserId !== req.user!.id) { res.status(403).json({ error: 'Forbidden' }); return; }
@@ -243,7 +327,10 @@ router.post('/installations/:id/repos/:owner/:repo/webhook', async (req: Request
     let webhookId: number | null = null;
     let warning: string | undefined;
 
-    const token = await getGitHubToken(req);
+    let token = await getGitHubToken(req);
+    if (!token && appLevel) {
+      token = await getInstallationToken(iid).catch(() => null);
+    }
     if (token) {
       const baseUrl = process.env.SYNTARO_PUBLIC_URL || req.protocol + '://' + req.get('host');
       const whResp = await fetch('https://api.github.com/repos/' + owner + '/' + repo + '/hooks', {

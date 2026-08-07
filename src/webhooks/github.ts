@@ -987,7 +987,7 @@ export function createGithubWebhooks(enqueue: EnqueueHandler): Webhooks {
           '',
           '🤖 This PR was fixed by **Syntaro** — automated bug fixing for your GitHub issues.',
           '',
-          '[Add Syntaro to your repo](https://github.com/apps/syntaro-app/installations/new?utm_source=github&utm_medium=pr-badge&utm_campaign=aim-4215) | [View Dashboard](https://syntaro.io/dashboard)',
+          '[Add Syntaro to your repo](https://github.com/apps/syntaro-bot/installations/new?utm_source=github&utm_medium=pr-badge&utm_campaign=aim-4215) | [View Dashboard](https://syntaro.io/dashboard)',
         ].join('\n'),
       });
 

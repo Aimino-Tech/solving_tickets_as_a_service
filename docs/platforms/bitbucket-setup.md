@@ -4,6 +4,14 @@ SYNTARO supports Bitbucket Cloud end-to-end: a labeled Bitbucket issue
 (`syntaro:fix`) triggers a fix run, status comments are posted on the issue,
 and a draft pull request is opened on Bitbucket for human review.
 
+> ⚠️ **2026 update — use the Bitbucket App (Forge).** Bitbucket removed its
+> built-in Issues tracker on **Aug 20, 2026** and deprecated app passwords
+> (June 2026). The one-click **Bitbucket App** (Atlassian Forge) is now the
+> recommended path: users install the app into their workspace and trigger
+> fixes with a `/syntaro fix` PR comment — no API tokens, no app passwords.
+> See [bitbucket-forge-app.md](bitbucket-forge-app.md). The OAuth/API-token
+> flows below remain for legacy/self-host setups.
+
 ## Prerequisites
 
 - A Bitbucket workspace and repository (Cloud)
@@ -40,6 +48,19 @@ Bitbucket UI may say **OAuth clients** (newer) or **OAuth consumers** (older doc
 | `BITBUCKET_OAUTH_CLIENT_SECRET` | OAuth client secret |
 | `SYNTARO_PUBLIC_URL` | API public URL (OAuth **callback** host), e.g. `http://localhost:3002` |
 | `SYNTARO_FRONTEND_URL` | Dashboard SPA URL (OAuth **return**), e.g. `http://localhost:5173` |
+
+> ⚠️ **`SYNTARO_PUBLIC_URL` MUST match the Callback URL registered on the OAuth
+> consumer, exactly (host + port + path).** If it differs, the token exchange
+> fails with `Bitbucket token exchange failed: host must match configured
+> redirect uri` and the user can never connect. Symptom: the user completes the
+> Bitbucket approval but the dashboard shows a connect error.
+>
+> Fix: in Bitbucket → Workspace settings → OAuth clients → edit the SYNTARO
+> client → set the Callback URL to `<SYNTARO_PUBLIC_URL>/api/v1/auth/bitbucket/callback`
+> (e.g. `http://localhost:3030/api/v1/auth/bitbucket/callback`), then restart
+> the SYNTARO backend. Verify with:
+> `curl -X POST <SYNTARO_PUBLIC_URL>/api/v1/auth/bitbucket/url` (with a JWT) and
+> check the returned `redirectUri` matches the consumer callback.
 
 > Local tip: callback stays on the API (`:3002`); after approve, users must return to the Vite app (`:5173`) where the JWT lives. Do not point the post-login redirect at the API port.
 

@@ -465,7 +465,7 @@ export function getWizardConfig(): {
   return {
     enabled: config.onboarding.enabled,
     requiredSteps: WIZARD_STEP_ORDER.filter((s) => s !== 'complete'),
-    githubAppUrl: `https://github.com/apps/${config.github.appId}/installations/new`,
+    githubAppUrl: `https://github.com/apps/${config.github.appName}/installations/new`,
   };
 }
 

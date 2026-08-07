@@ -11,11 +11,11 @@ export default function Repos() {
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; githubLogin?: string }>({ connected: false });
+  const [appInstalled, setAppInstalled] = useState<{ installed: boolean; installationCount: number } | null>(null);
   const [togglingRepo, setTogglingRepo] = useState<string | null>(null);
   const [bbStatus, setBbStatus] = useState<{ connected: boolean; workspace: string }>({ connected: false, workspace: '' });
   const [bbRepos, setBbRepos] = useState<BitbucketRepo[]>([]);
   const [bbLoading, setBbLoading] = useState(false);
-  const [bbForm, setBbForm] = useState({ apiToken: '' });
   const [bbConnecting, setBbConnecting] = useState(false);
   const [bbError, setBbError] = useState<string | null>(null);
   const [togglingBbRepo, setTogglingBbRepo] = useState<string | null>(null);
@@ -38,25 +38,6 @@ export default function Repos() {
       setBbRepos([]);
     } finally {
       setBbLoading(false);
-    }
-  }
-
-  async function handleConnectBitbucket() {
-    const apiToken = bbForm.apiToken.trim();
-    if (!apiToken || apiToken.length < 20) {
-      setBbError('Paste the full Atlassian API token (Account settings → Security → API tokens).');
-      return;
-    }
-    setBbConnecting(true);
-    setBbError(null);
-    try {
-      await bitbucket.connect({ apiToken });
-      setBbForm({ apiToken: '' });
-      await loadBitbucket();
-    } catch (err) {
-      setBbError(err instanceof Error ? err.message : 'Failed to connect Bitbucket');
-    } finally {
-      setBbConnecting(false);
     }
   }
 
@@ -197,9 +178,19 @@ export default function Repos() {
             Disconnect GitHub
           </button>
         ) : (
-          <button onClick={handleConnectGitHub} className="btn-primary">
-            Connect GitHub
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={`https://github.com/apps/${import.meta.env.VITE_GITHUB_APP_NAME || 'syntaro-bot'}/installations/new`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary text-sm inline-flex items-center min-h-[44px]"
+            >
+              Install GitHub App
+            </a>
+            <button onClick={handleConnectGitHub} className="btn-primary">
+              Connect GitHub
+            </button>
+          </div>
         )}
       </div>
 
@@ -302,9 +293,19 @@ export default function Repos() {
           <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
             Connect your GitHub account to manage repositories and enable automated fixes.
           </p>
-          <button onClick={handleConnectGitHub} className="btn-primary mt-4">
-            Connect GitHub Account
-          </button>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <a
+              href={`https://github.com/apps/${import.meta.env.VITE_GITHUB_APP_NAME || 'syntaro-bot'}/installations/new`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary inline-block"
+            >
+              Install GitHub App
+            </a>
+            <button onClick={handleConnectGitHub} className="btn-primary">
+              Connect GitHub Account
+            </button>
+          </div>
         </div>
       )}
 
@@ -335,7 +336,7 @@ export default function Repos() {
         {!bbStatus.connected ? (
           <div className="card mt-3 space-y-3">
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              Connect with Bitbucket OAuth (recommended). Workspace is detected automatically.
+              Connect with Bitbucket OAuth — one click, no API token. Workspace is detected automatically.
             </p>
             {bbError && (
               <p className="text-sm text-red-600 dark:text-red-400">{bbError}</p>
@@ -357,29 +358,6 @@ export default function Repos() {
             >
               {bbConnecting ? t('repos.bitbucketConnecting') : 'Connect with Bitbucket'}
             </button>
-            <details className="text-sm">
-              <summary className="cursor-pointer text-gray-500">Use API token instead</summary>
-              <div className="mt-3 max-w-xl space-y-2">
-                <input
-                  type="password"
-                  placeholder={t('repos.bitbucketApiToken')}
-                  value={bbForm.apiToken}
-                  onChange={(e) => {
-                    setBbError(null);
-                    setBbForm({ apiToken: e.target.value });
-                  }}
-                  className="input-field min-h-[44px] w-full"
-                  autoComplete="off"
-                />
-                <button
-                  onClick={handleConnectBitbucket}
-                  disabled={bbConnecting || !bbForm.apiToken.trim()}
-                  className="btn-secondary"
-                >
-                  {bbConnecting ? t('repos.bitbucketConnecting') : t('repos.bitbucketConnect')}
-                </button>
-              </div>
-            </details>
           </div>
         ) : (
           <div className="space-y-3 mt-3">

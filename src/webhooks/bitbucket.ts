@@ -121,10 +121,31 @@ export const bitbucketWebhook: PlatformWebhook = {
 };
 
 /**
- * Resolve a Bitbucket API client for a workspace: prefer the per-user DB
- * connection, fall back to instance BITBUCKET_* env (self-host).
+ * Resolve a Bitbucket API client for a workspace: prefer the Forge app
+ * installation (bot identity), then the per-user DB connection, then the
+ * instance BITBUCKET_* env (self-host).
  */
 export async function resolveBitbucketClient(workspace: string): Promise<BitbucketPlatformClient> {
+  // 1. Forge app installation — the Bitbucket App bot identity. The token is
+  //    rotated into the registry on every Forge invocation + hourly refresh.
+  try {
+    const { bitbucketForgeInstallationRepository } = await import(
+      '../db/repositories/BitbucketForgeInstallationRepository.js'
+    );
+    const forge = await bitbucketForgeInstallationRepository.findByWorkspace(workspace);
+    if (forge?.systemTokenEncrypted) {
+      const expired = forge.tokenExpiresAt != null && new Date(forge.tokenExpiresAt).getTime() < Date.now() + 60_000;
+      if (!expired) {
+        const { decrypt } = await import('../utils/encryption.js');
+        const token = decrypt(forge.systemTokenEncrypted);
+        return new BitbucketPlatformClient(`bearer:${token}`, forge.apiBaseUrl ?? undefined);
+      }
+    }
+  } catch (err) {
+    log.warn({ err: String(err), workspace }, 'Failed to resolve Forge Bitbucket client — falling back');
+  }
+
+  // 2. Per-user OAuth/API-token connection (dashboard "Connect with Bitbucket").
   try {
     const row = await bitbucketConnectionRepository.findByWorkspace(workspace);
     if (row) {

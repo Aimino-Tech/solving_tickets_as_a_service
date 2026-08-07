@@ -53,5 +53,6 @@ fail-closed: anything it rejects is never dispatched.
 
 - [GitLab Setup](gitlab-setup.md) — Self-hosted and GitLab.com
 - [Bitbucket Setup](bitbucket-setup.md) — Bitbucket Cloud
+- [Bitbucket App (Forge)](bitbucket-forge-app.md) — One-click workspace install (GitHub-App equivalent)
 - [Eval on Any Platform](eval.md) — Running evaluations across platforms
 - [Adding a New Platform](development/adding-a-platform.md) — Developer guide

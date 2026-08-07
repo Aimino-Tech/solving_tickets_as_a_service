@@ -14,12 +14,12 @@
 > **I want** to understand what SYNTARO is the moment I land on the homepage,
 > **so that** I can decide whether to keep going.
 
-- [ ] Open `https://syntaro.io` → see hero: tagline *"Label a Ticket. Get a Pull Request."* + CTA **"Install GitHub App →"** (→ `https://github.com/apps/syntarogithub1/installations/new`)
+- [ ] Open `https://syntaro.io` → see hero: tagline *"Label a Ticket. Get a Pull Request."* + CTA **"Install GitHub App →"** (→ `https://github.com/apps/syntaro-bot/installations/new`)
 - [ ] See 3 trust stats: `162K+ OpenCode Stars`, `5 min Setup`, `∞ No Hidden Costs`
 - [ ] Read **The Problem** section (old way 45+ min/ticket vs SYNTARO < 4 min)
 - [ ] Read **How It Works** section (4 steps: Label issue → Investigate → Fix & Verify → PR Created)
 - [ ] Browse **Testimonials** + **FAQ**
-- [ ] (Optional) Click **"Read the Docs"** → docs page: Quick Start, GitHub App install guide (`github.com/apps/syntaro-app/installations/new`)
+- [ ] (Optional) Click **"Read the Docs"** → docs page: Quick Start, GitHub App install guide (`github.com/apps/syntaro-bot/installations/new`)
 - [ ] (Optional) View **Pricing** → each plan's "Get Started" button points to GitHub App install
 - [ ] (Optional) View **/integrations** → list of integrations (OpenCode, Claude, Cursor, Codex, Windsurf, GitHub/GitLab/Bitbucket, MCP Registry, Smithery, npm, skills.sh, GitHub Marketplace, RapidAPI)
 - [ ] (Optional) View **/agents** → "SYNTARO for AI Agents"
@@ -170,7 +170,7 @@
 > **I want** to install the SYNTARO GitHub App on my repos,
 > **so that** I can trigger auto-fix with the `syntaro:fix` label.
 
-- [ ] Visit the GitHub App page (`github.com/apps/syntarogithub1/installations/new` or `syntaro-app`/`syntaro-bot` depending on environment)
+- [ ] Visit the GitHub App page (`github.com/apps/syntaro-bot/installations/new` or `syntaro-app`/`syntaro-bot` depending on environment)
 - [ ] Select account + repos → **Install** → grant webhook access
 - [ ] In dashboard **Settings → GitHub** see status *Connected via GitHub App*
 - [ ] (Reconnect) Click reconnect → `githubApi.getOAuthUrl` → OAuth redirect
