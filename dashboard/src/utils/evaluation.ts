@@ -334,8 +334,7 @@ export function evaluateProject(input: ProjectEvaluationInput): ProjectEvaluatio
     labelKey: 'overview.rubric.failureRate',
     value: failureRate,
     criteria: '\u2264 10% good \u00b7 10\u201330% warning \u00b7 > 30% critical',
-    severity:
-      failureRate === null ? 'empty' : failureRate <= 10 ? 'good' : failureRate <= 30 ? 'warning' : 'critical',
+    severity: failureRate === null ? 'empty' : failureRate <= 10 ? 'good' : failureRate <= 30 ? 'warning' : 'critical',
     evidence: failureRate === null ? '\u2014' : `${failed}/${runs.length} runs failed (${Math.round(failureRate)}%)`,
     weight: 0.25,
     higherIsBetter: false,
@@ -347,9 +346,11 @@ export function evaluateProject(input: ProjectEvaluationInput): ProjectEvaluatio
     labelKey: 'overview.rubric.usage',
     value: usagePct,
     criteria: '< 80% good \u00b7 80\u201399% warning \u00b7 \u2265 100% critical',
-    severity:
-      usagePct === null ? 'good' : usagePct >= 100 ? 'critical' : usagePct >= 80 ? 'warning' : 'good',
-    evidence: isUnlimited || usagePct === null ? 'Unlimited plan' : `${usedFixes}/${monthlyLimit} fixes used (${Math.round(usagePct)}%)`,
+    severity: usagePct === null ? 'good' : usagePct >= 100 ? 'critical' : usagePct >= 80 ? 'warning' : 'good',
+    evidence:
+      isUnlimited || usagePct === null
+        ? 'Unlimited plan'
+        : `${usedFixes}/${monthlyLimit} fixes used (${Math.round(usagePct)}%)`,
     weight: 0.15,
     higherIsBetter: false,
   });
@@ -384,10 +385,7 @@ export function evaluateProject(input: ProjectEvaluationInput): ProjectEvaluatio
  * and report the per-metric delta so the team can see whether actions
  * (e.g. created tickets) moved the metrics.
  */
-export function computeFeedbackLoop(
-  previous: ProjectEvaluation | null,
-  current: ProjectEvaluation,
-): FeedbackDelta[] {
+export function computeFeedbackLoop(previous: ProjectEvaluation | null, current: ProjectEvaluation): FeedbackDelta[] {
   if (!previous) return [];
   return current.rubric.map((item) => {
     const before = previous.rubric.find((p) => p.id === item.id);
@@ -403,8 +401,7 @@ export function computeFeedbackLoop(
       };
     }
     const delta = item.value === null ? null : item.value - before.value;
-    const normDelta =
-      delta === null ? null : item.higherIsBetter ? delta : -delta;
+    const normDelta = delta === null ? null : item.higherIsBetter ? delta : -delta;
     const trend: FeedbackDelta['trend'] =
       normDelta === null
         ? 'unchanged'
@@ -423,4 +420,203 @@ export function computeFeedbackLoop(
       trend,
     };
   });
+}
+
+// ── Bug evaluation system ────────────────────────────────────────────────────
+//
+// A "bug" is a failed fix run. Bugs are derived from the run history:
+//   - severity — auto-classified from the error message (heuristic rubric)
+//   - status   — open (no later fix yet), fixed (a later run fixed the issue),
+//                reopened (was fixed once, then failed again)
+// The evaluation reuses the same Criteria / Evidence / Rubric / Feedback
+// machinery as the project evaluation above.
+
+export type BugStatus = 'open' | 'fixed' | 'reopened';
+
+export interface Bug {
+  id: string;
+  repo: string;
+  issueNumber: number;
+  issueTitle: string;
+  errorMessage: string | null;
+  severity: Exclude<Severity, 'good' | 'empty'>;
+  status: BugStatus;
+  createdAt: string;
+  fixedAt: string | null;
+  prUrl?: string;
+}
+
+const CRITICAL_ERROR_PATTERNS: RegExp[] = [
+  /typeerror/i,
+  /referenceerror/i,
+  /rangeerror/i,
+  /syntaxerror/i,
+  /cannot read propert/i,
+  /is not a function/i,
+  /is not defined/i,
+  /econnrefused/i,
+  /econnreset/i,
+  /enotfound/i,
+  /eacces/i,
+  /segmentation fault/i,
+  /panic:/i,
+  /fatal/i,
+  /unhandled rejection/i,
+];
+
+/**
+ * Auto-classify a failed run's error message into a bug severity.
+ * Fatal runtime errors and unrecoverable network/IO failures are critical;
+ * everything else (timeouts, assertion failures, unknown) is a warning.
+ */
+export function classifyBugSeverity(errorMessage: string | null): Exclude<Severity, 'good' | 'empty'> {
+  if (!errorMessage) return 'warning';
+  return CRITICAL_ERROR_PATTERNS.some((pattern) => pattern.test(errorMessage)) ? 'critical' : 'warning';
+}
+
+function isRunSuccess(status: Run['status']): boolean {
+  return status === 'success' || status === 'completed';
+}
+
+function runIssueKey(run: Run): string {
+  return `${run.repoOwner}/${run.repoName}#${run.issueNumber}`;
+}
+
+function compareDate(a: string, b: string): number {
+  return new Date(a).getTime() - new Date(b).getTime();
+}
+
+/**
+ * Derive one Bug per failed run, with lifecycle status computed from the
+ * surrounding run history for the same issue:
+ *   - fixed    — a later successful run exists for the issue
+ *   - reopened — no later success, but the issue had been fixed before
+ *   - open     — otherwise
+ */
+export function deriveBugs(runs: Run[]): Bug[] {
+  const byIssue = new Map<string, Run[]>();
+  for (const run of runs) {
+    const key = runIssueKey(run);
+    const list = byIssue.get(key);
+    if (list) list.push(run);
+    else byIssue.set(key, [run]);
+  }
+  for (const list of byIssue.values()) {
+    list.sort((a, b) => compareDate(a.createdAt, b.createdAt));
+  }
+
+  const bugs: Bug[] = [];
+  for (const run of runs) {
+    if (run.status !== 'failed') continue;
+    const issueRuns = byIssue.get(runIssueKey(run)) ?? [];
+    const earlierSuccess = issueRuns.some((r) => isRunSuccess(r.status) && compareDate(r.createdAt, run.createdAt) < 0);
+    const laterSuccess = issueRuns.find((r) => isRunSuccess(r.status) && compareDate(r.createdAt, run.createdAt) > 0);
+    const status: BugStatus = laterSuccess ? 'fixed' : earlierSuccess ? 'reopened' : 'open';
+    bugs.push({
+      id: run.id,
+      repo: `${run.repoOwner}/${run.repoName}`,
+      issueNumber: run.issueNumber,
+      issueTitle: run.issueTitle,
+      errorMessage: run.errorMessage ?? null,
+      severity: classifyBugSeverity(run.errorMessage ?? null),
+      status,
+      createdAt: run.createdAt,
+      fixedAt: laterSuccess?.createdAt ?? null,
+      prUrl: run.prUrl,
+    });
+  }
+  return bugs.sort((a, b) => compareDate(a.createdAt, b.createdAt));
+}
+
+function fmtHours(hours: number): string {
+  if (hours < 1) return `${Math.round(hours * 60)}m`;
+  if (hours < 24) return `${Math.round(hours)}h`;
+  return `${(hours / 24).toFixed(1)}d`;
+}
+
+/**
+ * Evaluate bug health against explicit criteria with evidence.
+ * Rubric: fix rate, mean time to fix, open critical bugs, open backlog.
+ * Same scoring/verdict thresholds and feedback-loop machinery as evaluateProject.
+ */
+export function evaluateBugs(bugs: Bug[]): ProjectEvaluation {
+  const total = bugs.length;
+  const fixed = bugs.filter((b) => b.status === 'fixed').length;
+  const backlog = bugs.filter((b) => b.status !== 'fixed').length;
+  const criticalOpen = bugs.filter((b) => b.severity === 'critical' && b.status !== 'fixed').length;
+  const fixRate = total > 0 ? (fixed / total) * 100 : null;
+
+  const rubric: RubricItem[] = [];
+
+  rubric.push({
+    id: 'bug-fix-rate',
+    labelKey: 'overview.rubric.bugFixRate',
+    value: fixRate,
+    criteria: '\u2265 80% good \u00b7 50\u201379% warning \u00b7 < 50% critical',
+    severity: fixRate === null ? 'empty' : fixRate >= 80 ? 'good' : fixRate >= 50 ? 'warning' : 'critical',
+    evidence: total === 0 || fixRate === null ? '\u2014' : `${fixed}/${total} bugs fixed (${Math.round(fixRate)}%)`,
+    weight: 0.4,
+    higherIsBetter: true,
+  });
+
+  const fixedBugs = bugs.filter((b): b is Bug & { fixedAt: string } => b.fixedAt !== null);
+  const mttrHours =
+    fixedBugs.length === 0
+      ? null
+      : fixedBugs.reduce((sum, b) => sum + (new Date(b.fixedAt).getTime() - new Date(b.createdAt).getTime()), 0) /
+        fixedBugs.length /
+        3_600_000;
+  rubric.push({
+    id: 'mttr',
+    labelKey: 'overview.rubric.mttr',
+    value: mttrHours,
+    criteria: '\u2264 24h good \u00b7 24\u201372h warning \u00b7 > 72h critical',
+    severity: mttrHours === null ? 'empty' : mttrHours <= 24 ? 'good' : mttrHours <= 72 ? 'warning' : 'critical',
+    evidence:
+      mttrHours === null
+        ? fixedBugs.length === 0
+          ? 'No bugs fixed yet'
+          : '\u2014'
+        : `avg ${fmtHours(mttrHours)} to fix (${fixedBugs.length} bugs)`,
+    weight: 0.25,
+    higherIsBetter: false,
+  });
+
+  rubric.push({
+    id: 'open-critical',
+    labelKey: 'overview.rubric.openCritical',
+    value: criticalOpen,
+    criteria: '0 good \u00b7 1\u20133 warning \u00b7 > 3 critical',
+    severity: criticalOpen === 0 ? 'good' : criticalOpen <= 3 ? 'warning' : 'critical',
+    evidence: `${criticalOpen} open critical bug${criticalOpen === 1 ? '' : 's'}`,
+    weight: 0.2,
+    higherIsBetter: false,
+  });
+
+  rubric.push({
+    id: 'open-backlog',
+    labelKey: 'overview.rubric.openBacklog',
+    value: backlog,
+    criteria: '\u2264 5 good \u00b7 6\u201315 warning \u00b7 > 15 critical',
+    severity: backlog <= 5 ? 'good' : backlog <= 15 ? 'warning' : 'critical',
+    evidence: `${backlog} unresolved bug${backlog === 1 ? '' : 's'}`,
+    weight: 0.15,
+    higherIsBetter: false,
+  });
+
+  const activeItems = rubric.filter((r) => r.severity !== 'empty');
+  const totalWeight = activeItems.reduce((s, r) => s + r.weight, 0);
+  const score =
+    total === 0 || activeItems.length === 0 || totalWeight === 0
+      ? null
+      : Math.round(activeItems.reduce((s, r) => s + SEVERITY_SCORE[r.severity] * r.weight, 0) / totalWeight);
+
+  let verdict: Verdict = 'empty';
+  if (total > 0 && score !== null) verdict = score >= 85 ? 'good' : score >= 50 ? 'warning' : 'critical';
+
+  const actions: string[] = [];
+  if (criticalOpen > 0) actions.push('overview.action.reviewFailedRuns');
+  if (fixRate !== null && fixRate < 80) actions.push('overview.action.createTickets');
+
+  return { timestamp: new Date().toISOString(), score, verdict, rubric, actions };
 }

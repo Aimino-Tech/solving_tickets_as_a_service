@@ -1,10 +1,16 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useLocation } from 'react-router-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '@/__tests__/test-utils';
-import ProjectOverview from '@/components/ProjectOverview';
-import type { DashboardStats, Run } from '@/api/types';
 import type { BillingPlan } from '@/api/client';
+import type { DashboardStats, Run } from '@/api/types';
+import ProjectOverview from '@/components/ProjectOverview';
+
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
+}
 
 const mockRunsList = vi.hoisted(() => vi.fn());
 const mockBillingPlan = vi.hoisted(() => vi.fn());
@@ -152,7 +158,9 @@ describe('ProjectOverview', () => {
 
   it('opens run detail when a kanban card is clicked', async () => {
     const onSelectRun = vi.fn();
-    mockRunsList.mockResolvedValue(makeRunsResponse([makeRun('ok1', { status: 'success' }), makeRun('f1', { status: 'failed' })]));
+    mockRunsList.mockResolvedValue(
+      makeRunsResponse([makeRun('ok1', { status: 'success' }), makeRun('f1', { status: 'failed' })]),
+    );
     mockStatsGet.mockResolvedValue(makeStats({ totalRuns: 2, passRate: 50 }));
 
     renderWithProviders(<ProjectOverview onSelectRun={onSelectRun} />);
@@ -166,8 +174,7 @@ describe('ProjectOverview', () => {
     expect(onSelectRun).toHaveBeenCalledWith(expect.objectContaining({ id: 'ok1' }));
   });
 
-  it('opens the detail aside with the grouped list when the metric card is clicked', async () => {
-    const onBrowseRuns = vi.fn();
+  it('navigates to the issues tab when the issues metric card is clicked', async () => {
     const runs = [
       makeRun('r1', { issueNumber: 10, issueTitle: 'Fix login bug' }),
       makeRun('r2', { issueNumber: 10, issueTitle: 'Fix login bug' }),
@@ -177,18 +184,19 @@ describe('ProjectOverview', () => {
     mockRunsList.mockResolvedValue(makeRunsResponse(runs));
     mockStatsGet.mockResolvedValue(makeStats({ totalRuns: 4, passRate: 80 }));
 
-    renderWithProviders(<ProjectOverview onBrowseRuns={onBrowseRuns} />);
+    renderWithProviders(
+      <>
+        <ProjectOverview />
+        <LocationProbe />
+      </>,
+    );
 
     await waitFor(() => {
       expect(screen.getAllByText('3').length).toBeGreaterThan(0);
     });
     await userEvent.click(screen.getByRole('button', { name: /issues created/i }));
 
-    expect(onBrowseRuns).toHaveBeenCalledTimes(1);
-    const [browsedRuns, titleKey] = onBrowseRuns.mock.calls[0] as [Run[], string, string];
-    expect(browsedRuns).toHaveLength(3);
-    expect(browsedRuns.map((r) => r.id).sort()).toEqual(['r1', 'r3', 'r4']);
-    expect(titleKey).toBe('dashboard.issuesCreated');
+    expect(screen.getByTestId('location')).toHaveTextContent('/runs?tab=issues');
   });
 
   it('free tier: create ticket opens usage review modal and submits on confirm', async () => {
@@ -267,7 +275,9 @@ describe('ProjectOverview', () => {
     mockStatsGet.mockResolvedValue(makeStats({ totalRuns: 2, passRate: 50 }));
     mockRunsList
       .mockResolvedValueOnce(makeRunsResponse([makeRun('ok1', { status: 'success' })]))
-      .mockResolvedValueOnce(makeRunsResponse([makeRun('ok1', { status: 'success' }), makeRun('f1', { status: 'failed' })]));
+      .mockResolvedValueOnce(
+        makeRunsResponse([makeRun('ok1', { status: 'success' }), makeRun('f1', { status: 'failed' })]),
+      );
 
     renderWithProviders(<ProjectOverview />);
     await act(async () => {});

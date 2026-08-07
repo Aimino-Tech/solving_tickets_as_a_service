@@ -1,10 +1,9 @@
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { incidents } from '@/api/client';
 import type { ServiceCatalogEntry } from '@/api/types';
 import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
-import SlideOver from '@/components/SlideOver';
 import { useI18n } from '@/i18n/I18nProvider';
 
 interface CatalogForm {
@@ -116,173 +115,194 @@ export default function ServiceCatalogManager() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('incidents.catalog.desc')}</p>
-        <button type="button" onClick={openCreate} className="btn-primary min-h-[44px]">
-          <Plus size={16} className="mr-1 inline" />
-          {t('incidents.catalog.add')}
-        </button>
+    <div className="flex items-start gap-6">
+      {/* Main content */}
+      <div className="min-w-0 flex-1 space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('incidents.catalog.desc')}</p>
+          <button type="button" onClick={openCreate} className="btn-primary min-h-[44px]">
+            <Plus size={16} className="mr-1 inline" />
+            {t('incidents.catalog.add')}
+          </button>
+        </div>
+
+        {error ? (
+          <ErrorState message={error} onRetry={() => void load()} retryLabel={t('common.retry')} />
+        ) : loading ? (
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-16 animate-pulse rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+              />
+            ))}
+          </div>
+        ) : entries.length === 0 ? (
+          <EmptyState title={t('incidents.catalog.empty')} hint={t('incidents.catalog.emptyDesc')} />
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                    {t('incidents.catalog.tableName')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                    {t('incidents.catalog.tableRepos')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
+                    {t('incidents.catalog.tableProviders')}
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">
+                    {t('common.actions')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {entries.map((entry) => (
+                  <tr key={entry.id}>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{entry.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      {entry.repos.length > 0 ? entry.repos.join(', ') : '\u2014'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      {entry.providers.length > 0 ? entry.providers.join(', ') : '\u2014'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(entry)}
+                        className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400"
+                        aria-label={t('common.edit')}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(entry)}
+                        className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                        aria-label={t('common.delete')}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {error ? (
-        <ErrorState message={error} onRetry={() => void load()} retryLabel={t('common.retry')} />
-      ) : loading ? (
-        <div className="space-y-2">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="h-16 animate-pulse rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
-            />
-          ))}
-        </div>
-      ) : entries.length === 0 ? (
-        <EmptyState title={t('incidents.catalog.empty')} hint={t('incidents.catalog.emptyDesc')} />
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
-                  {t('incidents.catalog.tableName')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
-                  {t('incidents.catalog.tableRepos')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">
-                  {t('incidents.catalog.tableProviders')}
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">
-                  {t('common.actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {entries.map((entry) => (
-                <tr key={entry.id}>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{entry.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                    {entry.repos.length > 0 ? entry.repos.join(', ') : '\u2014'}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                    {entry.providers.length > 0 ? entry.providers.join(', ') : '\u2014'}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(entry)}
-                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400"
-                      aria-label={t('common.edit')}
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(entry)}
-                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-                      aria-label={t('common.delete')}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <SlideOver
-        isOpen={panelOpen}
-        onClose={closePanel}
-        title={editing ? t('incidents.catalog.editTitle') : t('incidents.catalog.addTitle')}
+      {/* Slide-over form panel — sits beside main, slides in on demand */}
+      <aside
+        className={`hidden shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out md:block ${
+          panelOpen ? 'w-[26rem]' : 'w-0'
+        }`}
       >
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="catalog-name" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('incidents.catalog.name')}
-            </label>
-            <input
-              id="catalog-name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="input-field min-h-[44px] w-full"
-              placeholder="payments-api"
-            />
+        {panelOpen && (
+          <div className="w-[26rem] rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                {editing ? t('incidents.catalog.editTitle') : t('incidents.catalog.addTitle')}
+              </h3>
+              <button
+                type="button"
+                onClick={closePanel}
+                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
+                aria-label={t('common.close')}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="mt-4 space-y-4">
+              <div>
+                <label htmlFor="catalog-name" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('incidents.catalog.name')}
+                </label>
+                <input
+                  id="catalog-name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="input-field min-h-[44px] w-full"
+                  placeholder="payments-api"
+                />
+              </div>
+              <div>
+                <label htmlFor="catalog-repos" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('incidents.catalog.repos')}
+                </label>
+                <input
+                  id="catalog-repos"
+                  value={form.repos}
+                  onChange={(e) => setForm({ ...form, repos: e.target.value })}
+                  className="input-field min-h-[44px] w-full"
+                  placeholder="owner/repo-a, owner/repo-b"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="catalog-providers"
+                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  {t('incidents.catalog.providers')}
+                </label>
+                <input
+                  id="catalog-providers"
+                  value={form.providers}
+                  onChange={(e) => setForm({ ...form, providers: e.target.value })}
+                  className="input-field min-h-[44px] w-full"
+                  placeholder="datadog, grafana"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="catalog-purpose"
+                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  {t('incidents.catalog.purpose')}
+                </label>
+                <textarea
+                  id="catalog-purpose"
+                  value={form.purpose}
+                  onChange={(e) => setForm({ ...form, purpose: e.target.value })}
+                  className="input-field w-full"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="catalog-runbook"
+                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  {t('incidents.catalog.runbook')}
+                </label>
+                <textarea
+                  id="catalog-runbook"
+                  value={form.runbook}
+                  onChange={(e) => setForm({ ...form, runbook: e.target.value })}
+                  className="input-field w-full"
+                  rows={3}
+                />
+              </div>
+              {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
+              <div className="flex gap-3">
+                <button type="button" onClick={closePanel} className="btn-secondary min-h-[44px]">
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSubmit()}
+                  disabled={saving}
+                  className="btn-primary min-h-[44px]"
+                >
+                  {saving ? t('common.loading') : t('common.save')}
+                </button>
+              </div>
+            </div>
           </div>
-          <div>
-            <label htmlFor="catalog-repos" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('incidents.catalog.repos')}
-            </label>
-            <input
-              id="catalog-repos"
-              value={form.repos}
-              onChange={(e) => setForm({ ...form, repos: e.target.value })}
-              className="input-field min-h-[44px] w-full"
-              placeholder="owner/repo-a, owner/repo-b"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="catalog-providers"
-              className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              {t('incidents.catalog.providers')}
-            </label>
-            <input
-              id="catalog-providers"
-              value={form.providers}
-              onChange={(e) => setForm({ ...form, providers: e.target.value })}
-              className="input-field min-h-[44px] w-full"
-              placeholder="datadog, grafana"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="catalog-purpose"
-              className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              {t('incidents.catalog.purpose')}
-            </label>
-            <textarea
-              id="catalog-purpose"
-              value={form.purpose}
-              onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-              className="input-field w-full"
-              rows={3}
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="catalog-runbook"
-              className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              {t('incidents.catalog.runbook')}
-            </label>
-            <textarea
-              id="catalog-runbook"
-              value={form.runbook}
-              onChange={(e) => setForm({ ...form, runbook: e.target.value })}
-              className="input-field w-full"
-              rows={3}
-            />
-          </div>
-          {formError && <p className="text-sm text-red-600 dark:text-red-400">{formError}</p>}
-          <div className="flex gap-3">
-            <button type="button" onClick={closePanel} className="btn-secondary min-h-[44px]">
-              {t('common.cancel')}
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleSubmit()}
-              disabled={saving}
-              className="btn-primary min-h-[44px]"
-            >
-              {saving ? t('common.loading') : t('common.save')}
-            </button>
-          </div>
-        </div>
-      </SlideOver>
+        )}
+      </aside>
     </div>
   );
 }

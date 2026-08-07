@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  ArrowDown,
   ArrowUp,
   Bug,
   CheckCircle2,
@@ -8,17 +7,17 @@ import {
   ChevronRight,
   Clock,
   Loader2,
-  Minus,
   RefreshCw,
   Ticket,
   X,
   Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { BillingPlan, CreateTicketResult, Ticket as StoredTicket } from '@/api/client';
 import { billing, runs, stats, tickets } from '@/api/client';
 import type { DashboardStats, Run } from '@/api/types';
+import EvaluationPanel from '@/components/EvaluationPanel';
 import { SkeletonCard } from '@/components/LoadingSkeleton';
 import MetricCard from '@/components/MetricCard';
 import ProgressBar from '@/components/ProgressBar';
@@ -26,7 +25,7 @@ import StatusBadge from '@/components/StatusBadge';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/i18n/I18nProvider';
 import type { ProjectEvaluation, Severity } from '@/utils/evaluation';
-import { aggregateRepoHealth, computeFeedbackLoop, evaluateProject, formatUsage } from '@/utils/evaluation';
+import { aggregateRepoHealth, computeFeedbackLoop, deriveBugs, evaluateProject, formatUsage } from '@/utils/evaluation';
 import { formatRelativeTime } from '@/utils/format';
 
 const POLL_INTERVAL_MS = 20_000;
@@ -62,8 +61,6 @@ function isFailed(status: Run['status']): boolean {
   return status === 'failed';
 }
 
-type DrillKind = 'bugs' | 'issues' | 'pending' | 'done';
-
 interface RunWarning {
   id: string;
   kind: 'run-failure' | 'usage';
@@ -87,15 +84,10 @@ const EMPTY_RUNS_RESPONSE = {
   totalPages: 0,
 };
 
-export default function ProjectOverview({
-  onSelectRun,
-  onBrowseRuns,
-}: {
-  onSelectRun?: (run: Run) => void;
-  onBrowseRuns?: (runs: Run[], titleKey: string, descKey: string) => void;
-}) {
+export default function ProjectOverview({ onSelectRun }: { onSelectRun?: (run: Run) => void }) {
   const { t } = useI18n();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [plan, setPlan] = useState<BillingPlan | null>(null);
   const [allRuns, setAllRuns] = useState<Run[]>([]);
   const [statsData, setStatsData] = useState<DashboardStats | null>(null);
@@ -149,6 +141,10 @@ export default function ProjectOverview({
 
   const repoHealth = useMemo(() => aggregateRepoHealth(allRuns), [allRuns]);
   const totalBugs = repoHealth.reduce((s, r) => s + r.bugsDetected, 0);
+  const criticalBugs = useMemo(
+    () => deriveBugs(allRuns).filter((b) => b.severity === 'critical' && b.status !== 'fixed').length,
+    [allRuns],
+  );
   const totalIssues = repoHealth.reduce((s, r) => s + r.issuesCreated, 0);
   const totalPending = repoHealth.reduce((s, r) => s + r.pending, 0);
   const totalDone = repoHealth.reduce((s, r) => s + r.done, 0);
@@ -159,15 +155,6 @@ export default function ProjectOverview({
     const failed = allRuns.filter((r) => isFailed(r.status));
     return { pending, done, failed };
   }, [allRuns]);
-
-  const drillRuns = useMemo<Record<DrillKind, Run[]>>(() => {
-    const seen = new Map<string, Run>();
-    for (const run of allRuns) {
-      const key = `${run.repoOwner}/${run.repoName}#${run.issueNumber}`;
-      if (!seen.has(key)) seen.set(key, run);
-    }
-    return { bugs: kanban.failed, issues: Array.from(seen.values()), pending: kanban.pending, done: kanban.done };
-  }, [allRuns, kanban]);
 
   const usagePct = useMemo(() => {
     if (isUnlimited || monthlyLimit <= 0) return null;
@@ -409,15 +396,15 @@ export default function ProjectOverview({
           icon={<Bug size={16} className="text-red-500" />}
           label={t('dashboard.bugsDetected')}
           value={String(totalBugs)}
-          severity={totalBugs > 0 ? 'critical' : 'good'}
-          onClick={() => onBrowseRuns?.(drillRuns.bugs, DRILLDOWN_META.bugs.titleKey, DRILLDOWN_META.bugs.descKey)}
+          severity={criticalBugs > 0 ? 'critical' : totalBugs > 0 ? 'warning' : 'good'}
+          onClick={() => navigate('/runs?tab=bug')}
           footer={t('overview.metric.clickToView')}
         />
         <MetricCard
           icon={<Ticket size={16} className="text-brand-600 dark:text-brand-400" />}
           label={t('dashboard.issuesCreated')}
           value={String(totalIssues)}
-          onClick={() => onBrowseRuns?.(drillRuns.issues, DRILLDOWN_META.issues.titleKey, DRILLDOWN_META.issues.descKey)}
+          onClick={() => navigate('/runs?tab=issues')}
           footer={t('overview.metric.clickToView')}
         />
         <MetricCard
@@ -425,7 +412,7 @@ export default function ProjectOverview({
           label={t('dashboard.pendingRuns')}
           value={String(totalPending)}
           severity={totalPending > 0 ? 'warning' : 'good'}
-          onClick={() => onBrowseRuns?.(drillRuns.pending, DRILLDOWN_META.pending.titleKey, DRILLDOWN_META.pending.descKey)}
+          onClick={() => navigate('/runs?tab=pending')}
           footer={t('overview.metric.clickToView')}
         />
         <MetricCard
@@ -433,7 +420,7 @@ export default function ProjectOverview({
           label={t('dashboard.doneVerified')}
           value={String(totalDone)}
           severity="good"
-          onClick={() => onBrowseRuns?.(drillRuns.done, DRILLDOWN_META.done.titleKey, DRILLDOWN_META.done.descKey)}
+          onClick={() => navigate('/runs?tab=done')}
           footer={t('overview.metric.clickToView')}
         />
         <MetricCard
@@ -441,6 +428,7 @@ export default function ProjectOverview({
           label={t('overview.healthScore')}
           value={evaluation.score === null ? '\u2014' : `${evaluation.score}/100`}
           severity={evaluation.verdict === 'empty' ? undefined : evaluation.verdict}
+          onClick={() => navigate('/runs?tab=evaluation')}
           footer={t('overview.verdict', { verdict: t(`overview.verdicts.${evaluation.verdict}`) })}
         />
       </div>
@@ -770,129 +758,6 @@ function WarningRow({
   );
 }
 
-function EvaluationPanel({
-  evaluation,
-  feedback,
-  hasFailed,
-}: {
-  evaluation: ProjectEvaluation;
-  feedback: ReturnType<typeof computeFeedbackLoop>;
-  hasFailed: boolean;
-}) {
-  const { t } = useI18n();
-  const feedbackMap = new Map(feedback.map((f) => [f.id, f]));
-  return (
-    <div className="card">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('overview.evaluation.title')}</h3>
-        <span className="inline-flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          {t('overview.evaluation.lastRun')}: {new Date(evaluation.timestamp).toLocaleTimeString()}
-        </span>
-      </div>
-      <div className="mt-3 overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
-              <th className="pb-2 pr-4 font-medium">{t('overview.evaluation.criteria')}</th>
-              <th className="pb-2 pr-4 font-medium">{t('overview.evaluation.value')}</th>
-              <th className="hidden pb-2 pr-4 font-medium sm:table-cell">{t('overview.evaluation.evidence')}</th>
-              <th className="pb-2 pr-4 font-medium">{t('overview.evaluation.verdict')}</th>
-              <th className="pb-2 font-medium">{t('overview.evaluation.trend')}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {evaluation.rubric.map((item) => {
-              const delta = feedbackMap.get(item.id);
-              return (
-                <tr key={item.id}>
-                  <td className="py-2 pr-4">
-                    <span className="text-gray-900 dark:text-gray-100">{t(item.labelKey)}</span>
-                    <span className="ml-2 hidden text-[11px] text-gray-400 md:inline">{item.criteria}</span>
-                  </td>
-                  <td className="py-2 pr-4 tabular-nums text-gray-700 dark:text-gray-300">
-                    {item.value === null
-                      ? '\u2014'
-                      : `${Math.round(item.value * 10) / 10}${item.id === 'usage' || item.id === 'failure-rate' || item.id === 'pass-rate' ? '%' : ''}`}
-                  </td>
-                  <td className="hidden py-2 pr-4 text-xs text-gray-500 dark:text-gray-400 sm:table-cell">
-                    {item.evidence}
-                  </td>
-                  <td className="py-2 pr-4">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${severityBadge(item.severity)}`}
-                    >
-                      {t(`overview.verdicts.${item.severity}`)}
-                    </span>
-                  </td>
-                  <td className="py-2">{delta ? <TrendCell delta={delta} /> : '\u2014'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-gray-100 pt-3 dark:border-gray-800">
-        <span className="text-sm text-gray-500 dark:text-gray-400">{t('overview.evaluation.score')}:</span>
-        <span className="text-lg font-bold tabular-nums text-gray-900 dark:text-gray-100">
-          {evaluation.score === null ? '\u2014' : `${evaluation.score}/100`}
-        </span>
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${severityBadge(evaluation.verdict)}`}
-        >
-          {t(`overview.verdicts.${evaluation.verdict}`)}
-        </span>
-        {hasFailed && (
-          <span className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-            <AlertTriangle size={12} />
-            {t('overview.evaluation.actionHint')}
-          </span>
-        )}
-        {evaluation.actions.length > 0 && (
-          <span className="flex flex-wrap gap-1.5">
-            {evaluation.actions.map((action) => (
-              <span
-                key={action}
-                className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/50 dark:text-brand-300"
-              >
-                {t(action)}
-              </span>
-            ))}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TrendCell({
-  delta,
-}: {
-  delta: { trend: string; delta: number | null; before: number | null; after: number | null };
-}) {
-  const { t } = useI18n();
-  if (delta.trend === 'new') {
-    return <span className="text-xs text-gray-400 dark:text-gray-500">{t('overview.evaluation.trendNew')}</span>;
-  }
-  if (delta.trend === 'unchanged') {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-        <Minus size={12} />
-        {t('overview.evaluation.trendSame')}
-      </span>
-    );
-  }
-  const improved = delta.trend === 'improved';
-  return (
-    <span
-      className={`inline-flex items-center gap-1 text-xs font-medium ${improved ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
-    >
-      {improved ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-      {delta.delta === null ? '' : `${improved ? '+' : ''}${Math.round(delta.delta * 10) / 10}`}
-      {t(`overview.evaluation.trend${improved ? 'Improved' : 'Regressed'}`)}
-    </span>
-  );
-}
-
 function TicketModal({
   state,
   usagePct,
@@ -1023,24 +888,3 @@ function TicketModal({
     </div>
   );
 }
-
-function severityBadge(severity: Severity): string {
-  switch (severity) {
-    case 'good':
-      return 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300';
-    case 'warning':
-      return 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300';
-    case 'critical':
-      return 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300';
-    default:
-      return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
-  }
-}
-
-const DRILLDOWN_META: Record<DrillKind, { titleKey: string; descKey: string }> = {
-  bugs: { titleKey: 'dashboard.bugsDetected', descKey: 'overview.metric.desc.bugs' },
-  issues: { titleKey: 'dashboard.issuesCreated', descKey: 'overview.metric.desc.issues' },
-  pending: { titleKey: 'dashboard.pendingRuns', descKey: 'overview.metric.desc.pending' },
-  done: { titleKey: 'dashboard.doneVerified', descKey: 'overview.metric.desc.done' },
-};
-
